@@ -1,0 +1,9 @@
+# HD Map + V2X Fusion for Trajectory Prediction
+
+Master's thesis project: "Integration of HD Map and V2X Data for Enhanced Environment Prediction in Autonomous Driving"
+TU Chemnitz, Chair of Computer Engineering
+
+## Contents
+- `export_topology.py` — exports lane topology from CARLA maps
+- `topology/` — exported lane connection data (Town03, Town04, Town05)
+- `*.xodr` — raw OpenDRIVE map files
