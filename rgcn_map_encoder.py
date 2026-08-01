@@ -42,6 +42,23 @@ class RGCNMapEncoder(nn.Module):
         return h  # [num_nodes, out_dim] lane embeddings
 
 
+def get_nearby_lane_nodes(agent_pos, node_positions, k=10):
+    """
+    agent_pos: tensor [2] or [B, 2] - agent (x, y) position(s), same normalization as node_positions
+    node_positions: tensor [N, 2] - all lane node positions (data.x from load_graph)
+    k: number of nearest lane nodes to retrieve
+
+    Returns: indices [k] or [B, k] into node_positions for the k nearest nodes
+    """
+    if agent_pos.dim() == 1:
+        agent_pos = agent_pos.unsqueeze(0)  # [1, 2]
+
+    dists = torch.cdist(agent_pos, node_positions)
+    _, indices = torch.topk(dists, k=min(k, node_positions.shape[0]), dim=1, largest=False)
+
+    return indices.squeeze(0) if indices.shape[0] == 1 else indices  # [k] or [B, k]
+
+
 if __name__ == "__main__":
     model = RGCNMapEncoder(in_dim=2, hidden_dim=64, out_dim=128, num_relations=3)
 
@@ -53,4 +70,10 @@ if __name__ == "__main__":
         embeddings = model(data.x, data.edge_index, data.edge_type)
         print(f"{town}: output embeddings shape = {embeddings.shape}")
         assert embeddings.shape == (data.x.shape[0], 128), f"{town}: shape mismatch!"
+
+        dummy_agent_pos = data.x[0]
+        nearby_idx = get_nearby_lane_nodes(dummy_agent_pos, data.x, k=10)
+        nearby_embeddings = embeddings[nearby_idx]
+        assert nearby_embeddings.shape == (10, 128), f"{town}: nearby embedding shape mismatch!"
+        print(f"{town}: nearest-neighbor lookup OK, retrieved {nearby_embeddings.shape}")
         print(f"{town}: OK\n")
