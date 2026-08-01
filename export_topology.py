@@ -8,6 +8,11 @@ print("connecting...")
 client = carla.Client('localhost', 2000)
 client.set_timeout(20.0)
 
+# Loading a new town makes the server unload/stream a whole UE4 level,
+# which routinely takes well over 20s (especially under -RenderOffScreen
+# without GPU acceleration), so load_world needs its own longer timeout.
+LOAD_WORLD_TIMEOUT = 120.0
+
 towns = ['Town03', 'Town04', 'Town05']
 
 
@@ -23,9 +28,16 @@ def add_edge(edges, wp_a, wp_b, relation):
 
 for town in towns:
     print(f"loading {town}...")
-    client.load_world(town)
-    world = client.get_world()
+    client.set_timeout(LOAD_WORLD_TIMEOUT)
+    world = client.load_world(town)
+    client.set_timeout(20.0)
     carla_map = world.get_map()
+
+    loaded_name = carla_map.name.split('/')[-1]
+    if loaded_name != town:
+        raise RuntimeError(
+            f"asked to load '{town}' but server reports '{loaded_name}' loaded"
+        )
 
     print("getting topology...")
     topology = carla_map.get_topology()
