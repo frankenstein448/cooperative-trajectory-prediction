@@ -9,24 +9,20 @@ from torch_geometric.nn import RGCNConv
 def load_graph(path):
     with open(path, "rb") as f:
         edges = pickle.load(f)
-
     node_pos = {}
     for e in edges:
         node_pos[e["start_id"]] = e["start_pos"]
         node_pos[e["end_id"]] = e["end_pos"]
-
     node_ids = sorted(node_pos.keys())
     id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
-
     xs = torch.tensor([node_pos[nid] for nid in node_ids], dtype=torch.float)
-    xs = (xs - xs.mean(0)) / (xs.std(0) + 1e-6)
-
+    mean, std = xs.mean(0), xs.std() + 1e-6
+    xs_norm = (xs - mean) / std
     src = [id_to_idx[e["start_id"]] for e in edges]
     dst = [id_to_idx[e["end_id"]] for e in edges]
     edge_index = torch.tensor([src, dst], dtype=torch.long)
     edge_type = torch.tensor([e["relation"] for e in edges], dtype=torch.long)
-
-    return Data(x=xs, edge_index=edge_index, edge_type=edge_type), id_to_idx
+    return Data(x=xs_norm, edge_index=edge_index, edge_type=edge_type), id_to_idx, mean, std
 
 
 class RGCNMapEncoder(nn.Module):
@@ -64,7 +60,7 @@ if __name__ == "__main__":
 
     for town in ["Town03", "Town04", "Town05"]:
         path = f"topology/{town}_topology.pkl"
-        data, id_to_idx = load_graph(path)
+        data, id_to_idx, mean, std = load_graph(path)
         print(f"{town}: {data}")
 
         embeddings = model(data.x, data.edge_index, data.edge_type)
