@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.claude/
+.vscode/
+pilot_model.pt
+*.pt
+*.xodr
