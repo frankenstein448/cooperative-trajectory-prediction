@@ -1,32 +1,35 @@
 """
 train.py
-Training loop with train/val split over PilotDataset (Town05, 38 scenes,
-10,640 samples) -> FourStreamFusion -> WinnerTakesAllLoss -> optimizer step.
-Stream encoders (ego/coop/v2x/map) stay frozen -- only FourStreamFusion's
-fuse + trajectory head layers are trained.
-
-Train/val split: 85% train, 15% val. Val loss is measured every epoch but
-never backpropagated -- it's the honest signal for whether the model
-generalizes rather than just memorizing the training samples.
+End-to-end training: all encoders (ego, coop, v2x, map) are now trainable,
+not frozen. Uses EndToEndFusion (end_to_end_model.py) and PilotDataset's
+custom collate_fn (variable-size LiDAR/camera/coop data per sample).
 
 Run in gpu-test-venv.
 """
+import os
+import time
 import torch
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy("file_system")
 from torch.utils.data import DataLoader, random_split
 
-from pilot_dataset import PilotDataset, DEVICE
-from four_stream_fusion import FourStreamFusion
+from pilot_dataset import PilotDataset, pilot_collate_fn
+from end_to_end_model import EndToEndFusion
 from trajectory_loss import WinnerTakesAllLoss
 
 BATCH_SIZE = 8
-EPOCHS = 3
-LR = 1e-3
+EPOCHS = 30
+LR = 1e-4          # lower than the frozen-encoder run (1e-3) -- more parameters now training, needs more caution
 VAL_FRACTION = 0.15
 SEED = 42
+NUM_WORKERS = 4
+CHECKPOINT_EVERY = 5
+CHECKPOINT_DIR = "checkpoints_scene_full"
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def run_epoch(model, loader, loss_fn, optimizer=None):
-    """optimizer=None -> validation mode (no backward, no weight update)."""
     is_train = optimizer is not None
     model.train() if is_train else model.eval()
 
@@ -35,17 +38,13 @@ def run_epoch(model, loader, loss_fn, optimizer=None):
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
         for batch in loader:
-            ego = batch["ego_embed"].to(DEVICE)
-            coop = batch["coop_embed"].to(DEVICE)
-            v2x = batch["v2x_embed"].to(DEVICE)
-            map_ = batch["map_embed"].to(DEVICE)
             gt_traj = batch["gt_traj"].to(DEVICE)
             gt_mask = batch["gt_mask"].to(DEVICE)
 
             if is_train:
                 optimizer.zero_grad()
 
-            fused, trajs, conf = model(ego, coop, v2x, map_)
+            fused, trajs, conf = model(batch)
             loss, info = loss_fn(trajs, conf, gt_traj, gt_mask)
 
             if is_train:
@@ -60,37 +59,66 @@ def run_epoch(model, loader, loss_fn, optimizer=None):
     return total_loss / n_batches, total_reg / n_batches, total_cls / n_batches
 
 
+def save_checkpoint(model, optimizer, epoch, train_loss, val_loss, path):
+    torch.save({
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "train_loss": train_loss,
+        "val_loss": val_loss,
+    }, path)
+
+
 def main():
     print(f"Using device: {DEVICE}")
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
     dataset = PilotDataset()
     print(f"Dataset size: {len(dataset)} samples")
 
-    n_val = int(len(dataset) * VAL_FRACTION)
-    n_train = len(dataset) - n_val
-    train_set, val_set = random_split(
-        dataset, [n_train, n_val], generator=torch.Generator().manual_seed(SEED)
-    )
+    from scene_split import scene_split
+    train_set, val_set = scene_split(dataset, VAL_FRACTION, SEED)
+    n_train, n_val = len(train_set), len(val_set)
     print(f"Train: {n_train} samples | Val: {n_val} samples")
 
-    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
+                               num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
+    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False,
+                             num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
 
-    model = FourStreamFusion().to(DEVICE)
+    model = EndToEndFusion(device=DEVICE).to(DEVICE)
     loss_fn = WinnerTakesAllLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-    for epoch in range(EPOCHS):
+    n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Trainable parameters: {n_params:,}")
+
+    best_val_loss = float("inf")
+
+    for epoch in range(1, EPOCHS + 1):
+        t0 = time.time()
         train_loss, train_reg, train_cls = run_epoch(model, train_loader, loss_fn, optimizer)
         val_loss, val_reg, val_cls = run_epoch(model, val_loader, loss_fn, optimizer=None)
+        elapsed = time.time() - t0
 
-        print(f"Epoch {epoch+1}/{EPOCHS} | "
+        print(f"Epoch {epoch}/{EPOCHS} ({elapsed:.1f}s) | "
               f"train_loss={train_loss:.4f} (reg={train_reg:.4f}, cls={train_cls:.4f}) | "
               f"val_loss={val_loss:.4f} (reg={val_reg:.4f}, cls={val_cls:.4f})")
 
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_checkpoint(model, optimizer, epoch, train_loss, val_loss,
+                             os.path.join(CHECKPOINT_DIR, "best_model.pt"))
+            print(f"  -> New best val_loss ({val_loss:.4f}), saved best_model.pt")
+
+        if epoch % CHECKPOINT_EVERY == 0:
+            save_checkpoint(model, optimizer, epoch, train_loss, val_loss,
+                             os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch{epoch}.pt"))
+            print(f"  -> Periodic checkpoint saved (epoch {epoch})")
+
     print("\nTraining complete.")
-    torch.save(model.state_dict(), "pilot_model.pt")
-    print("Saved model to pilot_model.pt")
+    torch.save(model.state_dict(), "e2e_model_scene_full.pt")
+    print("Saved final model to e2e_model_scene_full.pt")
 
 
 if __name__ == "__main__":

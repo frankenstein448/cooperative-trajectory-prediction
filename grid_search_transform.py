@@ -180,12 +180,11 @@ def icp_polish(agent_pts, carla_pts, seed, max_iters=50, tol=1e-4):
 
 if __name__ == "__main__":
     V2X_SIM_ROOT = "/home/karra/V2X-Sim-2.0"
-    CARLA_POINTS_NPY = "dense_waypoints_town05.npy" # from your dense_waypoints.py output
+    CARLA_POINTS_NPY = "dense_waypoints_town04.npy"
 
-    # Adjust scene_ids to whichever Town05 scenes you have (more = better).
-    agent_pts = extract_agent_points(V2X_SIM_ROOT, scene_ids=[77])
+    agent_pts = extract_agent_points(V2X_SIM_ROOT, scene_ids=[6, 9, 20, 26, 30, 92, 96, 97, 98])
     carla_pts = np.load(CARLA_POINTS_NPY)
 
-    coarse_best = grid_search(agent_pts, carla_pts, t_center=(0, 0), t_half_width=40, t_step=2)
+    coarse_best = grid_search(agent_pts, carla_pts, t_center=(0, 0), t_half_width=80, t_step=2)
     refined = refine(agent_pts, carla_pts, coarse_best)
-    final = icp_polish(agent_pts, carla_pts, refined)
+    print(f"\nFinal Town04 transform: theta={refined[1]:.2f}° tx={refined[2]:.2f} ty={refined[3]:.2f} (median residual {refined[0]:.3f}m)")
