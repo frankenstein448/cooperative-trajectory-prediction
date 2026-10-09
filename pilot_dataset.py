@@ -12,13 +12,16 @@ Run in gpu-test-venv.
 """
 import re
 import glob
+import os
+import json
 import torch
+import numpy as np
 from torch.utils.data import Dataset
 
 from v2x_message_stream import V2XMetadataLoader
 from ground_truth_extractor import get_future_trajectory, HORIZON
 from ego_sensor_encoder import load_semantic_lidar
-from ego_camera_encoder import load_image
+from ego_camera_encoder import load_image, IMG_SIZE
 from find_coop_neighbors import find_coop_neighbors
 from rgcn_map_encoder import load_graph, get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
@@ -27,6 +30,11 @@ SWEEPS_ROOT = "/home/karra/V2X-Sim-2.0/sweeps"
 CAMERA_COMPATIBLE_AGENTS = [1, 2, 3, 4]
 VIEWS = ["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT"]
 K_NEAREST_LANES = 5
+
+# Camera image cache (built by build_image_cache.py): one .npy per
+# (agent_id, scene, frame), holding all 3 views as uint8 [3, 3, 224, 224]
+# (decoded + resized, before ToTensor's float/255 conversion).
+IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images")
 
 TOWN03_SCENES = [4, 5, 64, 77, 79, 80, 85]
 TOWN04_SCENES = [6, 9, 20, 26, 30, 92, 96, 97, 98]
@@ -58,9 +66,25 @@ def _available_frames(agent_id: int, scene: int) -> set:
 
 
 class PilotDataset(Dataset):
-    def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON):
+    def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
+                 use_image_cache: bool = False):
         self.horizon = horizon
+        self.use_image_cache = use_image_cache
         self.loader = V2XMetadataLoader()
+
+        if use_image_cache:
+            manifest_path = os.path.join(IMAGE_CACHE_DIR, "manifest.json")
+            if not os.path.exists(manifest_path):
+                raise FileNotFoundError(
+                    f"use_image_cache=True but no manifest at {manifest_path} -- "
+                    f"build the cache with build_image_cache.py first.")
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+            assert manifest["img_size"] == IMG_SIZE, (
+                f"Image cache manifest img_size={manifest['img_size']} does not match "
+                f"expected {IMG_SIZE} (ego_camera_encoder.IMG_SIZE)")
+        print(f"PilotDataset: use_image_cache={use_image_cache}"
+              + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else ""))
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -82,6 +106,29 @@ class PilotDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
+    def _load_images(self, agent_id, scene, frame):
+        """Returns VIEWS as [3,224,224] float tensors in [0,1], identical to
+        load_image()'s ToTensor() output. Reads the on-disk cache if
+        self.use_image_cache is True; a missing key is a hard error, never a
+        silent fallback to decoding the original JPEGs."""
+        if not self.use_image_cache:
+            cam_base = SWEEPS_ROOT + "/{view}_id_" + str(agent_id) + "/scene_" + str(scene) + f"_{frame:06d}.jpg"
+            return [load_image(cam_base.format(view=v)) for v in VIEWS]
+
+        key = (agent_id, scene, frame)
+        cache_path = os.path.join(IMAGE_CACHE_DIR, f"{agent_id}_{scene}_{frame:06d}.npy")
+        if not os.path.exists(cache_path):
+            raise FileNotFoundError(
+                f"Image cache miss for key {key}: {cache_path} not found. "
+                f"use_image_cache=True requires every referenced key to be pre-built by "
+                f"build_image_cache.py -- refusing to fall back to decoding from disk.")
+        arr = np.load(cache_path)  # [3 views, 3, 224, 224] uint8, CHW per view
+        assert arr.shape == (3, 3, IMG_SIZE, IMG_SIZE), (
+            f"Image cache shape mismatch for key {key}: got {arr.shape}, "
+            f"expected (3, 3, {IMG_SIZE}, {IMG_SIZE})")
+        assert arr.dtype == np.uint8, f"Image cache dtype mismatch for key {key}: got {arr.dtype}, expected uint8"
+        return [torch.from_numpy(arr[v]).float().div(255) for v in range(arr.shape[0])]
+
     def __getitem__(self, idx):
         agent_id, scene, frame, town = self.samples[idx]
         graph = self.town_graphs[town]
@@ -89,8 +136,7 @@ class PilotDataset(Dataset):
         lidar_path = f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{agent_id}/scene_{scene}_{frame:06d}.pcd.bin"
         points = load_semantic_lidar(lidar_path)
 
-        cam_base = SWEEPS_ROOT + "/{view}_id_" + str(agent_id) + "/scene_" + str(scene) + f"_{frame:06d}.jpg"
-        images = [load_image(cam_base.format(view=v)) for v in VIEWS]
+        images = self._load_images(agent_id, scene, frame)
 
         cam, _ = self.loader.get_cam(agent_id, scene, frame)
         cpm_objects = self.loader.get_cpm(agent_id, scene, frame)
@@ -101,8 +147,7 @@ class PilotDataset(Dataset):
         for nid in neighbor_ids:
             n_lidar_path = f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{nid}/scene_{scene}_{frame:06d}.pcd.bin"
             coop_points.append(load_semantic_lidar(n_lidar_path))
-            n_cam_base = SWEEPS_ROOT + "/{view}_id_" + str(nid) + "/scene_" + str(scene) + f"_{frame:06d}.jpg"
-            coop_images.append([load_image(n_cam_base.format(view=v)) for v in VIEWS])
+            coop_images.append(self._load_images(nid, scene, frame))
 
         # non-trainable geometry: coordinate transform + nearest-lane lookup
         # -- now town-aware, using this sample's own town's transform + graph

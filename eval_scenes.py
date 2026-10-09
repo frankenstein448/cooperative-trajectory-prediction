@@ -11,11 +11,12 @@ from scene_split import scene_split
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt", required=True)
 parser.add_argument("--no-map", action="store_true")
+parser.add_argument("--use-image-cache", action="store_true")
 args = parser.parse_args()
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-dataset = PilotDataset()
+dataset = PilotDataset(use_image_cache=args.use_image_cache)
 _, val_set = scene_split(dataset, 0.15, 42)
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
 loader = DataLoader(val_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
