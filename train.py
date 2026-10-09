@@ -91,6 +91,9 @@ def parse_args():
                               "which is always SCENE_SPLIT_SEED regardless of this value")
     parser.add_argument("--use-speed", action="store_true")
     parser.add_argument("--use-image-cache", action="store_true")
+    parser.add_argument("--normalize-cam", action="store_true",
+                         help="z-score cam (x,y,heading,speed) using train-split stats, saved to "
+                              "<out-dir>/cam_norm.json; applied to the returned sample only, never to lookups")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -114,6 +117,7 @@ def main():
         "seed": args.seed,
         "use_speed": args.use_speed,
         "use_image_cache": args.use_image_cache,
+        "normalize_cam": args.normalize_cam,
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -135,6 +139,17 @@ def main():
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)
     print(f"Train: {len(train_set)} samples | Tuning: {len(tuning_set)} samples "
           f"| Test: {len(test_set)} samples (never used here)")
+
+    if args.normalize_cam:
+        cam_values = torch.stack([dataset.get_cam_features(*dataset.samples[i][:3])
+                                   for i in train_set.indices])
+        mean = cam_values.mean(0)
+        std = cam_values.std(0) + 1e-6
+        cam_norm = {"mean": mean.tolist(), "std": std.tolist()}
+        with open(os.path.join(args.out_dir, "cam_norm.json"), "w") as f:
+            json.dump(cam_norm, f, indent=2)
+        dataset.cam_norm = cam_norm  # settable post-construction; see PilotDataset.__init__
+        print(f"Computed cam_norm from {len(train_set.indices)} train samples: {cam_norm}")
 
     train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
                                num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)

@@ -69,7 +69,8 @@ def _available_frames(agent_id: int, scene: int) -> set:
 
 class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
-                 use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False):
+                 use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
+                 cam_norm: dict = None):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
 
@@ -77,6 +78,12 @@ class PilotDataset(Dataset):
         self.use_image_cache = use_image_cache
         self.require_prev_frame = require_prev_frame
         self.use_speed = use_speed
+        # Settable post-construction too (train.py computes train-split stats
+        # AFTER building the dataset/split, then sets dataset.cam_norm directly
+        # rather than re-constructing a second dataset). {"mean": [4], "std": [4]}.
+        # Applied ONLY to the returned sample's "cam" -- every lookup inside
+        # __getitem__ (nearest-lane, etc.) must keep using the raw cam.
+        self.cam_norm = cam_norm
         self.loader = V2XMetadataLoader()
 
         if use_image_cache:
@@ -92,7 +99,8 @@ class PilotDataset(Dataset):
                 f"expected {IMG_SIZE} (ego_camera_encoder.IMG_SIZE)")
         print(f"PilotDataset: use_image_cache={use_image_cache}"
               + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
-              + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}")
+              + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
+              + f"cam_norm={'on' if cam_norm is not None else 'off'}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -116,6 +124,20 @@ class PilotDataset(Dataset):
 
     def __len__(self):
         return len(self.samples)
+
+    def get_cam_features(self, agent_id, scene, frame):
+        """Returns the RAW [4] (x,y,heading,speed) cam tensor, before any
+        normalization -- speed is motion_utils-derived if self.use_speed,
+        else get_cam's own (always-0) speed field. Factored out so train.py
+        can compute cam_norm stats over the train split without loading
+        images/LiDAR, and so __getitem__ can keep a raw copy for lookups."""
+        cam, _ = self.loader.get_cam(agent_id, scene, frame)
+        if self.use_speed:
+            ok, vx, vy = get_cv_velocity(self.loader, agent_id, scene, frame)
+            assert ok, (f"require_prev_frame guarantees frame-1 exists, but get_cv_velocity found none "
+                        f"for (agent={agent_id}, scene={scene}, frame={frame})")
+            cam[3] = math.hypot(vx, vy)  # metres per frame, from frame-1 -> frame displacement
+        return cam
 
     def _load_images(self, agent_id, scene, frame):
         """Returns VIEWS as [3,224,224] float tensors in [0,1], identical to
@@ -149,12 +171,10 @@ class PilotDataset(Dataset):
 
         images = self._load_images(agent_id, scene, frame)
 
-        cam, _ = self.loader.get_cam(agent_id, scene, frame)
-        if self.use_speed:
-            ok, vx, vy = get_cv_velocity(self.loader, agent_id, scene, frame)
-            assert ok, (f"require_prev_frame guarantees frame-1 exists, but get_cv_velocity found none "
-                        f"for (agent={agent_id}, scene={scene}, frame={frame})")
-            cam[3] = math.hypot(vx, vy)  # metres per frame, from frame-1 -> frame displacement
+        # RAW cam -- used for every lookup below (nearest-lane, etc.). Normalization,
+        # if any, is applied to a separate copy only at the very end of this method,
+        # right before building the returned dict -- never to this variable.
+        cam_raw = self.get_cam_features(agent_id, scene, frame)
 
         cpm_objects = self.loader.get_cpm(agent_id, scene, frame)
 
@@ -167,8 +187,10 @@ class PilotDataset(Dataset):
             coop_images.append(self._load_images(nid, scene, frame))
 
         # non-trainable geometry: coordinate transform + nearest-lane lookup
-        # -- now town-aware, using this sample's own town's transform + graph
-        ego_x, ego_y = cam[0].item(), cam[1].item()
+        # -- now town-aware, using this sample's own town's transform + graph.
+        # Uses cam_raw, NOT the (possibly normalized) cam built below -- this
+        # lookup needs real V2X-Sim world coordinates, not z-scored values.
+        ego_x, ego_y = cam_raw[0].item(), cam_raw[1].item()
         carla_x, carla_y = v2xsim_to_carla(ego_x, ego_y, town)
         agent_pos = torch.tensor([[carla_x, carla_y]], dtype=torch.float32)
         agent_pos_norm = (agent_pos - graph["mean"]) / graph["std"]
@@ -177,6 +199,14 @@ class PilotDataset(Dataset):
             nearby_idx = nearby_idx  # already [k], fine as-is per-sample -- collate stacks to [B, k]
 
         gt_traj, gt_mask = get_future_trajectory(self.loader, agent_id, scene, frame, self.horizon)
+
+        # cam normalization happens here, as the LAST step, on a copy -- cam_raw
+        # above (used for the lookup) is never touched.
+        cam = cam_raw
+        if self.cam_norm is not None:
+            mean = torch.tensor(self.cam_norm["mean"], dtype=torch.float32)
+            std = torch.tensor(self.cam_norm["std"], dtype=torch.float32)
+            cam = (cam_raw - mean) / std
 
         return {
             "agent_id": agent_id,
