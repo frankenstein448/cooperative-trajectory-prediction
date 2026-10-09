@@ -14,6 +14,7 @@ import re
 import glob
 import os
 import json
+import math
 import torch
 import numpy as np
 from torch.utils.data import Dataset
@@ -25,6 +26,7 @@ from ego_camera_encoder import load_image, IMG_SIZE
 from find_coop_neighbors import find_coop_neighbors
 from rgcn_map_encoder import load_graph, get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
+from motion_utils import get_cv_velocity
 
 SWEEPS_ROOT = "/home/karra/V2X-Sim-2.0/sweeps"
 CAMERA_COMPATIBLE_AGENTS = [1, 2, 3, 4]
@@ -67,9 +69,14 @@ def _available_frames(agent_id: int, scene: int) -> set:
 
 class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
-                 use_image_cache: bool = False):
+                 use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False):
+        if use_speed:
+            assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
+
         self.horizon = horizon
         self.use_image_cache = use_image_cache
+        self.require_prev_frame = require_prev_frame
+        self.use_speed = use_speed
         self.loader = V2XMetadataLoader()
 
         if use_image_cache:
@@ -84,7 +91,8 @@ class PilotDataset(Dataset):
                 f"Image cache manifest img_size={manifest['img_size']} does not match "
                 f"expected {IMG_SIZE} (ego_camera_encoder.IMG_SIZE)")
         print(f"PilotDataset: use_image_cache={use_image_cache}"
-              + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else ""))
+              + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
+              + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -100,8 +108,11 @@ class PilotDataset(Dataset):
             for agent_id in agent_ids:
                 frames = _available_frames(agent_id, scene)
                 for frame in sorted(frames):
-                    if all((frame + step) in frames for step in range(1, horizon + 1)):
-                        self.samples.append((agent_id, scene, frame, town))
+                    if not all((frame + step) in frames for step in range(1, horizon + 1)):
+                        continue
+                    if require_prev_frame and (frame - 1) not in frames:
+                        continue
+                    self.samples.append((agent_id, scene, frame, town))
 
     def __len__(self):
         return len(self.samples)
@@ -139,6 +150,12 @@ class PilotDataset(Dataset):
         images = self._load_images(agent_id, scene, frame)
 
         cam, _ = self.loader.get_cam(agent_id, scene, frame)
+        if self.use_speed:
+            ok, vx, vy = get_cv_velocity(self.loader, agent_id, scene, frame)
+            assert ok, (f"require_prev_frame guarantees frame-1 exists, but get_cv_velocity found none "
+                        f"for (agent={agent_id}, scene={scene}, frame={frame})")
+            cam[3] = math.hypot(vx, vy)  # metres per frame, from frame-1 -> frame displacement
+
         cpm_objects = self.loader.get_cpm(agent_id, scene, frame)
 
         neighbor_ids = find_coop_neighbors(self.loader, ego_agent_id=agent_id, scene=scene, frame=frame,
