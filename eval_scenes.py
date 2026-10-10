@@ -2,6 +2,8 @@ import argparse
 import os
 import json
 import statistics
+import subprocess
+from datetime import datetime
 import torch
 from torch.utils.data import DataLoader
 
@@ -16,8 +18,20 @@ parser.add_argument("--no-map", action="store_true")
 parser.add_argument("--use-image-cache", action="store_true")
 parser.add_argument("--run-dir", default=None,
                      help="read <run-dir>/config.json for use_image_cache/require_prev_frame/use_speed/no_map etc. and "
-                          "evaluate on three_way_scene_split's tuning part, instead of the old val split")
+                          "evaluate on three_way_scene_split's tuning (or --split test) part, instead of the old val split")
+parser.add_argument("--split", choices=["tuning", "test"], default="tuning",
+                     help="which three_way_scene_split part to evaluate (requires --run-dir). "
+                          "test requires --confirm-final-test and is logged to runs/TEST_EVALS.log")
+parser.add_argument("--confirm-final-test", action="store_true",
+                     help="required for --split test: acknowledges this is a final, logged test-set evaluation")
 args = parser.parse_args()
+
+TEST_EVALS_LOG = "runs/TEST_EVALS.log"
+if args.split == "test":
+    if not args.run_dir:
+        parser.error("--split test requires --run-dir (the test split only exists in three_way_scene_split)")
+    if not args.confirm_final_test:
+        parser.error("--split test requires --confirm-final-test")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -60,7 +74,20 @@ else:
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
                         use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy)
 if args.run_dir:
-    _, val_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
+    _, tuning_set, test_set = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
+    val_set = test_set if args.split == "test" else tuning_set
+    print(f"Evaluating on the {args.split.upper()} split ({len(val_set)} samples)")
+    if args.split == "test":
+        # Logged BEFORE evaluating, so an attempt is on record even if it crashes partway.
+        try:
+            commit = subprocess.check_output(["git", "rev-parse", "HEAD"],
+                                             cwd=os.path.dirname(os.path.abspath(__file__))).decode().strip()
+        except Exception as e:
+            commit = f"<unavailable: {e}>"
+        with open(TEST_EVALS_LOG, "a") as f:
+            f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
+                    f"git_commit={commit}\tckpt={args.ckpt}\n")
+        print(f"Appended this test evaluation to {TEST_EVALS_LOG}")
 else:
     _, val_set = scene_split(dataset, 0.15, 42)  # unchanged old path
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
