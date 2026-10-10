@@ -71,6 +71,84 @@ class WinnerTakesAllLoss(nn.Module):
         }
 
 
+RELAXED_WTA_EPS = 0.05  # fixed for run E; not a CLI knob
+
+
+class RelaxedWTALoss(nn.Module):
+    """Relaxed winner-takes-all: same winner selection, smooth-L1, masking and
+    classification term as WinnerTakesAllLoss, but regression is spread over
+    all modes -- winner weighted (1-eps), each other mode eps/(K-1). Keeps
+    non-winning modes from drifting arbitrarily far from plausible futures.
+
+    reg = (1-eps) * reg_winner + eps/(K-1) * reg_others, where reg_winner is
+    computed exactly as in WinnerTakesAllLoss and reg_others is the sum of the
+    other modes' masked smooth-L1, normalized by the same (step, xy) count. So
+    eps=0 gives 1.0*reg_winner + 0.0*reg_others == WinnerTakesAllLoss exactly.
+    """
+    def __init__(self, eps: float = RELAXED_WTA_EPS, cls_weight: float = 1.0):
+        super().__init__()
+        assert 0.0 <= eps < 1.0, f"eps must be in [0, 1), got {eps}"
+        self.eps = eps
+        self.cls_weight = cls_weight
+
+    def forward(self, trajs: torch.Tensor, conf: torch.Tensor,
+                gt_traj: torch.Tensor, gt_mask: torch.Tensor):
+        """Same inputs/outputs as WinnerTakesAllLoss.forward."""
+        B, n_modes, horizon, _ = trajs.shape
+        assert n_modes > 1, "RelaxedWTALoss needs more than one mode"
+
+        # ---- winner selection: identical to WinnerTakesAllLoss ----
+        gt_expanded = gt_traj.unsqueeze(1)                    # [B, 1, horizon, 2]
+        mask_expanded = gt_mask.unsqueeze(1).unsqueeze(-1)    # [B, 1, horizon, 1]
+        sq_err = (trajs - gt_expanded) ** 2
+        sq_err = sq_err * mask_expanded
+        per_step_dist = sq_err.sum(dim=-1).sqrt()              # [B, n_modes, horizon]
+        valid_counts = gt_mask.sum(dim=-1).clamp(min=1).unsqueeze(1)
+        ade_per_mode = per_step_dist.sum(dim=-1) / valid_counts  # [B, n_modes]
+        winner_idx = ade_per_mode.argmin(dim=-1)               # [B]
+
+        norm = (gt_mask.sum() * 2).clamp(min=1)                # valid (step, xy) count, as in WTA
+
+        # ---- winner regression: identical to WinnerTakesAllLoss ----
+        batch_idx = torch.arange(B)
+        winning_traj = trajs[batch_idx, winner_idx]
+        reg_winner_per_step = F.smooth_l1_loss(winning_traj, gt_traj, reduction="none")
+        reg_winner_per_step = reg_winner_per_step * gt_mask.unsqueeze(-1)
+        reg_winner = reg_winner_per_step.sum() / norm
+
+        # ---- other modes: same smooth-L1 and masking, winner excluded ----
+        reg_all_per_step = F.smooth_l1_loss(trajs, gt_expanded.expand_as(trajs), reduction="none")
+        reg_all_per_step = reg_all_per_step * mask_expanded    # [B, n_modes, horizon, 2]
+        not_winner = torch.ones(B, n_modes, device=trajs.device)
+        not_winner[batch_idx, winner_idx] = 0.0
+        reg_others = (reg_all_per_step * not_winner[:, :, None, None]).sum() / norm
+
+        reg_loss = (1.0 - self.eps) * reg_winner + (self.eps / (n_modes - 1)) * reg_others
+
+        # ---- classification: unchanged from WinnerTakesAllLoss ----
+        cls_loss = F.cross_entropy(conf, winner_idx)
+
+        total_loss = reg_loss + self.cls_weight * cls_loss
+
+        return total_loss, {
+            "reg_loss": reg_loss.item(),
+            "cls_loss": cls_loss.item(),
+            "reg_winner": reg_winner.item(),
+            "reg_others": reg_others.item(),
+            "winner_idx": winner_idx.tolist(),
+            "ade_per_mode": ade_per_mode.detach(),
+        }
+
+
+def build_loss(name: str):
+    """'wta' -> WinnerTakesAllLoss (default); 'relaxed_wta' -> RelaxedWTALoss(eps=RELAXED_WTA_EPS)."""
+    if name == "wta":
+        return WinnerTakesAllLoss()
+    if name == "relaxed_wta":
+        return RelaxedWTALoss(eps=RELAXED_WTA_EPS)
+    raise ValueError(f"unknown loss {name!r}")
+
+
 if __name__ == "__main__":
     from ego_stream import EgoStream
     from ego_sensor_encoder import load_semantic_lidar

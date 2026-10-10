@@ -10,6 +10,10 @@ NUM_WORKERS lowered to 2 here (vs train.py's 4) based on the DataLoader
 warning seen in the Town05-only pilot run, where 4 workers on a 2-core
 system roughly doubled epoch time from ~650s to ~1480s partway through.
 
+Superseded for new runs by `train.py --no-map` (three-way scene split,
+config.json, --run-dir-aware eval). Kept only to reproduce the old
+checkpoints_scene_no_map run.
+
 Run in gpu-test-venv.
 """
 import os

@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion
-from trajectory_loss import WinnerTakesAllLoss
+from trajectory_loss import build_loss, RELAXED_WTA_EPS
 from scene_split import three_way_scene_split
 
 BATCH_SIZE = 8
@@ -97,6 +97,12 @@ def parse_args():
     parser.add_argument("--drop-cam-xy", action="store_true",
                          help="after cam normalization, zero cam[0:2] (x,y) in the returned sample only; "
                               "lookups keep raw cam. Requires --normalize-cam")
+    parser.add_argument("--loss", choices=["wta", "relaxed_wta"], default="wta",
+                         help=f"wta: pure winner-takes-all (default). relaxed_wta: winner regression weight 1-eps, "
+                              f"each other mode eps/(K-1), eps={RELAXED_WTA_EPS} fixed")
+    parser.add_argument("--no-map", action="store_true",
+                         help="EndToEndFusion(use_map=False): map stream removed, for the ablation "
+                              "(replaces train_ablation.py for new runs)")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -124,6 +130,9 @@ def main():
         "use_image_cache": args.use_image_cache,
         "normalize_cam": args.normalize_cam,
         "drop_cam_xy": args.drop_cam_xy,
+        "loss": args.loss,
+        "relaxed_wta_eps": RELAXED_WTA_EPS if args.loss == "relaxed_wta" else None,
+        "no_map": args.no_map,
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -163,8 +172,10 @@ def main():
     val_loader = DataLoader(tuning_set, batch_size=BATCH_SIZE, shuffle=False,
                              num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
 
-    model = EndToEndFusion(device=DEVICE).to(DEVICE)
-    loss_fn = WinnerTakesAllLoss()
+    model = EndToEndFusion(device=DEVICE, use_map=not args.no_map).to(DEVICE)
+    loss_fn = build_loss(args.loss)
+    print(f"Model use_map={not args.no_map}, loss={type(loss_fn).__name__}"
+          + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else ""))
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)

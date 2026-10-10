@@ -52,6 +52,7 @@ if run_config.get("normalize_cam"):
         cam_norm = json.load(f)
 drop_cam_xy = run_config.get("drop_cam_xy", False)  # absent in pre-D configs
 assert not drop_cam_xy or cam_norm is not None, f"{config_path}: drop_cam_xy=True requires normalize_cam=True"
+use_map = not run_config.get("no_map", False)  # absent in pre-E configs
 
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
@@ -59,11 +60,11 @@ dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
 _, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
-model = load_model(ckpt_path, use_map=True).to(DEVICE).eval()
+model = load_model(ckpt_path, use_map=use_map).to(DEVICE).eval()
 print(f"ckpt={ckpt_path}")
 print(f"run config: use_speed={run_config['use_speed']} use_image_cache={run_config['use_image_cache']} "
       f"require_prev_frame={run_config['require_prev_frame']} normalize_cam={cam_norm is not None} "
-      f"drop_cam_xy={drop_cam_xy}")
+      f"drop_cam_xy={drop_cam_xy} use_map={use_map}")
 
 
 def raw_speed(agent_id, scene, frame):

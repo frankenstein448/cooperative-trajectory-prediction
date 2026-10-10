@@ -15,7 +15,7 @@ parser.add_argument("--ckpt", required=True)
 parser.add_argument("--no-map", action="store_true")
 parser.add_argument("--use-image-cache", action="store_true")
 parser.add_argument("--run-dir", default=None,
-                     help="read <run-dir>/config.json for use_image_cache/require_prev_frame/use_speed and "
+                     help="read <run-dir>/config.json for use_image_cache/require_prev_frame/use_speed/no_map etc. and "
                           "evaluate on three_way_scene_split's tuning part, instead of the old val split")
 args = parser.parse_args()
 
@@ -41,16 +41,21 @@ if args.run_dir:
         with open(cam_norm_path) as f:
             cam_norm = json.load(f)
     drop_cam_xy = run_config.get("drop_cam_xy", False)  # absent in pre-D configs
+    run_no_map = run_config.get("no_map", False)        # absent in pre-E configs
+    if args.no_map and not run_no_map:
+        raise ValueError(f"--no-map conflicts with {config_path}'s no_map={run_no_map}")
+    use_map = not run_no_map
     assert not drop_cam_xy or cam_norm is not None, f"{config_path}: drop_cam_xy=True requires normalize_cam=True"
     print(f"--run-dir {args.run_dir}: use_image_cache={use_image_cache}, "
           f"require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
-          f"normalize_cam={cam_norm is not None}, drop_cam_xy={drop_cam_xy} (from config.json)")
+          f"normalize_cam={cam_norm is not None}, drop_cam_xy={drop_cam_xy}, use_map={use_map} (from config.json)")
 else:
     use_image_cache = args.use_image_cache
     require_prev_frame = False
     use_speed = False
     cam_norm = None
     drop_cam_xy = False
+    use_map = not args.no_map
 
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
                         use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy)
@@ -60,8 +65,8 @@ else:
     _, val_set = scene_split(dataset, 0.15, 42)  # unchanged old path
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
 loader = DataLoader(val_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
-model = load_model(args.ckpt, use_map=not args.no_map).to(DEVICE).eval()
-print(f"ckpt={args.ckpt}  use_map={not args.no_map}")
+model = load_model(args.ckpt, use_map=use_map).to(DEVICE).eval()
+print(f"ckpt={args.ckpt}  use_map={use_map}")
 
 cols = {k: [] for k in ("ade6", "fde6", "ade1", "fde1", "zade", "zfde", "valid", "first",
                          "cvade", "cvfde", "cv1", "cv_ok", "v_norm")}
