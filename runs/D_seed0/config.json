@@ -1,0 +1,15 @@
+{
+  "seed": 0,
+  "use_speed": true,
+  "use_image_cache": true,
+  "normalize_cam": true,
+  "drop_cam_xy": true,
+  "epochs": 12,
+  "out_dir": "runs/D_seed0",
+  "require_prev_frame": true,
+  "batch_size": 8,
+  "lr": 0.0001,
+  "num_workers": 2,
+  "scene_split_seed": 42,
+  "git_commit": "7505a93e6b4cd6c3f11e2f3961b5b54fbafd9d69"
+}

@@ -1,0 +1,17 @@
+ckpt=checkpoints_scene_full/checkpoint_epoch30.pt  use_map=True
+output[0]: (8, 128)
+output[1]: (8, 6, 30, 2)
+output[2]: (8, 6)
+
+valid samples: 2240, K=6
+score range [-13.700, 13.353], mean row sum -2.180 (1.0 = probabilities; otherwise logits or something else)
+normalized entropy of mode distribution: 0.319 (1.0 = uniform, 0 = one-hot)
+
+ADE best mode (minADE6): 2.646 m
+ADE argmax-score mode:     7.484 m
+ADE argmin-score mode:     16.539 m
+ADE averaged over modes:   12.430 m  (= expected ADE of a random mode)
+
+argmax picks best mode: 0.462  (chance = 0.167)
+best-mode slot histogram:   [280, 1350, 202, 177, 79, 152]
+argmax-score slot histogram: [443, 1040, 256, 108, 75, 318]

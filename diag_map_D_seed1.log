@@ -1,0 +1,11 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True
+ckpt=runs/D_seed1/checkpoint_epoch12.pt
+run config: use_speed=True use_image_cache=True require_prev_frame=True normalize_cam=True drop_cam_xy=True
+Paired 2208 tuning samples with non-test partners (same town, other scene), seed 0
+
+Swap geometry: partner CARLA-position distance mean=124.9 m median=111.9 m; swapped nearby_idx identical to real in 11/2208 samples
+
+Over 2208 tuning samples (real map input vs map input from another scene, same town):
+  [stationary] n= 1138  top-1 L2 change=1.5906 m  mode-flip frac=0.0967  ADE1 real=2.359 swapped=2.545 (delta=+0.186 m)  minADE6 real=0.993 swapped=0.980 (delta=-0.013 m)
+  [moving    ] n= 1070  top-1 L2 change=4.4942 m  mode-flip frac=0.2832  ADE1 real=8.784 swapped=8.434 (delta=-0.350 m)  minADE6 real=4.049 swapped=4.179 (delta=+0.130 m)
+  [ALL       ] n= 2208  top-1 L2 change=2.9977 m  mode-flip frac=0.1870  ADE1 real=5.473 swapped=5.399 (delta=-0.074 m)  minADE6 real=2.474 swapped=2.531 (delta=+0.056 m)

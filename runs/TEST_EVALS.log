@@ -1,0 +1,6 @@
+2026-10-10T21:11:22	run_dir=runs/D_seed0	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/D_seed0/checkpoint_epoch12.pt
+2026-10-10T21:13:28	run_dir=runs/D_seed1	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/D_seed1/checkpoint_epoch12.pt
+2026-10-10T21:15:29	run_dir=runs/D_seed2	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/D_seed2/checkpoint_epoch12.pt
+2026-10-10T21:17:28	run_dir=runs/Dnomap_seed0	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed0/checkpoint_epoch12.pt
+2026-10-10T21:19:30	run_dir=runs/Dnomap_seed1	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed1/checkpoint_epoch12.pt
+2026-10-10T21:21:30	run_dir=runs/Dnomap_seed2	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed2/checkpoint_epoch12.pt

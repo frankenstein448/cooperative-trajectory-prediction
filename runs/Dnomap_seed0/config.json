@@ -1,0 +1,18 @@
+{
+  "seed": 0,
+  "use_speed": true,
+  "use_image_cache": true,
+  "normalize_cam": true,
+  "drop_cam_xy": true,
+  "loss": "wta",
+  "relaxed_wta_eps": null,
+  "no_map": true,
+  "epochs": 12,
+  "out_dir": "runs/Dnomap_seed0",
+  "require_prev_frame": true,
+  "batch_size": 8,
+  "lr": 0.0001,
+  "num_workers": 2,
+  "scene_split_seed": 42,
+  "git_commit": "c06863c13bcb5dd56841c60ed5cac9f765774b8f"
+}

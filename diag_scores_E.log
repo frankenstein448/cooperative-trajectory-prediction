@@ -1,0 +1,18 @@
+PilotDataset: use_image_cache=False, require_prev_frame=False, use_speed=False, cam_norm=off, drop_cam_xy=False
+ckpt=runs/E_seed0/checkpoint_epoch12.pt  use_map=True
+output[0]: (8, 128)
+output[1]: (8, 6, 30, 2)
+output[2]: (8, 6)
+
+valid samples: 2240, K=6
+score range [-4.548, 7.560], mean row sum 1.023 (1.0 = probabilities; otherwise logits or something else)
+normalized entropy of mode distribution: 0.286 (1.0 = uniform, 0 = one-hot)
+
+ADE best mode (minADE6): 6.482 m
+ADE argmax-score mode:     12.438 m
+ADE argmin-score mode:     15.953 m
+ADE averaged over modes:   14.396 m  (= expected ADE of a random mode)
+
+argmax picks best mode: 0.586  (chance = 0.167)
+best-mode slot histogram:   [20, 45, 31, 45, 70, 2029]
+argmax-score slot histogram: [203, 0, 292, 0, 487, 1258]

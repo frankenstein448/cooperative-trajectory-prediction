@@ -1,0 +1,11 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True
+ckpt=runs/D_seed0/checkpoint_epoch12.pt
+run config: use_speed=True use_image_cache=True require_prev_frame=True normalize_cam=True drop_cam_xy=True
+
+Moving samples in tuning split: 1070 / 2208  median RAW speed = 0.4877 m/frame
+Mean |cam| over tuning split (x, y, heading, speed), as seen by the model: 0.000, 0.000, 0.808, 0.596
+
+Over 2208 tuning samples (moving: real RAW speed -> 0; stationary: 0 -> median RAW moving speed 0.4877):
+  [stationary] n= 1138  mean L2 change=3.3652 m  mode-flip frac=0.2004  final-step disp: real=2.1197 m, perturbed=8.1074 m
+  [moving    ] n= 1070  mean L2 change=7.5585 m  mode-flip frac=0.3738  final-step disp: real=14.8149 m, perturbed=3.6757 m
+  [ALL       ] n= 2208  mean L2 change=5.3973 m  mode-flip frac=0.2844  final-step disp: real=8.2718 m, perturbed=5.9598 m

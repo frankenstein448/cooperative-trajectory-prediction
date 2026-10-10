@@ -1,0 +1,13 @@
+{
+  "seed": 0,
+  "use_speed": true,
+  "use_image_cache": true,
+  "epochs": 12,
+  "out_dir": "runs/B_seed0",
+  "require_prev_frame": true,
+  "batch_size": 8,
+  "lr": 0.0001,
+  "num_workers": 2,
+  "scene_split_seed": 42,
+  "git_commit": "b06fc0deb871a14492d74aa57ecb20231a7fe748"
+}

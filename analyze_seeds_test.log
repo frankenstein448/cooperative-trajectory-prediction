@@ -1,0 +1,26 @@
+Per run, ALL (minADE6, ADE1):
+  D_seed0        1.919  4.586
+  D_seed1        1.961  5.297
+  D_seed2        1.839  4.485
+  Dnomap_seed0   1.892  5.264
+  Dnomap_seed1   1.984  4.208
+  Dnomap_seed2   1.898  4.157
+
+ALL minADE6: full 1.906 +/- 0.062   no-map 1.925 +/- 0.051   gap (no-map - full) +0.018
+
+ALL ADE1: full 4.789 +/- 0.443   no-map 4.543 +/- 0.625   gap (no-map - full) -0.246
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #79      0.434     0.416  -0.018 |    0.486     0.459  -0.027
+Town04 #92      1.884     1.941  +0.057 |    5.492     5.236  -0.256
+Town05 #3       1.556     1.589  +0.033 |    3.084     3.605  +0.521
+Town05 #14      1.754     1.757  +0.003 |    8.667     6.784  -1.883
+Town05 #35      0.750     1.076  +0.325 |    2.213     2.520  +0.307
+Town05 #37      1.465     1.344  -0.120 |    3.367     3.484  +0.117
+Town05 #49      2.587     2.125  -0.463 |    6.512     6.464  -0.048
+Town05 #78      4.824     5.149  +0.325 |    8.496     7.791  -0.706
+Full better in 5/8 scenes (minADE6), 3/8 scenes (ADE1)
+
+RULE (minADE6): scenes 5/8 >= 7? False   gap +0.018 > 2 x max std 0.124? False
+VERDICT: no detectable map effect under the scene-held-out protocol
