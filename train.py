@@ -94,12 +94,17 @@ def parse_args():
     parser.add_argument("--normalize-cam", action="store_true",
                          help="z-score cam (x,y,heading,speed) using train-split stats, saved to "
                               "<out-dir>/cam_norm.json; applied to the returned sample only, never to lookups")
+    parser.add_argument("--drop-cam-xy", action="store_true",
+                         help="after cam normalization, zero cam[0:2] (x,y) in the returned sample only; "
+                              "lookups keep raw cam. Requires --normalize-cam")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
                          help="build dataset/splits, write config.json, run 2 train + 2 val batches, "
                               "then exit without saving any checkpoint")
-    return parser.parse_args()
+    args = parser.parse_args()
+    assert not args.drop_cam_xy or args.normalize_cam, "--drop-cam-xy requires --normalize-cam"
+    return args
 
 
 def main():
@@ -118,6 +123,7 @@ def main():
         "use_speed": args.use_speed,
         "use_image_cache": args.use_image_cache,
         "normalize_cam": args.normalize_cam,
+        "drop_cam_xy": args.drop_cam_xy,
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -133,7 +139,8 @@ def main():
 
     dataset = PilotDataset(use_image_cache=args.use_image_cache,
                             require_prev_frame=REQUIRE_PREV_FRAME,
-                            use_speed=args.use_speed)
+                            use_speed=args.use_speed,
+                            drop_cam_xy=args.drop_cam_xy)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)

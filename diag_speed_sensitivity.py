@@ -50,17 +50,20 @@ if run_config.get("normalize_cam"):
         raise FileNotFoundError(f"run config says normalize_cam=True but no cam_norm.json at {cam_norm_path}")
     with open(cam_norm_path) as f:
         cam_norm = json.load(f)
+drop_cam_xy = run_config.get("drop_cam_xy", False)  # absent in pre-D configs
+assert not drop_cam_xy or cam_norm is not None, f"{config_path}: drop_cam_xy=True requires normalize_cam=True"
 
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
-                        use_speed=run_config["use_speed"], cam_norm=cam_norm)
+                        use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy)
 _, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
 model = load_model(ckpt_path, use_map=True).to(DEVICE).eval()
 print(f"ckpt={ckpt_path}")
 print(f"run config: use_speed={run_config['use_speed']} use_image_cache={run_config['use_image_cache']} "
-      f"require_prev_frame={run_config['require_prev_frame']} normalize_cam={cam_norm is not None}")
+      f"require_prev_frame={run_config['require_prev_frame']} normalize_cam={cam_norm is not None} "
+      f"drop_cam_xy={drop_cam_xy}")
 
 
 def raw_speed(agent_id, scene, frame):

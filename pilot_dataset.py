@@ -70,7 +70,7 @@ def _available_frames(agent_id: int, scene: int) -> set:
 class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
-                 cam_norm: dict = None):
+                 cam_norm: dict = None, drop_cam_xy: bool = False):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
 
@@ -84,6 +84,11 @@ class PilotDataset(Dataset):
         # Applied ONLY to the returned sample's "cam" -- every lookup inside
         # __getitem__ (nearest-lane, etc.) must keep using the raw cam.
         self.cam_norm = cam_norm
+        # Zeroes the returned sample's cam[0:2] (x,y) AFTER normalization, so the
+        # model sees no absolute position. Requires cam_norm (checked in
+        # __getitem__, since train.py sets cam_norm post-construction). Lookups
+        # keep using cam_raw, exactly as with cam_norm alone.
+        self.drop_cam_xy = drop_cam_xy
         self.loader = V2XMetadataLoader()
 
         if use_image_cache:
@@ -100,7 +105,7 @@ class PilotDataset(Dataset):
         print(f"PilotDataset: use_image_cache={use_image_cache}"
               + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
               + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
-              + f"cam_norm={'on' if cam_norm is not None else 'off'}")
+              + f"cam_norm={'on' if cam_norm is not None else 'off'}, drop_cam_xy={drop_cam_xy}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -207,6 +212,10 @@ class PilotDataset(Dataset):
             mean = torch.tensor(self.cam_norm["mean"], dtype=torch.float32)
             std = torch.tensor(self.cam_norm["std"], dtype=torch.float32)
             cam = (cam_raw - mean) / std
+        if self.drop_cam_xy:
+            assert self.cam_norm is not None, "drop_cam_xy=True requires cam_norm (--normalize-cam)"
+            cam = cam.clone()  # never write into cam_raw
+            cam[0:2] = 0.0
 
         return {
             "agent_id": agent_id,
