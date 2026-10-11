@@ -23,6 +23,7 @@ from end_to_end_model import EndToEndFusion
 from trajectory_loss import build_loss, RELAXED_WTA_EPS
 from scene_split import three_way_scene_split
 from sensor_degradation import DEGRADE_MODES, degrade_config
+from history_encoder import HISTORY_ENCODERS
 
 BATCH_SIZE = 8
 LR = 1e-4          # lower than the frozen-encoder run (1e-3) -- more parameters now training, needs more caution
@@ -108,6 +109,16 @@ def parse_args():
                          help="sensor degradation (sensor_degradation.py) applied at load time to every agent's "
                               "LiDAR/images, in the train AND tuning loaders; V2X messages and map inputs "
                               "untouched. Default off")
+    parser.add_argument("--history-frames", type=int, default=0,
+                         help="H > 0: keep only samples with frames frame-H .. frame, feed the [H, 2] observed "
+                              "history (z-scored per coordinate with train-split stats, saved to "
+                              "<out-dir>/history_norm.json) through --history-encoder, concatenated with the "
+                              "CAM embedding. 0 (default) = model identical to D")
+    parser.add_argument("--history-encoder", choices=HISTORY_ENCODERS, default="gru",
+                         help="history encoder (history_encoder.py); only used with --history-frames > 0")
+    parser.add_argument("--require-history-frames", type=int, default=0,
+                         help="control for --history-frames N: the same sample filter (frames frame-N .. frame "
+                              "must exist), but no history input")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -115,6 +126,8 @@ def parse_args():
                               "then exit without saving any checkpoint")
     args = parser.parse_args()
     assert not args.drop_cam_xy or args.normalize_cam, "--drop-cam-xy requires --normalize-cam"
+    if args.history_frames and args.require_history_frames:
+        parser.error("--require-history-frames is for the no-history control; --history-frames filters on its own")
     return args
 
 
@@ -139,6 +152,9 @@ def main():
         "relaxed_wta_eps": RELAXED_WTA_EPS if args.loss == "relaxed_wta" else None,
         "no_map": args.no_map,
         "degrade": degrade_config(args.degrade),
+        "history_frames": args.history_frames,
+        "history_encoder": args.history_encoder if args.history_frames > 0 else None,
+        "require_history_frames": args.require_history_frames,
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -156,7 +172,9 @@ def main():
                             require_prev_frame=REQUIRE_PREV_FRAME,
                             use_speed=args.use_speed,
                             drop_cam_xy=args.drop_cam_xy,
-                            degrade=args.degrade)
+                            degrade=args.degrade,
+                            history_frames=args.history_frames,
+                            require_history_frames=args.require_history_frames)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)
@@ -174,12 +192,30 @@ def main():
         dataset.cam_norm = cam_norm  # settable post-construction; see PilotDataset.__init__
         print(f"Computed cam_norm from {len(train_set.indices)} train samples: {cam_norm}")
 
+    if args.history_frames > 0:
+        hist_values = torch.cat([dataset.get_history(*dataset.samples[i][:3])
+                                  for i in train_set.indices])  # [N*H, 2]
+        mean = hist_values.mean(0)
+        std = hist_values.std(0) + 1e-6
+        history_norm = {"mean": mean.tolist(), "std": std.tolist()}
+        with open(os.path.join(args.out_dir, "history_norm.json"), "w") as f:
+            json.dump(history_norm, f, indent=2)
+        dataset.history_norm = history_norm  # settable post-construction, like cam_norm
+        print(f"Computed history_norm from {len(train_set.indices)} train samples: {history_norm}")
+
     train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
                                num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
     val_loader = DataLoader(tuning_set, batch_size=BATCH_SIZE, shuffle=False,
                              num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
 
-    model = EndToEndFusion(device=DEVICE, use_map=not args.no_map).to(DEVICE)
+    model = EndToEndFusion(device=DEVICE, use_map=not args.no_map, history_frames=args.history_frames,
+                            history_encoder=args.history_encoder).to(DEVICE)
+    if args.history_frames == 0:
+        # history off must be exactly D's model: same parameters as one built without the history kwargs
+        with torch.random.fork_rng(devices=[]):  # building the reference must not shift the run's RNG stream
+            n_ref = sum(p.numel() for p in EndToEndFusion(device="cpu", use_map=not args.no_map).parameters())
+        n_off = sum(p.numel() for p in model.parameters())
+        assert n_off == n_ref, f"history off changed the parameter count: {n_off} vs {n_ref}"
     loss_fn = build_loss(args.loss)
     print(f"Model use_map={not args.no_map}, loss={type(loss_fn).__name__}"
           + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else ""))

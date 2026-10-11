@@ -25,7 +25,7 @@ import math
 import torch
 from torch.utils.data import DataLoader
 
-from pilot_dataset import PilotDataset, pilot_collate_fn
+from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
 from scene_split import three_way_scene_split
@@ -56,11 +56,13 @@ use_map = not run_config.get("no_map", False)  # absent in pre-E configs
 
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
-                        use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy)
+                        use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy,
+                        **load_history_settings(args.run_dir, run_config))
 _, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
-model = load_model(ckpt_path, use_map=use_map).to(DEVICE).eval()
+model = load_model(ckpt_path, use_map=use_map, history_frames=dataset.history_frames,
+                   history_encoder=run_config.get("history_encoder") or "gru").to(DEVICE).eval()
 print(f"ckpt={ckpt_path}")
 print(f"run config: use_speed={run_config['use_speed']} use_image_cache={run_config['use_image_cache']} "
       f"require_prev_frame={run_config['require_prev_frame']} normalize_cam={cam_norm is not None} "

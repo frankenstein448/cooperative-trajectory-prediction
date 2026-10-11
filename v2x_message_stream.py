@@ -127,17 +127,26 @@ class CPMEncoder(nn.Module):
 
 
 class V2XMessageStream(nn.Module):
-    """CAM + CPM -> concat -> project to [128]."""
-    def __init__(self, out_dim=EMBED_DIM):
+    """CAM + CPM -> concat -> project to [128].
+
+    use_history=True: a history embedding (same width as the CAM embedding,
+    computed batched by EndToEndFusion's history encoder) is concatenated right
+    after the CAM embedding, and fuse grows to 3*out_dim inputs. With
+    use_history=False the module is exactly the original one."""
+    def __init__(self, out_dim=EMBED_DIM, use_history=False):
         super().__init__()
+        self.use_history = use_history
         self.cam_enc = CAMEncoder(out_dim=out_dim)
         self.cpm_enc = CPMEncoder(out_dim=out_dim)
-        self.fuse = nn.Linear(out_dim * 2, out_dim)
+        self.fuse = nn.Linear(out_dim * (3 if use_history else 2), out_dim)
 
-    def forward(self, cam: torch.Tensor, cpm_objects: torch.Tensor) -> torch.Tensor:
+    def forward(self, cam: torch.Tensor, cpm_objects: torch.Tensor, history_embed: torch.Tensor = None) -> torch.Tensor:
+        assert (history_embed is not None) == self.use_history, (
+            f"use_history={self.use_history} but history_embed is {'given' if history_embed is not None else 'None'}")
         cam_embed = self.cam_enc(cam)
         cpm_embed = self.cpm_enc(cpm_objects)
-        concat = torch.cat([cam_embed, cpm_embed], dim=0)
+        parts = [cam_embed, history_embed, cpm_embed] if self.use_history else [cam_embed, cpm_embed]
+        concat = torch.cat(parts, dim=0)
         return self.fuse(concat)
 
 

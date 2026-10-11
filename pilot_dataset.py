@@ -19,7 +19,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 
-from v2x_message_stream import V2XMetadataLoader
+from v2x_message_stream import V2XMetadataLoader, quaternion_to_yaw
 from ground_truth_extractor import get_future_trajectory, HORIZON
 from ego_sensor_encoder import load_semantic_lidar
 from ego_camera_encoder import load_image, IMG_SIZE
@@ -71,9 +71,14 @@ def _available_frames(agent_id: int, scene: int) -> set:
 class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
-                 cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None):
+                 cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None,
+                 history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
+        assert history_frames >= 0 and require_history_frames >= 0
+        assert not (history_frames and require_history_frames), (
+            "history_frames already implies its own frame filter; require_history_frames is for the "
+            "no-history control only")
 
         self.horizon = horizon
         self.use_image_cache = use_image_cache
@@ -95,6 +100,14 @@ class PilotDataset(Dataset):
         # nearby_idx and gt are never touched. Settable post-construction.
         assert degrade is None or degrade in DEGRADE_MODES, f"unknown degrade={degrade!r}"
         self.degrade = degrade
+        # history_frames=H > 0: keep only samples whose agent has frames frame-H .. frame,
+        # and return "history" [H, 2] (see get_history). require_history_frames=N > 0:
+        # the same filter with N, but no history returned -- the control for H=N.
+        self.history_frames = history_frames
+        self.require_history_frames = require_history_frames
+        # Like cam_norm: {"mean": [2], "std": [2]} per coordinate, from the train
+        # split, settable post-construction, applied to the returned copy only.
+        self.history_norm = history_norm
         self.loader = V2XMetadataLoader()
 
         if use_image_cache:
@@ -112,7 +125,9 @@ class PilotDataset(Dataset):
               + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
               + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
               + f"cam_norm={'on' if cam_norm is not None else 'off'}, drop_cam_xy={drop_cam_xy}, "
-              + f"degrade={degrade}")
+              + f"degrade={degrade}, history_frames={history_frames}, "
+              + f"require_history_frames={require_history_frames}, "
+              + f"history_norm={'on' if history_norm is not None else 'off'}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -122,7 +137,9 @@ class PilotDataset(Dataset):
             data, id_to_idx, mean, std = load_graph(f"topology/{town}_topology.pkl")
             self.town_graphs[town] = {"data": data, "id_to_idx": id_to_idx, "mean": mean, "std": std}
 
+        n_past = max(history_frames, require_history_frames)
         self.samples = []
+        n_dropped_history = 0
         for scene in scenes:
             town = SCENE_TO_TOWN[scene]
             for agent_id in agent_ids:
@@ -132,7 +149,13 @@ class PilotDataset(Dataset):
                         continue
                     if require_prev_frame and (frame - 1) not in frames:
                         continue
+                    if n_past and not all((frame - step) in frames for step in range(1, n_past + 1)):
+                        n_dropped_history += 1
+                        continue
                     self.samples.append((agent_id, scene, frame, town))
+        if n_past:
+            print(f"PilotDataset: dropped {n_dropped_history} samples without frames frame-{n_past} .. frame "
+                  f"({len(self.samples)} kept)")
 
     def __len__(self):
         return len(self.samples)
@@ -150,6 +173,30 @@ class PilotDataset(Dataset):
                         f"for (agent={agent_id}, scene={scene}, frame={frame})")
             cam[3] = math.hypot(vx, vy)  # metres per frame, from frame-1 -> frame displacement
         return cam
+
+    def get_history(self, agent_id, scene, frame):
+        """Returns the RAW [H, 2] history: positions at frame-H .. frame-1 minus the
+        position at `frame`, rotated into the heading at `frame` -- the convention
+        of ground_truth_extractor.get_future_trajectory / motion_utils.get_cv_velocity,
+        so history[-1] == -(get_cv_velocity's vx, vy). A parked agent gives all
+        zeros. Factored out (like get_cam_features) so train.py can compute
+        history_norm over the train split without loading sensors."""
+        H = self.history_frames
+        cur_pose = self.loader.ego_pose[self.loader.find_sample_data(agent_id, scene, frame)["ego_pose_token"]]
+        cur_x, cur_y, _ = cur_pose["translation"]
+        cur_heading = quaternion_to_yaw(cur_pose["rotation"])
+        cos_h, sin_h = math.cos(-cur_heading), math.sin(-cur_heading)  # inverse rotation
+
+        history = torch.zeros((H, 2), dtype=torch.float32)
+        for k in range(H):
+            past_frame = frame - H + k
+            # the sample filter guarantees these frames exist; find_sample_data raises if not
+            pose = self.loader.ego_pose[self.loader.find_sample_data(agent_id, scene, past_frame)["ego_pose_token"]]
+            px, py, _ = pose["translation"]
+            dx, dy = px - cur_x, py - cur_y
+            history[k, 0] = dx * cos_h - dy * sin_h
+            history[k, 1] = dx * sin_h + dy * cos_h
+        return history
 
     def _load_images(self, agent_id, scene, frame):
         """Returns VIEWS as [3,224,224] float tensors in [0,1], identical to
@@ -232,6 +279,15 @@ class PilotDataset(Dataset):
             cam = cam.clone()  # never write into cam_raw
             cam[0:2] = 0.0
 
+        extra = {}
+        if self.history_frames > 0:
+            history = self.get_history(agent_id, scene, frame)
+            if self.history_norm is not None:
+                mean = torch.tensor(self.history_norm["mean"], dtype=torch.float32)
+                std = torch.tensor(self.history_norm["std"], dtype=torch.float32)
+                history = (history - mean) / std  # new tensor; per coordinate, broadcast over H
+            extra["history"] = history
+
         return {
             "agent_id": agent_id,
             "scene": scene,
@@ -246,7 +302,26 @@ class PilotDataset(Dataset):
             "nearby_idx": nearby_idx,
             "gt_traj": gt_traj,
             "gt_mask": gt_mask,
+            **extra,
         }
+
+
+def load_history_settings(run_dir, run_config):
+    """Dataset kwargs for the history experiment, from a run's config.json:
+    history_frames, require_history_frames, and history_norm loaded from
+    <run_dir>/history_norm.json -- a hard error if history is on and the file is
+    missing. Configs from before the history experiment give all-off."""
+    history_frames = run_config.get("history_frames", 0)
+    history_norm = None
+    if history_frames > 0:
+        path = os.path.join(run_dir, "history_norm.json")
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"run config says history_frames={history_frames} but no history_norm.json at {path}")
+        with open(path) as f:
+            history_norm = json.load(f)
+    return {"history_frames": history_frames,
+            "require_history_frames": run_config.get("require_history_frames", 0),
+            "history_norm": history_norm}
 
 
 def pilot_collate_fn(batch):
@@ -255,7 +330,11 @@ def pilot_collate_fn(batch):
     cpm_objects) stay as Python lists across the batch. Fixed-size items (cam,
     nearby_idx, gt_traj, gt_mask) get stacked into normal batched tensors.
     """
+    extra = {}
+    if "history" in batch[0]:
+        extra["history"] = torch.stack([b["history"] for b in batch], dim=0)  # [B, H, 2]
     return {
+        **extra,
         "agent_id": [b["agent_id"] for b in batch],
         "scene": [b["scene"] for b in batch],
         "frame": [b["frame"] for b in batch],

@@ -10,6 +10,11 @@ study isolating the HD map fusion's contribution. fuse layer's input dim
 shrinks accordingly (3*embed_dim instead of 4*embed_dim), so the ablated
 model isn't just carrying dead weights for a disabled input.
 
+history_frames=H > 0: batch["history"] [B, H, 2] (observed past positions) is
+encoded by history_encoder.py (gru or transformer) to [B, 128] and
+concatenated with the CAM embedding inside V2XMessageStream. history_frames=0
+(default) builds exactly the model without it.
+
 Map stream is per-town: each town has its own topology graph, so RGCN
 output is computed once per town present in a batch, and each sample's
 nearby-lane lookup uses its OWN town's lane embeddings. Mixed-town batches
@@ -30,6 +35,7 @@ from coop_sensor_stream import CoopSensorStream
 from v2x_message_stream import V2XMessageStream
 from rgcn_map_encoder import load_graph, RGCNMapEncoder, get_nearby_lane_nodes
 from map_cross_attention_fusion import MapCrossAttentionFusion
+from history_encoder import build_history_encoder
 
 EMBED_DIM = 128
 N_MODES = 6
@@ -53,14 +59,20 @@ class TrajectoryHead(nn.Module):
 
 
 class EndToEndFusion(nn.Module):
-    def __init__(self, device, embed_dim=EMBED_DIM, n_modes=N_MODES, use_map=True):
+    def __init__(self, device, embed_dim=EMBED_DIM, n_modes=N_MODES, use_map=True,
+                 history_frames=0, history_encoder="gru"):
         super().__init__()
         self.device = device
         self.use_map = use_map
+        # history_frames=0: no history encoder, and V2XMessageStream is the original
+        # one -- the model (and its state_dict) is identical to run D's.
+        self.history_frames = history_frames
 
         self.ego_encoder = EgoStream(out_dim=embed_dim)
         self.coop_encoder = CoopSensorStream(out_dim=embed_dim)
-        self.v2x_encoder = V2XMessageStream(out_dim=embed_dim)
+        self.v2x_encoder = V2XMessageStream(out_dim=embed_dim, use_history=history_frames > 0)
+        if history_frames > 0:
+            self.history_encoder = build_history_encoder(history_encoder, embed_dim, history_frames)
 
         if self.use_map:
             # Per-town graphs -- registered as buffers with per-town names so
@@ -102,12 +114,18 @@ class EndToEndFusion(nn.Module):
             coop_embeds.append(self.coop_encoder(coop_points, coop_images))
         coop_embed = torch.stack(coop_embeds, dim=0)  # [B, 128]
 
+        # ---------- History: fixed-size [B, H, 2], encoded batched, joins the CAM embedding below ----------
+        history_embed = None
+        if self.history_frames > 0:
+            history_embed = self.history_encoder(batch["history"].to(self.device))  # [B, 128]
+
         # ---------- V2X: CAM is fixed-size but CPM varies -> loop for consistency/simplicity ----------
         v2x_embeds = []
         for i in range(B):
             cam = batch["cam"][i].to(self.device)
             cpm_objects = batch["cpm_objects"][i].to(self.device)
-            v2x_embeds.append(self.v2x_encoder(cam, cpm_objects))
+            hist_i = history_embed[i] if history_embed is not None else None
+            v2x_embeds.append(self.v2x_encoder(cam, cpm_objects, hist_i))
         v2x_embed = torch.stack(v2x_embeds, dim=0)  # [B, 128]
 
         streams = [ego_embed, coop_embed, v2x_embed]

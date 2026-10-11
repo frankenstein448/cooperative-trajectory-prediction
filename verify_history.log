@@ -1,0 +1,47 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=False, degrade=None, history_frames=0, require_history_frames=0, history_norm=off
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=False, degrade=None, history_frames=0, require_history_frames=8, history_norm=off
+PilotDataset: dropped 1512 samples without frames frame-8 .. frame (13392 kept)
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=False, degrade=None, history_frames=8, require_history_frames=0, history_norm=off
+PilotDataset: dropped 1512 samples without frames frame-8 .. frame (13392 kept)
+
+Samples: D filter 14904, history_frames=8 13392 (dropped 1512), require_history_frames=8 13392
+  note: (1,4,14) is still at frame-1 -> frame, history not all-zero: max |history| = 1.43e-06 m
+  parked (1,5,39): all-zero history
+  note: (1,64,65) is still at frame-1 -> frame, history not all-zero: max |history| = 3.28e+00 m
+  parked (2,77,27): all-zero history
+  parked (2,79,53): all-zero history
+  parked (3,80,16): all-zero history
+  parked (3,6,67): all-zero history
+  note: (4,9,30) is still at frame-1 -> frame, history not all-zero: max |history| = 3.05e-04 m
+  parked (4,20,56): all-zero history
+  parked (2,97,33): all-zero history
+  parked (2,98,58): all-zero history
+  parked (3,3,21): all-zero history
+  note: (3,14,46) is still at frame-1 -> frame, history not all-zero: max |history| = 1.21e+00 m
+  parked (4,21,59): all-zero history
+  parked (1,27,24): all-zero history
+  parked (1,34,74): all-zero history
+  parked (2,35,38): all-zero history
+  note: (3,37,26) is still at frame-1 -> frame, history not all-zero: max |history| = 9.54e-07 m
+  parked (3,38,51): all-zero history
+  note: (4,39,14) is still at frame-1 -> frame, history not all-zero: max |history| = 3.05e-05 m
+  parked (4,41,40): all-zero history
+  parked (4,42,65): all-zero history
+  parked (2,50,41): all-zero history
+  parked (2,51,67): all-zero history
+  parked (3,55,56): all-zero history
+  parked (4,59,19): all-zero history
+  note: (4,62,45) is still at frame-1 -> frame, history not all-zero: max |history| = 4.31e+00 m
+  parked (1,72,58): all-zero history
+  parked (2,73,21): all-zero history
+  parked (2,78,73): all-zero history
+  note: (3,86,35) is still at frame-1 -> frame, history not all-zero: max |history| = 5.80e-01 m
+  parked (3,89,61): all-zero history
+  parked (4,91,24): all-zero history
+1. history[-1] == -(motion_utils displacement): max abs error over 50 samples = 0.00e+00 m; 33 with zero frame-1 -> frame displacement
+   __getitem__ applies history_norm to the returned copy; get_history stays raw
+3. history off: 740,942 parameters == D's checkpoint (740,942); loads runs/D_seed0/checkpoint_epoch12.pt with strict=True
+   history_frames=8, gru: 778,702 parameters (+37,760 vs D), forward ok trajs (2, 6, 30, 2) conf (2, 6)
+   history_frames=8, transformer: 833,294 parameters (+92,352 vs D), forward ok trajs (2, 6, 30, 2) conf (2, 6)
+
+ALL HISTORY CHECKS PASSED

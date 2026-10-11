@@ -8,7 +8,7 @@ from datetime import datetime
 import torch
 from torch.utils.data import DataLoader
 
-from pilot_dataset import PilotDataset, pilot_collate_fn
+from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
 from scene_split import scene_split, three_way_scene_split
@@ -97,6 +97,11 @@ if args.run_dir:
     print(f"--run-dir {args.run_dir}: use_image_cache={use_image_cache}, "
           f"require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
           f"normalize_cam={cam_norm is not None}, drop_cam_xy={drop_cam_xy}, use_map={use_map} (from config.json)")
+    history_kwargs = load_history_settings(args.run_dir, run_config)  # errors if history_norm.json is missing
+    history_encoder = run_config.get("history_encoder") or "gru"     # absent in pre-history configs
+    print(f"history_frames={history_kwargs['history_frames']} "
+          f"(encoder={history_encoder if history_kwargs['history_frames'] else None}), "
+          f"require_history_frames={history_kwargs['require_history_frames']} (from config.json)")
     trained_degrade = run_config.get("degrade")  # absent in pre-degradation configs
     print(f"Trained with degrade={trained_degrade['mode'] if trained_degrade else None}; "
           f"evaluating with degrade={args.degrade}")
@@ -107,9 +112,12 @@ else:
     cam_norm = None
     drop_cam_xy = False
     use_map = not args.no_map
+    history_kwargs = {}
+    history_encoder = "gru"
 
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
-                        use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy, degrade=args.degrade)
+                        use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy, degrade=args.degrade,
+                        **history_kwargs)
 if args.run_dir:
     _, tuning_set, test_set = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
     val_set = test_set if args.split == "test" else tuning_set
@@ -129,7 +137,8 @@ else:
     _, val_set = scene_split(dataset, 0.15, 42)  # unchanged old path
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
 loader = DataLoader(val_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
-model = load_model(args.ckpt, use_map=use_map).to(DEVICE).eval()
+model = load_model(args.ckpt, use_map=use_map, history_frames=dataset.history_frames,
+                   history_encoder=history_encoder).to(DEVICE).eval()
 print(f"ckpt={args.ckpt}  use_map={use_map}")
 
 cols = {k: [] for k in ("ade6", "fde6", "ade1", "fde1", "zade", "zfde", "valid", "first",

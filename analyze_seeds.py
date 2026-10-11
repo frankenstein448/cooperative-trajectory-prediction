@@ -5,7 +5,13 @@ the ALL minADE6 gap > 2 x the larger of the two seed standard deviations.
 --suffix picks the logs, eval_<run>_<suffix>.log (default e12 = clean tuning,
 epoch 12; e.g. tuning_fog for eval_scenes.py --degrade fog). For any suffix
 other than e12, also prints each model's ALL increase over its clean e12 log
-(skipped if a run has none). --full / --nomap pick the runs (default D / Dnomap)."""
+(skipped if a run has none). --full / --nomap pick the runs (default D / Dnomap).
+
+--rule history (runs/DECISION_RULES_HISTORY.md) reuses the full / no-map labels
+for history (H8) / control (Dh), and applies that rule instead: adopt history only
+if seed-mean ALL ADE1 AND ALL minADE6 are both lower than the control's AND
+seed-mean ADE1 is lower in >= 6 of 8 tuning scenes. --expect-n is the ALL sample
+count every log must show (2208 for D's sample filter, 1984 with 8 frames of history)."""
 import os
 import re
 import argparse
@@ -16,6 +22,10 @@ parser.add_argument("--suffix", default="e12")
 parser.add_argument("--full", default="D_seed0,D_seed1,D_seed2", help="comma-separated full-model run names")
 parser.add_argument("--nomap", default="Dnomap_seed0,Dnomap_seed1,Dnomap_seed2",
                     help="comma-separated no-map run names")
+parser.add_argument("--rule", choices=["map", "history"], default="map",
+                    help="map: the map rule (default). history: runs/DECISION_RULES_HISTORY.md, "
+                         "--full = history runs, --nomap = control runs")
+parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
 args = parser.parse_args()
 CLEAN_SUFFIX = "e12"
 
@@ -39,7 +49,7 @@ def parse(name, suffix=args.suffix):
             allrow = (float(m.group(2)), float(m.group(4)))
     assert len(scenes) == 8, f"{path}: expected 8 scenes, found {len(scenes)}"
     assert allrow is not None, f"{path}: no ALL row"
-    assert int(re.search(r"^ALL\s+(\d+)", text, re.M).group(1)) == 2208, f"{path}: ALL n != 2208"
+    assert int(re.search(r"^ALL\s+(\d+)", text, re.M).group(1)) == args.expect_n, f"{path}: ALL n != {args.expect_n}"
     return scenes, allrow
 
 
@@ -75,12 +85,23 @@ for key in sorted(runs[FULL[0]][0]):
           f"{row[1][0]:8.3f} {row[1][1]:9.3f} {row[1][2]:+7.3f}")
 print(f"Full better in {wins[0]}/8 scenes (minADE6), {wins[1]}/8 scenes (ADE1)")
 
-mf, sf, _ = summary(FULL, 0)
-mn, sn, _ = summary(NOMAP, 0)
-gap, thr = mn - mf, 2 * max(sf, sn)
-c1, c2 = wins[0] >= 7, gap > thr
-print(f"\nRULE (minADE6): scenes {wins[0]}/8 >= 7? {c1}   gap {gap:+.3f} > 2 x max std {thr:.3f}? {c2}")
-print("VERDICT:", "map effect detected" if (c1 and c2) else "no detectable map effect under the scene-held-out protocol")
+if args.rule == "map":
+    mf, sf, _ = summary(FULL, 0)
+    mn, sn, _ = summary(NOMAP, 0)
+    gap, thr = mn - mf, 2 * max(sf, sn)
+    c1, c2 = wins[0] >= 7, gap > thr
+    print(f"\nRULE (minADE6): scenes {wins[0]}/8 >= 7? {c1}   gap {gap:+.3f} > 2 x max std {thr:.3f}? {c2}")
+    print("VERDICT:", "map effect detected" if (c1 and c2) else "no detectable map effect under the scene-held-out protocol")
+else:
+    # "full" = history runs, "no-map" = control runs (labels reused)
+    h_ade1, c_ade1 = summary(FULL, 1)[0], summary(NOMAP, 1)[0]
+    h_m6, c_m6 = summary(FULL, 0)[0], summary(NOMAP, 0)[0]
+    c1, c2, c3 = h_ade1 < c_ade1, h_m6 < c_m6, wins[1] >= 6
+    print(f"\nHISTORY RULE (full = history, no-map = control):")
+    print(f"  ALL ADE1    history {h_ade1:.3f} < control {c_ade1:.3f}? {c1}")
+    print(f"  ALL minADE6 history {h_m6:.3f} < control {c_m6:.3f}? {c2}")
+    print(f"  ADE1 lower in {wins[1]}/8 scenes >= 6? {c3}")
+    print("VERDICT:", "ADOPT history" if (c1 and c2 and c3) else "do NOT adopt history")
 
 missing_clean = [n for n in FULL + NOMAP if not os.path.exists(f"eval_{n}_{CLEAN_SUFFIX}.log")]
 if args.suffix != CLEAN_SUFFIX and missing_clean:
