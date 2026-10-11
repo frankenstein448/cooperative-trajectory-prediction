@@ -22,6 +22,7 @@ from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion
 from trajectory_loss import build_loss, RELAXED_WTA_EPS
 from scene_split import three_way_scene_split
+from sensor_degradation import DEGRADE_MODES, degrade_config
 
 BATCH_SIZE = 8
 LR = 1e-4          # lower than the frozen-encoder run (1e-3) -- more parameters now training, needs more caution
@@ -103,6 +104,10 @@ def parse_args():
     parser.add_argument("--no-map", action="store_true",
                          help="EndToEndFusion(use_map=False): map stream removed, for the ablation "
                               "(replaces train_ablation.py for new runs)")
+    parser.add_argument("--degrade", choices=DEGRADE_MODES, default=None,
+                         help="sensor degradation (sensor_degradation.py) applied at load time to every agent's "
+                              "LiDAR/images, in the train AND tuning loaders; V2X messages and map inputs "
+                              "untouched. Default off")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -133,6 +138,7 @@ def main():
         "loss": args.loss,
         "relaxed_wta_eps": RELAXED_WTA_EPS if args.loss == "relaxed_wta" else None,
         "no_map": args.no_map,
+        "degrade": degrade_config(args.degrade),
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -149,7 +155,8 @@ def main():
     dataset = PilotDataset(use_image_cache=args.use_image_cache,
                             require_prev_frame=REQUIRE_PREV_FRAME,
                             use_speed=args.use_speed,
-                            drop_cam_xy=args.drop_cam_xy)
+                            drop_cam_xy=args.drop_cam_xy,
+                            degrade=args.degrade)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)

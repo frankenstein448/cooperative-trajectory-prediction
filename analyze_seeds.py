@@ -1,8 +1,18 @@
 """Applies the pre-registered map rule to the six seed runs (tuning split, epoch 12).
 Map 'helps' only if: seed-averaged full minADE6 is lower in >= 7 of 8 scenes AND
-the ALL minADE6 gap > 2 x the larger of the two seed standard deviations."""
+the ALL minADE6 gap > 2 x the larger of the two seed standard deviations.
+
+--suffix picks the logs, eval_<run>_<suffix>.log (default e12 = clean tuning,
+epoch 12; e.g. tuning_fog for eval_scenes.py --degrade fog). For any suffix
+other than e12, also prints each model's ALL increase over its clean e12 log."""
 import re
+import argparse
 import statistics as st
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--suffix", default="e12")
+args = parser.parse_args()
+CLEAN_SUFFIX = "e12"
 
 FULL = ["D_seed0", "D_seed1", "D_seed2"]
 NOMAP = ["Dnomap_seed0", "Dnomap_seed1", "Dnomap_seed2"]
@@ -10,8 +20,8 @@ SCENE = re.compile(r"^(Town\d\d)\s+(\d+)\s+(\d+)\s+([\d.]+)m\s+([\d.]+)m\s+([\d.
 ALL = re.compile(r"^ALL\s+(\d+)\s+([\d.]+)m\s+([\d.]+)m\s+([\d.]+)m")
 
 
-def parse(name):
-    path = f"eval_{name}_e12.log"
+def parse(name, suffix=args.suffix):
+    path = f"eval_{name}_{suffix}.log"
     scenes, allrow = {}, None
     with open(path) as f:
         text = f.read()
@@ -66,3 +76,14 @@ gap, thr = mn - mf, 2 * max(sf, sn)
 c1, c2 = wins[0] >= 7, gap > thr
 print(f"\nRULE (minADE6): scenes {wins[0]}/8 >= 7? {c1}   gap {gap:+.3f} > 2 x max std {thr:.3f}? {c2}")
 print("VERDICT:", "map effect detected" if (c1 and c2) else "no detectable map effect under the scene-held-out protocol")
+
+if args.suffix != CLEAN_SUFFIX:
+    clean = {n: parse(n, CLEAN_SUFFIX) for n in FULL + NOMAP}
+    print(f"\nIncrease in ALL vs clean ({CLEAN_SUFFIX}), {args.suffix} - clean, seed mean +/- std "
+          f"(per seed in brackets):")
+    for label, names in (("full", FULL), ("no-map", NOMAP)):
+        for idx, metric in ((0, "minADE6"), (1, "ADE1")):
+            inc = [runs[n][1][idx] - clean[n][1][idx] for n in names]
+            print(f"  {label:7s} {metric:8s} clean {st.mean(clean[n][1][idx] for n in names):.3f} -> "
+                  f"{st.mean(runs[n][1][idx] for n in names):.3f}   increase {st.mean(inc):+.3f} +/- {st.stdev(inc):.3f}  "
+                  f"[{', '.join(f'{x:+.3f}' for x in inc)}]")

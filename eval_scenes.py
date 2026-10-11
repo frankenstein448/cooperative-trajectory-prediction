@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import json
 import statistics
 import subprocess
@@ -11,6 +12,7 @@ from pilot_dataset import PilotDataset, pilot_collate_fn
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
 from scene_split import scene_split, three_way_scene_split
+from sensor_degradation import DEGRADE_MODES, degrade_config, fallback_counts, reset_fallback_counts
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt", required=True)
@@ -24,6 +26,10 @@ parser.add_argument("--split", choices=["tuning", "test"], default="tuning",
                           "test requires --confirm-final-test and is logged to runs/TEST_EVALS.log")
 parser.add_argument("--confirm-final-test", action="store_true",
                      help="required for --split test: acknowledges this is a final, logged test-set evaluation")
+parser.add_argument("--degrade", choices=DEGRADE_MODES, default=None,
+                     help="evaluate under this sensor degradation (sensor_degradation.py), whatever the run was "
+                          "trained with. Tuning split only; requires --run-dir; output is also written to "
+                          "eval_<run>_tuning_<degrade>.log")
 args = parser.parse_args()
 
 TEST_EVALS_LOG = "runs/TEST_EVALS.log"
@@ -32,6 +38,34 @@ if args.split == "test":
         parser.error("--split test requires --run-dir (the test split only exists in three_way_scene_split)")
     if not args.confirm_final_test:
         parser.error("--split test requires --confirm-final-test")
+    if args.degrade:
+        parser.error("--degrade is exploratory and tuning-split only; refusing --split test")
+if args.degrade:
+    if not args.run_dir:
+        parser.error("--degrade requires --run-dir (the log is named after the run)")
+    run_name = os.path.basename(os.path.normpath(args.run_dir))
+    degrade_log = f"eval_{run_name}_tuning_{args.degrade}.log"
+    if os.path.exists(degrade_log):
+        parser.error(f"{degrade_log} already exists; refusing to overwrite it")
+
+
+    class _Tee:
+        def __init__(self, *streams):
+            self.streams = streams
+
+        def write(self, s):
+            for st in self.streams:
+                st.write(s)
+                st.flush()
+
+        def flush(self):
+            for st in self.streams:
+                st.flush()
+
+
+    sys.stdout = _Tee(sys.__stdout__, open(degrade_log, "w"))
+    print(f"Writing this output to {degrade_log}")
+    print(f"--degrade {args.degrade}: {degrade_config(args.degrade)}")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -63,6 +97,9 @@ if args.run_dir:
     print(f"--run-dir {args.run_dir}: use_image_cache={use_image_cache}, "
           f"require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
           f"normalize_cam={cam_norm is not None}, drop_cam_xy={drop_cam_xy}, use_map={use_map} (from config.json)")
+    trained_degrade = run_config.get("degrade")  # absent in pre-degradation configs
+    print(f"Trained with degrade={trained_degrade['mode'] if trained_degrade else None}; "
+          f"evaluating with degrade={args.degrade}")
 else:
     use_image_cache = args.use_image_cache
     require_prev_frame = False
@@ -72,7 +109,7 @@ else:
     use_map = not args.no_map
 
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
-                        use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy)
+                        use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy, degrade=args.degrade)
 if args.run_dir:
     _, tuning_set, test_set = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
     val_set = test_set if args.split == "test" else tuning_set
@@ -98,8 +135,11 @@ print(f"ckpt={args.ckpt}  use_map={use_map}")
 cols = {k: [] for k in ("ade6", "fde6", "ade1", "fde1", "zade", "zfde", "valid", "first",
                          "cvade", "cvfde", "cv1", "cv_ok", "v_norm")}
 score_idx = None
+n_sensors = 0  # ego + coop LiDARs seen, to cross-check the fallback counter
+reset_fallback_counts()
 with torch.no_grad():
     for batch in loader:
+        n_sensors += len(batch["points"]) + sum(len(cp) for cp in batch["coop_points"])
         gt = batch["gt_traj"].to(DEVICE)                                  # [B, T, 2]
         mask = batch["gt_mask"].to(DEVICE).float()                        # [B, T]
         out = model(batch)
@@ -152,6 +192,12 @@ with torch.no_grad():
         cols["cv1"].append(dist_cv[:, 0].cpu())
         cols["cv_ok"].append(cv_ok.cpu())
         cols["v_norm"].append(v.norm(dim=-1).cpu())
+
+if args.degrade:
+    fb = fallback_counts()
+    # loader has no workers, so the counter saw every load; a mismatch means it didn't
+    assert fb["sensors"] == n_sensors, f"fallback counter saw {fb['sensors']} sensors, batches had {n_sensors}"
+    print(f"Empty-LiDAR fallback ({args.degrade}): {fb['fallback']}/{fb['sensors']} sensors (ego + coop)")
 
 c = {k: torch.cat(v) for k, v in cols.items()}
 assert len(c["ade6"]) == len(keys), f"{len(c['ade6'])} predictions vs {len(keys)} keys"

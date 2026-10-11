@@ -27,6 +27,7 @@ from find_coop_neighbors import find_coop_neighbors
 from rgcn_map_encoder import load_graph, get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
 from motion_utils import get_cv_velocity
+from sensor_degradation import DEGRADE_MODES, degrade_points, degrade_images
 
 SWEEPS_ROOT = "/home/karra/V2X-Sim-2.0/sweeps"
 CAMERA_COMPATIBLE_AGENTS = [1, 2, 3, 4]
@@ -70,7 +71,7 @@ def _available_frames(agent_id: int, scene: int) -> set:
 class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
-                 cam_norm: dict = None, drop_cam_xy: bool = False):
+                 cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
 
@@ -89,6 +90,11 @@ class PilotDataset(Dataset):
         # __getitem__, since train.py sets cam_norm post-construction). Lookups
         # keep using cam_raw, exactly as with cam_norm alone.
         self.drop_cam_xy = drop_cam_xy
+        # Sensor degradation (sensor_degradation.py), applied to every agent's
+        # raw LiDAR/images as they are loaded -- ego and coop alike. cam, cpm,
+        # nearby_idx and gt are never touched. Settable post-construction.
+        assert degrade is None or degrade in DEGRADE_MODES, f"unknown degrade={degrade!r}"
+        self.degrade = degrade
         self.loader = V2XMetadataLoader()
 
         if use_image_cache:
@@ -105,7 +111,8 @@ class PilotDataset(Dataset):
         print(f"PilotDataset: use_image_cache={use_image_cache}"
               + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
               + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
-              + f"cam_norm={'on' if cam_norm is not None else 'off'}, drop_cam_xy={drop_cam_xy}")
+              + f"cam_norm={'on' if cam_norm is not None else 'off'}, drop_cam_xy={drop_cam_xy}, "
+              + f"degrade={degrade}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -167,14 +174,22 @@ class PilotDataset(Dataset):
         assert arr.dtype == np.uint8, f"Image cache dtype mismatch for key {key}: got {arr.dtype}, expected uint8"
         return [torch.from_numpy(arr[v]).float().div(255) for v in range(arr.shape[0])]
 
+    def _load_sensors(self, agent_id, scene, frame):
+        """One agent's (points, images), with self.degrade applied. Used for the
+        ego AND every coop neighbor, so degradation can't reach one but not the other."""
+        lidar_path = f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{agent_id}/scene_{scene}_{frame:06d}.pcd.bin"
+        points = load_semantic_lidar(lidar_path)
+        images = self._load_images(agent_id, scene, frame)
+        if self.degrade is not None:
+            points = degrade_points(points, self.degrade)
+            images = degrade_images(images, self.degrade, agent_id, scene, frame)
+        return points, images
+
     def __getitem__(self, idx):
         agent_id, scene, frame, town = self.samples[idx]
         graph = self.town_graphs[town]
 
-        lidar_path = f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{agent_id}/scene_{scene}_{frame:06d}.pcd.bin"
-        points = load_semantic_lidar(lidar_path)
-
-        images = self._load_images(agent_id, scene, frame)
+        points, images = self._load_sensors(agent_id, scene, frame)
 
         # RAW cam -- used for every lookup below (nearest-lane, etc.). Normalization,
         # if any, is applied to a separate copy only at the very end of this method,
@@ -187,9 +202,9 @@ class PilotDataset(Dataset):
                                             candidate_ids=[a for a in CAMERA_COMPATIBLE_AGENTS if a != agent_id])
         coop_points, coop_images = [], []
         for nid in neighbor_ids:
-            n_lidar_path = f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{nid}/scene_{scene}_{frame:06d}.pcd.bin"
-            coop_points.append(load_semantic_lidar(n_lidar_path))
-            coop_images.append(self._load_images(nid, scene, frame))
+            n_points, n_images = self._load_sensors(nid, scene, frame)
+            coop_points.append(n_points)
+            coop_images.append(n_images)
 
         # non-trainable geometry: coordinate transform + nearest-lane lookup
         # -- now town-aware, using this sample's own town's transform + graph.

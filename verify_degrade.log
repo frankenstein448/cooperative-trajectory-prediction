@@ -1,0 +1,13 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None
+Clean LiDAR horizontal range hypot(x,y), ego (50 sensors, 3048163 points): p10 0.5 m, median 4.7 m, p90 31.1 m, max 70.0 m; 17.3% of points beyond 20 m
+Clean LiDAR horizontal range hypot(x,y), ego + coop (200 sensors, 12200086 points): p10 0.5 m, median 4.6 m, p90 30.3 m, max 70.0 m; 16.8% of points beyond 20 m
+150 coop neighbors across the 50 samples (200 sensors)
+Empty-LiDAR fallback, lidar_range: 0/200 sensors (ego + coop)
+Empty-LiDAR fallback, cam_fog    : 0/200 sensors (ego + coop)
+Empty-LiDAR fallback, fog        : 0/200 sensors (ego + coop)
+Empty-LiDAR fallback, sensors_off: 0/200 sensors (ego + coop)
+OK lidar_range: only sensor tensors differ from clean in 50/50 samples (ego + 150 coop); 2048630 LiDAR points dropped
+OK cam_fog    : only sensor tensors differ from clean in 50/50 samples (ego + 150 coop); image residual mean +0.0000 std 0.0500 (unclamped pixels)
+OK fog        : only sensor tensors differ from clean in 50/50 samples (ego + 150 coop); 2048630 LiDAR points dropped; image residual mean +0.0000 std 0.0500 (unclamped pixels)
+OK sensors_off: only sensor tensors differ from clean in 50/50 samples (ego + 150 coop)
+OK deterministic: two loads of 10 indices are identical under every mode
