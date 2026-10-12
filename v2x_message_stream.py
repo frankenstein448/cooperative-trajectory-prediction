@@ -131,21 +131,30 @@ class V2XMessageStream(nn.Module):
 
     use_history=True: a history embedding (same width as the CAM embedding,
     computed batched by EndToEndFusion's history encoder) is concatenated right
-    after the CAM embedding, and fuse grows to 3*out_dim inputs. With
-    use_history=False the module is exactly the original one."""
-    def __init__(self, out_dim=EMBED_DIM, use_history=False):
+    after the CAM embedding. use_cpm=False: cpm_enc is removed (not fed an empty
+    object list) and the CPM embedding drops out of the concat. fuse's input is
+    out_dim * (1 + use_history + use_cpm). With use_history=False, use_cpm=True
+    the module is exactly the original one."""
+    def __init__(self, out_dim=EMBED_DIM, use_history=False, use_cpm=True):
         super().__init__()
         self.use_history = use_history
+        self.use_cpm = use_cpm
         self.cam_enc = CAMEncoder(out_dim=out_dim)
-        self.cpm_enc = CPMEncoder(out_dim=out_dim)
-        self.fuse = nn.Linear(out_dim * (3 if use_history else 2), out_dim)
+        if use_cpm:
+            self.cpm_enc = CPMEncoder(out_dim=out_dim)
+        self.fuse = nn.Linear(out_dim * (1 + int(use_history) + int(use_cpm)), out_dim)
 
-    def forward(self, cam: torch.Tensor, cpm_objects: torch.Tensor, history_embed: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, cam: torch.Tensor, cpm_objects: torch.Tensor = None,
+                history_embed: torch.Tensor = None) -> torch.Tensor:
         assert (history_embed is not None) == self.use_history, (
             f"use_history={self.use_history} but history_embed is {'given' if history_embed is not None else 'None'}")
-        cam_embed = self.cam_enc(cam)
-        cpm_embed = self.cpm_enc(cpm_objects)
-        parts = [cam_embed, history_embed, cpm_embed] if self.use_history else [cam_embed, cpm_embed]
+        assert (cpm_objects is not None) == self.use_cpm, (
+            f"use_cpm={self.use_cpm} but cpm_objects is {'given' if cpm_objects is not None else 'None'}")
+        parts = [self.cam_enc(cam)]
+        if self.use_history:
+            parts.append(history_embed)
+        if self.use_cpm:
+            parts.append(self.cpm_enc(cpm_objects))
         concat = torch.cat(parts, dim=0)
         return self.fuse(concat)
 

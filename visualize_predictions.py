@@ -81,9 +81,9 @@ def get_agent_world_pos(loader, agent_id, scene, frame, town):
     return v2xsim_to_carla(cur_x, cur_y, town)
 
 
-def load_model(ckpt_path, use_map, history_frames=0, history_encoder="gru"):
+def load_model(ckpt_path, use_map, history_frames=0, history_encoder="gru", use_cpm=True, use_coop=True):
     model = EndToEndFusion(device=DEVICE, use_map=use_map, history_frames=history_frames,
-                           history_encoder=history_encoder).to(DEVICE)
+                           history_encoder=history_encoder, use_cpm=use_cpm, use_coop=use_coop).to(DEVICE)
     checkpoint = torch.load(ckpt_path, map_location=DEVICE)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()

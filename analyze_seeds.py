@@ -11,7 +11,12 @@ other than e12, also prints each model's ALL increase over its clean e12 log
 for history (H8) / control (Dh), and applies that rule instead: adopt history only
 if seed-mean ALL ADE1 AND ALL minADE6 are both lower than the control's AND
 seed-mean ADE1 is lower in >= 6 of 8 tuning scenes. --expect-n is the ALL sample
-count every log must show (2208 for D's sample filter, 1984 with 8 frames of history)."""
+count every log must show (2208 for D's sample filter, 1984 with 8 frames of history).
+
+--rule component (runs/DECISION_RULES_V2X.md) is the map rule's computation, with
+--full = the full model's runs and --nomap = an ablation's runs (labels reused):
+the removed component helps only if the full model's seed-mean minADE6 is lower in
+>= 7 of 8 tuning scenes AND the ALL gap (ablation - full) > 2 x the larger seed std."""
 import os
 import re
 import argparse
@@ -22,9 +27,13 @@ parser.add_argument("--suffix", default="e12")
 parser.add_argument("--full", default="D_seed0,D_seed1,D_seed2", help="comma-separated full-model run names")
 parser.add_argument("--nomap", default="Dnomap_seed0,Dnomap_seed1,Dnomap_seed2",
                     help="comma-separated no-map run names")
-parser.add_argument("--rule", choices=["map", "history"], default="map",
+parser.add_argument("--rule", choices=["map", "history", "component"], default="map",
                     help="map: the map rule (default). history: runs/DECISION_RULES_HISTORY.md, "
-                         "--full = history runs, --nomap = control runs")
+                         "--full = history runs, --nomap = control runs. component: runs/DECISION_RULES_V2X.md, "
+                         "the map rule with --full = full-model runs, --nomap = ablation runs")
+parser.add_argument("--full-suffix", default=None,
+                    help="log suffix for the --full runs only (default: --suffix), e.g. e12_safety to read the "
+                         "full model's safety metrics from run_safety_reeval.sh's logs (same accuracy rows as e12)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
 args = parser.parse_args()
 CLEAN_SUFFIX = "e12"
@@ -33,9 +42,11 @@ FULL = args.full.split(",")
 NOMAP = args.nomap.split(",")
 SCENE = re.compile(r"^(Town\d\d)\s+(\d+)\s+(\d+)\s+([\d.]+)m\s+([\d.]+)m\s+([\d.]+)m")
 ALL = re.compile(r"^ALL\s+(\d+)\s+([\d.]+)m\s+([\d.]+)m\s+([\d.]+)m")
+SAFE_ALL = re.compile(r"^SAFE (ALL|  stationary|  moving)\s+\d+\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)")
+SAFETY = {}  # run -> {group: (miss1, miss6, offr1, offr6, offrGT)}, filled by parse() for the main suffix
 
 
-def parse(name, suffix=args.suffix):
+def parse(name, suffix=args.suffix, record_safety=False):
     path = f"eval_{name}_{suffix}.log"
     scenes, allrow = {}, None
     with open(path) as f:
@@ -50,10 +61,20 @@ def parse(name, suffix=args.suffix):
     assert len(scenes) == 8, f"{path}: expected 8 scenes, found {len(scenes)}"
     assert allrow is not None, f"{path}: no ALL row"
     assert int(re.search(r"^ALL\s+(\d+)", text, re.M).group(1)) == args.expect_n, f"{path}: ALL n != {args.expect_n}"
+    if record_safety:
+        # the ALL block is the last one with these labels in eval_scenes.py's SAFE output
+        safe = {}
+        for line in text.splitlines():
+            m = SAFE_ALL.match(line)
+            if m:
+                safe[m.group(1).strip()] = tuple(float(m.group(k)) for k in range(2, 7))
+        if safe:
+            SAFETY[name] = safe
     return scenes, allrow
 
 
-runs = {n: parse(n) for n in FULL + NOMAP}
+runs = {n: parse(n, args.full_suffix or args.suffix, record_safety=True) for n in FULL}
+runs.update({n: parse(n, record_safety=True) for n in NOMAP})
 assert all(set(runs[n][0]) == set(runs[FULL[0]][0]) for n in runs), "scene sets differ between runs"
 
 
@@ -85,13 +106,18 @@ for key in sorted(runs[FULL[0]][0]):
           f"{row[1][0]:8.3f} {row[1][1]:9.3f} {row[1][2]:+7.3f}")
 print(f"Full better in {wins[0]}/8 scenes (minADE6), {wins[1]}/8 scenes (ADE1)")
 
-if args.rule == "map":
+if args.rule in ("map", "component"):
     mf, sf, _ = summary(FULL, 0)
     mn, sn, _ = summary(NOMAP, 0)
     gap, thr = mn - mf, 2 * max(sf, sn)
     c1, c2 = wins[0] >= 7, gap > thr
     print(f"\nRULE (minADE6): scenes {wins[0]}/8 >= 7? {c1}   gap {gap:+.3f} > 2 x max std {thr:.3f}? {c2}")
-    print("VERDICT:", "map effect detected" if (c1 and c2) else "no detectable map effect under the scene-held-out protocol")
+    if args.rule == "map":
+        print("VERDICT:", "map effect detected" if (c1 and c2) else "no detectable map effect under the scene-held-out protocol")
+    else:
+        print(f"(component rule: full = {','.join(FULL)}, ablation = {','.join(NOMAP)})")
+        print("VERDICT:", "removed component HELPS (full model better)" if (c1 and c2)
+              else "no detectable effect of the removed component under the scene-held-out protocol")
 else:
     # "full" = history runs, "no-map" = control runs (labels reused)
     h_ade1, c_ade1 = summary(FULL, 1)[0], summary(NOMAP, 1)[0]
@@ -117,3 +143,15 @@ elif args.suffix != CLEAN_SUFFIX:
             print(f"  {label:7s} {metric:8s} clean {st.mean(clean[n][1][idx] for n in names):.3f} -> "
                   f"{st.mean(runs[n][1][idx] for n in names):.3f}   increase {st.mean(inc):+.3f} +/- {st.stdev(inc):.3f}  "
                   f"[{', '.join(f'{x:+.3f}' for x in inc)}]")
+
+if all(n in SAFETY for n in FULL + NOMAP):
+    print("\nSafety, ALL rows, seed mean (descriptive only, not part of any rule; "
+          "see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):")
+    print(f"  {'':9s} {'group':11s} {'miss1':>7s} {'miss6':>7s} {'offr1':>7s} {'offr6':>7s} {'offrGT':>7s}")
+    for label, names in (("full", FULL), ("no-map", NOMAP)):
+        for group in ("ALL", "stationary", "moving"):
+            vals = [SAFETY[n][group] for n in names]
+            print(f"  {label:9s} {group:11s} " + " ".join(f"{st.mean(v[k] for v in vals):7.4f}" for k in range(5)))
+else:
+    missing = [n for n in FULL + NOMAP if n not in SAFETY]
+    print(f"\nSafety summary skipped: no SAFE rows in the logs of {', '.join(missing)}")

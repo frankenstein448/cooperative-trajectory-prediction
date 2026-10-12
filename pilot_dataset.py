@@ -72,7 +72,8 @@ class PilotDataset(Dataset):
     def __init__(self, scenes=ALL_SCENES, agent_ids=CAMERA_COMPATIBLE_AGENTS, horizon: int = HORIZON,
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
                  cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None,
-                 history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None):
+                 history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None,
+                 use_cpm: bool = True, use_coop: bool = True):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
         assert history_frames >= 0 and require_history_frames >= 0
@@ -105,6 +106,12 @@ class PilotDataset(Dataset):
         # the same filter with N, but no history returned -- the control for H=N.
         self.history_frames = history_frames
         self.require_history_frames = require_history_frames
+        # V2X ablation (EndToEndFusion's use_cpm / use_coop, same names): use_cpm=False
+        # skips get_cpm and returns no "cpm_objects"; use_coop=False skips the neighbour
+        # search and neighbour sensor loading and returns no "coop_points"/"coop_images".
+        # The sample list is unaffected. The ego's own CAM is always returned.
+        self.use_cpm = use_cpm
+        self.use_coop = use_coop
         # Like cam_norm: {"mean": [2], "std": [2]} per coordinate, from the train
         # split, settable post-construction, applied to the returned copy only.
         self.history_norm = history_norm
@@ -127,7 +134,8 @@ class PilotDataset(Dataset):
               + f"cam_norm={'on' if cam_norm is not None else 'off'}, drop_cam_xy={drop_cam_xy}, "
               + f"degrade={degrade}, history_frames={history_frames}, "
               + f"require_history_frames={require_history_frames}, "
-              + f"history_norm={'on' if history_norm is not None else 'off'}")
+              + f"history_norm={'on' if history_norm is not None else 'off'}, "
+              + f"use_cpm={use_cpm}, use_coop={use_coop}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -243,15 +251,20 @@ class PilotDataset(Dataset):
         # right before building the returned dict -- never to this variable.
         cam_raw = self.get_cam_features(agent_id, scene, frame)
 
-        cpm_objects = self.loader.get_cpm(agent_id, scene, frame)
+        extra = {}
+        if self.use_cpm:
+            extra["cpm_objects"] = self.loader.get_cpm(agent_id, scene, frame)
 
-        neighbor_ids = find_coop_neighbors(self.loader, ego_agent_id=agent_id, scene=scene, frame=frame,
-                                            candidate_ids=[a for a in CAMERA_COMPATIBLE_AGENTS if a != agent_id])
-        coop_points, coop_images = [], []
-        for nid in neighbor_ids:
-            n_points, n_images = self._load_sensors(nid, scene, frame)
-            coop_points.append(n_points)
-            coop_images.append(n_images)
+        if self.use_coop:
+            neighbor_ids = find_coop_neighbors(self.loader, ego_agent_id=agent_id, scene=scene, frame=frame,
+                                                candidate_ids=[a for a in CAMERA_COMPATIBLE_AGENTS if a != agent_id])
+            coop_points, coop_images = [], []
+            for nid in neighbor_ids:
+                n_points, n_images = self._load_sensors(nid, scene, frame)
+                coop_points.append(n_points)
+                coop_images.append(n_images)
+            extra["coop_points"] = coop_points
+            extra["coop_images"] = coop_images
 
         # non-trainable geometry: coordinate transform + nearest-lane lookup
         # -- now town-aware, using this sample's own town's transform + graph.
@@ -279,7 +292,6 @@ class PilotDataset(Dataset):
             cam = cam.clone()  # never write into cam_raw
             cam[0:2] = 0.0
 
-        extra = {}
         if self.history_frames > 0:
             history = self.get_history(agent_id, scene, frame)
             if self.history_norm is not None:
@@ -296,9 +308,6 @@ class PilotDataset(Dataset):
             "points": points,
             "images": images,
             "cam": cam,
-            "cpm_objects": cpm_objects,
-            "coop_points": coop_points,
-            "coop_images": coop_images,
             "nearby_idx": nearby_idx,
             "gt_traj": gt_traj,
             "gt_mask": gt_mask,
@@ -324,6 +333,13 @@ def load_history_settings(run_dir, run_config):
             "history_norm": history_norm}
 
 
+def load_v2x_settings(run_config):
+    """use_cpm / use_coop from a run's config.json (keys no_cpm / no_coop; absent in
+    pre-ablation configs = both on). Same kwarg names for PilotDataset and EndToEndFusion."""
+    return {"use_cpm": not run_config.get("no_cpm", False),
+            "use_coop": not run_config.get("no_coop", False)}
+
+
 def pilot_collate_fn(batch):
     """
     Custom collate: variable-size items (points, images, coop_points, coop_images,
@@ -333,6 +349,9 @@ def pilot_collate_fn(batch):
     extra = {}
     if "history" in batch[0]:
         extra["history"] = torch.stack([b["history"] for b in batch], dim=0)  # [B, H, 2]
+    for key in ("cpm_objects", "coop_points", "coop_images"):  # absent with use_cpm / use_coop off
+        if key in batch[0]:
+            extra[key] = [b[key] for b in batch]
     return {
         **extra,
         "agent_id": [b["agent_id"] for b in batch],
@@ -342,9 +361,6 @@ def pilot_collate_fn(batch):
         "points": [b["points"] for b in batch],
         "images": [b["images"] for b in batch],
         "cam": [b["cam"] for b in batch],                      # kept as list; small, looped in model anyway
-        "cpm_objects": [b["cpm_objects"] for b in batch],
-        "coop_points": [b["coop_points"] for b in batch],
-        "coop_images": [b["coop_images"] for b in batch],
         "nearby_idx": torch.stack([b["nearby_idx"] for b in batch], dim=0),  # [B, k] -- fixed size, safe to stack
         "gt_traj": torch.stack([b["gt_traj"] for b in batch], dim=0),
         "gt_mask": torch.stack([b["gt_mask"] for b in batch], dim=0),

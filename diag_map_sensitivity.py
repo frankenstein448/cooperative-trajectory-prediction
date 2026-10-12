@@ -37,7 +37,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings, K_NEAREST_LANES
+from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings, load_v2x_settings, K_NEAREST_LANES
 from rgcn_map_encoder import get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
 from motion_utils import get_cv_velocity
@@ -72,12 +72,13 @@ assert not drop_cam_xy or cam_norm is not None, f"{config_path}: drop_cam_xy=Tru
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
                         use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy,
-                        **load_history_settings(args.run_dir, run_config))
+                        **load_history_settings(args.run_dir, run_config), **load_v2x_settings(run_config))
 train_set, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
 model = load_model(ckpt_path, use_map=True, history_frames=dataset.history_frames,
-                   history_encoder=run_config.get("history_encoder") or "gru").to(DEVICE).eval()
+                   history_encoder=run_config.get("history_encoder") or "gru",
+                   **load_v2x_settings(run_config)).to(DEVICE).eval()
 print(f"ckpt={ckpt_path}")
 print(f"run config: use_speed={run_config['use_speed']} use_image_cache={run_config['use_image_cache']} "
       f"require_prev_frame={run_config['require_prev_frame']} normalize_cam={cam_norm is not None} "

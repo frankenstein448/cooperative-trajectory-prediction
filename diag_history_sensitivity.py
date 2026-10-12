@@ -24,7 +24,7 @@ import math
 import torch
 from torch.utils.data import DataLoader
 
-from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings
+from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings, load_v2x_settings
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
 from scene_split import three_way_scene_split
@@ -60,12 +60,13 @@ hist_std = torch.tensor(history_kwargs["history_norm"]["std"], dtype=torch.float
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
                         use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy,
-                        **history_kwargs)
+                        **history_kwargs, **load_v2x_settings(run_config))
 _, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
 model = load_model(ckpt_path, use_map=use_map, history_frames=H,
-                   history_encoder=run_config["history_encoder"]).to(DEVICE).eval()
+                   history_encoder=run_config["history_encoder"],
+                   **load_v2x_settings(run_config)).to(DEVICE).eval()
 print(f"ckpt={ckpt_path}")
 print(f"run config: history_frames={H} history_encoder={run_config['history_encoder']} "
       f"use_speed={run_config['use_speed']} normalize_cam={cam_norm is not None} "

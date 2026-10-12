@@ -119,6 +119,12 @@ def parse_args():
     parser.add_argument("--require-history-frames", type=int, default=0,
                          help="control for --history-frames N: the same sample filter (frames frame-N .. frame "
                               "must exist), but no history input")
+    parser.add_argument("--no-cpm", action="store_true",
+                         help="V2X ablation: CPM objects removed (dataset skips get_cpm, model has no cpm_enc). "
+                              "The ego's own CAM stays")
+    parser.add_argument("--no-coop", action="store_true",
+                         help="V2X ablation: cooperative sensor stream removed (dataset skips the neighbour search "
+                              "and neighbour sensor loading, model has no coop_encoder)")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -155,6 +161,8 @@ def main():
         "history_frames": args.history_frames,
         "history_encoder": args.history_encoder if args.history_frames > 0 else None,
         "require_history_frames": args.require_history_frames,
+        "no_cpm": args.no_cpm,
+        "no_coop": args.no_coop,
         "epochs": args.epochs,
         "out_dir": args.out_dir,
         "require_prev_frame": REQUIRE_PREV_FRAME,
@@ -174,7 +182,9 @@ def main():
                             drop_cam_xy=args.drop_cam_xy,
                             degrade=args.degrade,
                             history_frames=args.history_frames,
-                            require_history_frames=args.require_history_frames)
+                            require_history_frames=args.require_history_frames,
+                            use_cpm=not args.no_cpm,
+                            use_coop=not args.no_coop)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)
@@ -209,15 +219,17 @@ def main():
                              num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
 
     model = EndToEndFusion(device=DEVICE, use_map=not args.no_map, history_frames=args.history_frames,
-                            history_encoder=args.history_encoder).to(DEVICE)
-    if args.history_frames == 0:
-        # history off must be exactly D's model: same parameters as one built without the history kwargs
+                            history_encoder=args.history_encoder, use_cpm=not args.no_cpm,
+                            use_coop=not args.no_coop).to(DEVICE)
+    if args.history_frames == 0 and not args.no_cpm and not args.no_coop:
+        # history, CPM and coop at their defaults must be exactly D's model: same parameters as one
+        # built without any of those kwargs (verify_v2x_ablation.py also strict-loads D_seed0)
         with torch.random.fork_rng(devices=[]):  # building the reference must not shift the run's RNG stream
             n_ref = sum(p.numel() for p in EndToEndFusion(device="cpu", use_map=not args.no_map).parameters())
         n_off = sum(p.numel() for p in model.parameters())
         assert n_off == n_ref, f"history off changed the parameter count: {n_off} vs {n_ref}"
     loss_fn = build_loss(args.loss)
-    print(f"Model use_map={not args.no_map}, loss={type(loss_fn).__name__}"
+    print(f"Model use_map={not args.no_map}, use_cpm={not args.no_cpm}, use_coop={not args.no_coop}, loss={type(loss_fn).__name__}"
           + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else ""))
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
