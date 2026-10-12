@@ -1,0 +1,3 @@
+Town03: offline map matches dense_waypoints (7092 points); 6156 in-junction waypoints, 31 junctions -> junction_waypoints_town03.npy
+Town04: offline map matches dense_waypoints (16919 points); 8496 in-junction waypoints, 27 junctions -> junction_waypoints_town04.npy
+Town05: offline map matches dense_waypoints (12224 points); 6646 in-junction waypoints, 21 junctions -> junction_waypoints_town05.npy

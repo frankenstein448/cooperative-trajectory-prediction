@@ -5,6 +5,7 @@ import json
 import statistics
 import subprocess
 from datetime import datetime
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -17,6 +18,8 @@ from safety_metrics import (LaneCentrelines, raw_pose, agent_to_carla,
                             MISS_THRESHOLD_M, OFFROAD_THRESHOLD_M, GT_OFFROAD_UNRELIABLE)
 from trajectory_loss import loss_predicts_scale
 from ranking_metrics import brier_min_fde, mode_diversity, laplace_coverage, COVERAGE_LEVELS
+from scene_conditions import (heading_change_deg, JunctionAreas, TURN_THRESHOLD_DEG, MIN_STEP_M,
+                              JUNCTION_RADIUS_M)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt", required=True)
@@ -173,12 +176,14 @@ model = load_model(args.ckpt, use_map=use_map, history_frames=dataset.history_fr
 print(f"ckpt={args.ckpt}  use_map={use_map}")
 
 cols = {k: [] for k in ("ade6", "fde6", "ade1", "fde1", "zade", "zfde", "valid", "first",
-                         "cvade", "cvfde", "cv1", "cv_ok", "v_norm", "or1", "or6", "orgt", "bfde", "div")}
+                         "cvade", "cvfde", "cv1", "cv_ok", "v_norm", "or1", "or6", "orgt", "bfde", "div",
+                         "hchg", "nsteps", "jdist")}
 if predict_scale:
     for lvl in COVERAGE_LEVELS:
         cols[f"cov{lvl}"], cols[f"covxy{lvl}"] = [], []
     cols["npts"] = []
 lanes = LaneCentrelines(sorted(dataset.town_graphs))
+junctions = JunctionAreas(sorted(dataset.town_graphs))
 score_idx = None
 n_sensors = 0  # ego + coop LiDARs seen, to cross-check the fallback counter
 reset_fallback_counts()
@@ -230,6 +235,7 @@ with torch.no_grad():
         valid_np = mask.cpu().numpy().astype(bool)                          # [B, T]
         top_np = top.squeeze(1).cpu().numpy()
         or1, or6, orgt = torch.zeros(B), torch.zeros(B), torch.zeros(B)
+        hchg, nsteps, jdist = torch.zeros(B), torch.zeros(B), torch.zeros(B)  # COND block (scene_conditions.py)
         for i in range(B):
             town = batch["town"][i]
             pose = raw_pose(dataset.loader, batch["agent_id"][i], batch["scene"][i], batch["frame"][i])
@@ -240,6 +246,8 @@ with torch.no_grad():
             or1[i] = off_modes[top_np[i]][vm].sum() / nv
             or6[i] = off_modes[:, vm].sum() / (nv * K)
             orgt[i] = off_gt[vm].sum() / nv
+            hchg[i], nsteps[i] = heading_change_deg(gt_np[i], vm)
+            jdist[i] = junctions.distance(town, agent_to_carla(np.zeros(2), pose, town))
 
         cols["ade6"].append(ade_modes.min(1).values.cpu())
         cols["fde6"].append(fde_modes.min(1).values.cpu())
@@ -257,6 +265,9 @@ with torch.no_grad():
         cols["or1"].append(or1)
         cols["or6"].append(or6)
         cols["orgt"].append(orgt)
+        cols["hchg"].append(hchg)
+        cols["nsteps"].append(nsteps)
+        cols["jdist"].append(jdist)
 
         # ---- mode ranking metrics (ranking_metrics.py) ----
         cols["bfde"].append(brier_min_fde(fde_modes, scores).cpu())
@@ -400,3 +411,35 @@ def rank_row(label, sel):
 for key in sorted(set(keys)):
     rank_row(f"{key[0]} {key[1]}", torch.tensor([k == key for k in keys]) & valid)
 rank_row("ALL", valid)
+
+# ---------- condition-based evaluation (evaluation only; runs/DECISION_RULES_CONDITIONS.md, labels from
+# ground truth in scene_conditions.py). Every line starts with "COND", so the ^Town / ^ALL / ^SAFE / ^RANK
+# parsers never see them. ----------
+turning = moving & (c["hchg"].abs() > TURN_THRESHOLD_DEG)
+straight = moving & ~turning
+near_junction = c["jdist"] <= JUNCTION_RADIUS_M
+cond_masks = (("stationary", stationary), ("moving", moving), ("turning", turning), ("straight", straight),
+              ("near_junction", near_junction), ("not_near_junction", ~near_junction))
+print(f"\nCONDITIONS  from ground truth: stationary / moving = frame-1 -> frame displacement = 0 / > 0; "
+      f"turning = moving and |heading change over the GT| > {TURN_THRESHOLD_DEG:g} deg (path direction, first vs "
+      f"last step >= {MIN_STEP_M:g} m); straight = moving and not turning; near_junction = current position within "
+      f"{JUNCTION_RADIUS_M:g} m of an in-junction lane-centre waypoint (CARLA OpenDRIVE, junction_waypoints_*.npy)")
+n_mov = int((valid & moving).sum())
+n_short = int((valid & moving & (c["nsteps"] < 2)).sum())
+print(f"COND note: {n_short} of {n_mov} moving samples have < 2 GT steps >= {MIN_STEP_M:g} m "
+      f"(heading change 0 -> straight)")
+print(f"COND {'town':7s} {'condition':18s} {'n':>5s} {'minADE6':>8s} {'ADE1':>8s} {'minFDE6':>8s}")
+
+
+def cond_row(town, label, sel):
+    n = int(sel.sum())
+    if not n:
+        print(f"COND {town:7s} {label:18s} {0:5d}")
+        return
+    print(f"COND {town:7s} {label:18s} {n:5d} {c['ade6'][sel].mean():8.3f} {c['ade1'][sel].mean():8.3f} "
+          f"{c['fde6'][sel].mean():8.3f}")
+
+
+for town, tsel in [("ALL", valid)] + list(town_sel.items()):
+    for label, m in cond_masks:
+        cond_row(town, label, tsel & m)
