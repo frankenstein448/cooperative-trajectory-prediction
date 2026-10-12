@@ -20,7 +20,8 @@ from torch.utils.data import DataLoader
 
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion
-from trajectory_loss import build_loss, RELAXED_WTA_EPS
+from trajectory_loss import (build_loss, loss_predicts_scale, LOSSES, RELAXED_WTA_EPS,
+                             LAPLACE_SCALE_FLOOR, WTA_SOFT_TAU)
 from scene_split import three_way_scene_split
 from sensor_degradation import DEGRADE_MODES, degrade_config
 from history_encoder import HISTORY_ENCODERS
@@ -46,6 +47,13 @@ def git_commit():
         return f"<unavailable: {e}>"
 
 
+def model_loss(model, batch, loss_fn, gt_traj, gt_mask):
+    """Forward + loss. A model built with predict_scale=True returns a 4th output
+    (Laplace scales), which only LaplaceMixtureLoss takes."""
+    _, trajs, conf, *scales = model(batch)
+    return loss_fn(trajs, conf, gt_traj, gt_mask, *scales)
+
+
 def run_epoch(model, loader, loss_fn, optimizer=None):
     is_train = optimizer is not None
     model.train() if is_train else model.eval()
@@ -61,8 +69,7 @@ def run_epoch(model, loader, loss_fn, optimizer=None):
             if is_train:
                 optimizer.zero_grad()
 
-            fused, trajs, conf = model(batch)
-            loss, info = loss_fn(trajs, conf, gt_traj, gt_mask)
+            loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
 
             if is_train:
                 loss.backward()
@@ -99,9 +106,12 @@ def parse_args():
     parser.add_argument("--drop-cam-xy", action="store_true",
                          help="after cam normalization, zero cam[0:2] (x,y) in the returned sample only; "
                               "lookups keep raw cam. Requires --normalize-cam")
-    parser.add_argument("--loss", choices=["wta", "relaxed_wta"], default="wta",
+    parser.add_argument("--loss", choices=LOSSES, default="wta",
                          help=f"wta: pure winner-takes-all (default). relaxed_wta: winner regression weight 1-eps, "
-                              f"each other mode eps/(K-1), eps={RELAXED_WTA_EPS} fixed")
+                              f"each other mode eps/(K-1), eps={RELAXED_WTA_EPS} fixed. laplace_mixture: "
+                              f"trajectory-level Laplace-mixture NLL, model gets a scale head (b = softplus + "
+                              f"{LAPLACE_SCALE_FLOOR} m). wta_soft: WTA regression, mode scores trained against "
+                              f"softmax(-ADE/tau), tau={WTA_SOFT_TAU} m fixed")
     parser.add_argument("--no-map", action="store_true",
                          help="EndToEndFusion(use_map=False): map stream removed, for the ablation "
                               "(replaces train_ablation.py for new runs)")
@@ -156,6 +166,8 @@ def main():
         "drop_cam_xy": args.drop_cam_xy,
         "loss": args.loss,
         "relaxed_wta_eps": RELAXED_WTA_EPS if args.loss == "relaxed_wta" else None,
+        "laplace_scale_floor": LAPLACE_SCALE_FLOOR if args.loss == "laplace_mixture" else None,
+        "wta_soft_tau": WTA_SOFT_TAU if args.loss == "wta_soft" else None,
         "no_map": args.no_map,
         "degrade": degrade_config(args.degrade),
         "history_frames": args.history_frames,
@@ -220,17 +232,22 @@ def main():
 
     model = EndToEndFusion(device=DEVICE, use_map=not args.no_map, history_frames=args.history_frames,
                             history_encoder=args.history_encoder, use_cpm=not args.no_cpm,
-                            use_coop=not args.no_coop).to(DEVICE)
+                            use_coop=not args.no_coop,
+                            predict_scale=loss_predicts_scale(args.loss)).to(DEVICE)
     if args.history_frames == 0 and not args.no_cpm and not args.no_coop:
         # history, CPM and coop at their defaults must be exactly D's model: same parameters as one
-        # built without any of those kwargs (verify_v2x_ablation.py also strict-loads D_seed0)
+        # built without any of those kwargs (verify_v2x_ablation.py also strict-loads D_seed0).
+        # The only addition allowed is laplace_mixture's scale head.
         with torch.random.fork_rng(devices=[]):  # building the reference must not shift the run's RNG stream
             n_ref = sum(p.numel() for p in EndToEndFusion(device="cpu", use_map=not args.no_map).parameters())
         n_off = sum(p.numel() for p in model.parameters())
-        assert n_off == n_ref, f"history off changed the parameter count: {n_off} vs {n_ref}"
+        n_scale = sum(p.numel() for p in model.traj_head.scale_mlp.parameters()) if model.traj_head.predict_scale else 0
+        assert n_off - n_scale == n_ref, f"parameter count differs from D's: {n_off} - {n_scale} (scale head) vs {n_ref}"
     loss_fn = build_loss(args.loss)
     print(f"Model use_map={not args.no_map}, use_cpm={not args.no_cpm}, use_coop={not args.no_coop}, loss={type(loss_fn).__name__}"
-          + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else ""))
+          + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else "")
+          + (f" (tau={loss_fn.tau} m)" if args.loss == "wta_soft" else "")
+          + (f" (scale floor={LAPLACE_SCALE_FLOOR} m)" if args.loss == "laplace_mixture" else ""))
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -245,8 +262,7 @@ def main():
             gt_traj = batch["gt_traj"].to(DEVICE)
             gt_mask = batch["gt_mask"].to(DEVICE)
             optimizer.zero_grad()
-            fused, trajs, conf = model(batch)
-            loss, info = loss_fn(trajs, conf, gt_traj, gt_mask)
+            loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
             loss.backward()
             optimizer.step()
             print(f"  train batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f}")
@@ -258,8 +274,7 @@ def main():
                     break
                 gt_traj = batch["gt_traj"].to(DEVICE)
                 gt_mask = batch["gt_mask"].to(DEVICE)
-                fused, trajs, conf = model(batch)
-                loss, info = loss_fn(trajs, conf, gt_traj, gt_mask)
+                loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
                 print(f"  val batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f}")
 
         print("DRY RUN complete -- no checkpoints saved, exiting.")

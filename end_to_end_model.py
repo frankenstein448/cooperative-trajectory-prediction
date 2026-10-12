@@ -17,7 +17,14 @@ concatenated with the CAM embedding inside V2XMessageStream. history_frames=0
 
 use_cpm=False / use_coop=False (V2X ablation): the CPM encoder / the cooperative
 sensor stream is removed the same way as the map, not zeroed. All defaults
-(use_map=True, history_frames=0, use_cpm=True, use_coop=True) give run D's model.
+(use_map=True, history_frames=0, use_cpm=True, use_coop=True, predict_scale=False)
+give run D's model.
+
+predict_scale=True (only for --loss laplace_mixture): the trajectory head gets one
+extra Linear (scale_mlp, same shape as traj_mlp) giving a per-mode, per-step, per-
+coordinate Laplace scale b = softplus(raw) + LAPLACE_SCALE_FLOOR, and forward()
+returns a 4th output, scales [B, n_modes, horizon, 2]. Every other parameter and
+state_dict key is D's.
 
 Map stream is per-town: each town has its own topology graph, so RGCN
 output is computed once per town present in a batch, and each sample's
@@ -33,6 +40,7 @@ Run in gpu-test-venv.
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from ego_stream import EgoStream
 from coop_sensor_stream import CoopSensorStream
@@ -40,6 +48,7 @@ from v2x_message_stream import V2XMessageStream
 from rgcn_map_encoder import load_graph, RGCNMapEncoder, get_nearby_lane_nodes
 from map_cross_attention_fusion import MapCrossAttentionFusion
 from history_encoder import build_history_encoder
+from trajectory_loss import LAPLACE_SCALE_FLOOR
 
 EMBED_DIM = 128
 N_MODES = 6
@@ -48,23 +57,33 @@ TOWNS = ["Town03", "Town04", "Town05"]
 
 
 class TrajectoryHead(nn.Module):
-    def __init__(self, embed_dim=EMBED_DIM, n_modes=N_MODES, horizon=HORIZON):
+    def __init__(self, embed_dim=EMBED_DIM, n_modes=N_MODES, horizon=HORIZON, predict_scale=False):
         super().__init__()
         self.n_modes = n_modes
         self.horizon = horizon
+        self.predict_scale = predict_scale
         self.traj_mlp = nn.Linear(embed_dim, n_modes * horizon * 2)
         self.conf_mlp = nn.Linear(embed_dim, n_modes)
+        if predict_scale:
+            # forked RNG: the scale head's init does not shift the global stream, so with the same
+            # --seed the rest of the run (data shuffling) matches D's run exactly
+            with torch.random.fork_rng(devices=[]):
+                self.scale_mlp = nn.Linear(embed_dim, n_modes * horizon * 2)
 
     def forward(self, x):
         n = x.shape[0]
         trajs = self.traj_mlp(x).view(n, self.n_modes, self.horizon, 2)
         conf_logits = self.conf_mlp(x)  # raw logits -- softmax applied only where needed
-        return trajs, conf_logits
+        if not self.predict_scale:
+            return trajs, conf_logits
+        scales = F.softplus(self.scale_mlp(x)).view(n, self.n_modes, self.horizon, 2) + LAPLACE_SCALE_FLOOR
+        return trajs, conf_logits, scales
 
 
 class EndToEndFusion(nn.Module):
     def __init__(self, device, embed_dim=EMBED_DIM, n_modes=N_MODES, use_map=True,
-                 history_frames=0, history_encoder="gru", use_cpm=True, use_coop=True):
+                 history_frames=0, history_encoder="gru", use_cpm=True, use_coop=True,
+                 predict_scale=False):
         super().__init__()
         self.device = device
         self.use_map = use_map
@@ -103,7 +122,7 @@ class EndToEndFusion(nn.Module):
             nn.LayerNorm(embed_dim * 2),
             nn.Linear(embed_dim * 2, embed_dim),
         )
-        self.traj_head = TrajectoryHead(embed_dim, n_modes)
+        self.traj_head = TrajectoryHead(embed_dim, n_modes, predict_scale=predict_scale)
 
     def forward(self, batch):
         B = len(batch["points"])
@@ -162,5 +181,5 @@ class EndToEndFusion(nn.Module):
         # ---------- Fusion + trajectory head ----------
         x = torch.cat(streams, dim=-1)  # [B, n_streams*128]
         fused = self.fuse(x)
-        trajs, conf_logits = self.traj_head(fused)
-        return fused, trajs, conf_logits
+        # (trajs, conf_logits) or, with predict_scale, (trajs, conf_logits, scales)
+        return (fused, *self.traj_head(fused))

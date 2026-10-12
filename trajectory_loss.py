@@ -140,13 +140,111 @@ class RelaxedWTALoss(nn.Module):
         }
 
 
+LAPLACE_SCALE_FLOOR = 0.01  # m; b = softplus(raw) + floor. Fixed, not a CLI knob
+WTA_SOFT_TAU = 1.0          # m; fixed for wta_soft, not a CLI knob
+
+
+def masked_ade_per_mode(trajs, gt_traj, gt_mask):
+    """[B, n_modes] masked ADE, computed exactly as in WinnerTakesAllLoss."""
+    sq_err = (trajs - gt_traj.unsqueeze(1)) ** 2 * gt_mask.unsqueeze(1).unsqueeze(-1)
+    per_step_dist = sq_err.sum(dim=-1).sqrt()                        # [B, n_modes, horizon]
+    valid_counts = gt_mask.sum(dim=-1).clamp(min=1).unsqueeze(1)     # [B, 1]
+    return per_step_dist.sum(dim=-1) / valid_counts
+
+
+class LaplaceMixtureLoss(nn.Module):
+    """Trajectory-level negative log-likelihood of the GT under a mixture of
+    per-mode Laplace distributions (independent per step and per x/y coordinate):
+
+        log p_k = sum over valid steps t, coords d of log Laplace(gt_td; mu_ktd, b_ktd)
+        NLL     = -logsumexp_k( log_softmax(conf)_k + log p_k ),  mean over the batch
+
+    Masking as in WTA: invalid steps contribute 0 to log p_k (a sample with no
+    valid step contributes NLL = 0 and no gradient). Every mode gets regression
+    gradient, weighted by its posterior responsibility; the mode scores are trained
+    by the same NLL (no separate classification term).
+
+    forward() takes the scales as a 5th argument: b [B, n_modes, horizon, 2], > 0
+    (the model applies softplus + LAPLACE_SCALE_FLOOR). Logged "reg_loss" is the
+    NLL itself; logged "cls_loss" is the cross-entropy of the mode scores against
+    the ADE winner, as in WTA -- for comparison with D's logs only, NOT optimized.
+    """
+    def forward(self, trajs, conf, gt_traj, gt_mask, scales):
+        assert scales.shape == trajs.shape, f"scales {tuple(scales.shape)} vs trajs {tuple(trajs.shape)}"
+        mask = gt_mask.unsqueeze(1).unsqueeze(-1).to(trajs.dtype)      # [B, 1, horizon, 1]
+        log_lap = -torch.log(2 * scales) - (gt_traj.unsqueeze(1) - trajs).abs() / scales  # [B, K, T, 2]
+        log_p = (log_lap * mask).sum(dim=(-1, -2))                       # [B, K]
+        log_mix = torch.logsumexp(F.log_softmax(conf, dim=-1) + log_p, dim=-1)  # [B]
+        nll = -log_mix.mean()
+
+        with torch.no_grad():
+            ade_per_mode = masked_ade_per_mode(trajs, gt_traj, gt_mask)
+            winner_idx = ade_per_mode.argmin(dim=-1)
+            cls_diag = F.cross_entropy(conf, winner_idx)
+        return nll, {
+            "reg_loss": nll.item(),
+            "cls_loss": cls_diag.item(),
+            "winner_idx": winner_idx.tolist(),
+            "ade_per_mode": ade_per_mode,
+            "mean_scale": scales.detach().mean().item(),
+        }
+
+
+class WTASoftLoss(nn.Module):
+    """WTA regression unchanged (winner by masked ADE, smooth L1 on the winner only,
+    masked, normalized by the valid (step, xy) count). Mode scores trained with
+    cross-entropy against soft targets softmax(-ADE_k / tau) (ADE detached) instead
+    of the one-hot winner. tau -> 0 gives WinnerTakesAllLoss's one-hot target."""
+    def __init__(self, tau: float = WTA_SOFT_TAU, cls_weight: float = 1.0):
+        super().__init__()
+        assert tau > 0, f"tau must be > 0, got {tau}"
+        self.tau = tau
+        self.cls_weight = cls_weight
+
+    def forward(self, trajs, conf, gt_traj, gt_mask):
+        """Same inputs/outputs as WinnerTakesAllLoss.forward."""
+        B = trajs.shape[0]
+        ade_per_mode = masked_ade_per_mode(trajs, gt_traj, gt_mask)   # [B, n_modes]
+        winner_idx = ade_per_mode.argmin(dim=-1)
+
+        # ---- regression: identical to WinnerTakesAllLoss ----
+        winning_traj = trajs[torch.arange(B), winner_idx]
+        reg_loss_per_step = F.smooth_l1_loss(winning_traj, gt_traj, reduction="none") * gt_mask.unsqueeze(-1)
+        reg_loss = reg_loss_per_step.sum() / (gt_mask.sum() * 2).clamp(min=1)
+
+        # ---- classification: soft targets ----
+        target = F.softmax(-ade_per_mode.detach() / self.tau, dim=-1)
+        cls_loss = -(target * F.log_softmax(conf, dim=-1)).sum(dim=-1).mean()
+
+        total_loss = reg_loss + self.cls_weight * cls_loss
+        return total_loss, {
+            "reg_loss": reg_loss.item(),
+            "cls_loss": cls_loss.item(),
+            "winner_idx": winner_idx.tolist(),
+            "ade_per_mode": ade_per_mode.detach(),
+        }
+
+
+LOSSES = ["wta", "relaxed_wta", "laplace_mixture", "wta_soft"]
+
+
 def build_loss(name: str):
-    """'wta' -> WinnerTakesAllLoss (default); 'relaxed_wta' -> RelaxedWTALoss(eps=RELAXED_WTA_EPS)."""
+    """'wta' -> WinnerTakesAllLoss (default); 'relaxed_wta' -> RelaxedWTALoss(eps=RELAXED_WTA_EPS);
+    'laplace_mixture' -> LaplaceMixtureLoss (model must predict scales); 'wta_soft' -> WTASoftLoss(tau=WTA_SOFT_TAU)."""
     if name == "wta":
         return WinnerTakesAllLoss()
     if name == "relaxed_wta":
         return RelaxedWTALoss(eps=RELAXED_WTA_EPS)
+    if name == "laplace_mixture":
+        return LaplaceMixtureLoss()
+    if name == "wta_soft":
+        return WTASoftLoss(tau=WTA_SOFT_TAU)
     raise ValueError(f"unknown loss {name!r}")
+
+
+def loss_predicts_scale(name: str) -> bool:
+    """True if the loss needs per-step Laplace scales from the model (EndToEndFusion(predict_scale=True))."""
+    return name == "laplace_mixture"
 
 
 if __name__ == "__main__":

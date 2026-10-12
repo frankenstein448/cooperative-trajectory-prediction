@@ -15,6 +15,8 @@ from scene_split import scene_split, three_way_scene_split
 from sensor_degradation import DEGRADE_MODES, degrade_config, fallback_counts, reset_fallback_counts
 from safety_metrics import (LaneCentrelines, raw_pose, agent_to_carla,
                             MISS_THRESHOLD_M, OFFROAD_THRESHOLD_M, GT_OFFROAD_UNRELIABLE)
+from trajectory_loss import loss_predicts_scale
+from ranking_metrics import brier_min_fde, mode_diversity, laplace_coverage, COVERAGE_LEVELS
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt", required=True)
@@ -124,6 +126,9 @@ if args.run_dir:
     print(f"history_frames={history_kwargs['history_frames']} "
           f"(encoder={history_encoder if history_kwargs['history_frames'] else None}), "
           f"require_history_frames={history_kwargs['require_history_frames']} (from config.json)")
+    run_loss = run_config.get("loss", "wta")  # absent in pre-loss-option configs
+    predict_scale = loss_predicts_scale(run_loss)
+    print(f"loss={run_loss}, predict_scale={predict_scale} (from config.json)")
     trained_degrade = run_config.get("degrade")  # absent in pre-degradation configs
     print(f"Trained with degrade={trained_degrade['mode'] if trained_degrade else None}; "
           f"evaluating with degrade={args.degrade}")
@@ -137,6 +142,7 @@ else:
     history_kwargs = {}
     v2x_kwargs = {}
     history_encoder = "gru"
+    predict_scale = False
 
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
                         use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy, degrade=args.degrade,
@@ -163,11 +169,15 @@ else:
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
 loader = DataLoader(val_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 model = load_model(args.ckpt, use_map=use_map, history_frames=dataset.history_frames,
-                   history_encoder=history_encoder, **v2x_kwargs).to(DEVICE).eval()
+                   history_encoder=history_encoder, predict_scale=predict_scale, **v2x_kwargs).to(DEVICE).eval()
 print(f"ckpt={args.ckpt}  use_map={use_map}")
 
 cols = {k: [] for k in ("ade6", "fde6", "ade1", "fde1", "zade", "zfde", "valid", "first",
-                         "cvade", "cvfde", "cv1", "cv_ok", "v_norm", "or1", "or6", "orgt")}
+                         "cvade", "cvfde", "cv1", "cv_ok", "v_norm", "or1", "or6", "orgt", "bfde", "div")}
+if predict_scale:
+    for lvl in COVERAGE_LEVELS:
+        cols[f"cov{lvl}"], cols[f"covxy{lvl}"] = [], []
+    cols["npts"] = []
 lanes = LaneCentrelines(sorted(dataset.town_graphs))
 score_idx = None
 n_sensors = 0  # ego + coop LiDARs seen, to cross-check the fallback counter
@@ -178,8 +188,9 @@ with torch.no_grad():
         gt = batch["gt_traj"].to(DEVICE)                                  # [B, T, 2]
         mask = batch["gt_mask"].to(DEVICE).float()                        # [B, T]
         out = model(batch)
-        if not (isinstance(out, (tuple, list)) and len(out) == 3):
-            raise RuntimeError(f"Expected model to return 3 outputs, got {type(out)}")
+        n_out = 4 if predict_scale else 3  # (fused, trajs, scores[, scales])
+        if not (isinstance(out, (tuple, list)) and len(out) == n_out):
+            raise RuntimeError(f"Expected model to return {n_out} outputs, got {type(out)}")
         trajs = out[1]                                                    # [B, K, T, 2]
         B, K = trajs.shape[:2]
         if trajs.shape[2:] != gt.shape[1:]:
@@ -246,6 +257,16 @@ with torch.no_grad():
         cols["or1"].append(or1)
         cols["or6"].append(or6)
         cols["orgt"].append(orgt)
+
+        # ---- mode ranking metrics (ranking_metrics.py) ----
+        cols["bfde"].append(brier_min_fde(fde_modes, scores).cpu())
+        cols["div"].append(mode_diversity(trajs).cpu())
+        if predict_scale:
+            pt_hits, xy_hits, npts = laplace_coverage(trajs, out[3], gt, mask, top.squeeze(1))
+            for lvl in COVERAGE_LEVELS:
+                cols[f"cov{lvl}"].append(pt_hits[lvl].cpu())
+                cols[f"covxy{lvl}"].append(xy_hits[lvl].cpu())
+            cols["npts"].append(npts.cpu())
 
 if args.degrade:
     fb = fallback_counts()
@@ -350,3 +371,32 @@ for key in sorted(set(keys)):
 for t, sel in town_sel.items():
     safety_block(f"{t} (town)", sel, {t})
 safety_block("ALL", valid, set(town_sel))
+
+# ---------- mode ranking metrics (evaluation only). Every line starts with "RANK", so the ^Town / ^ALL /
+# ^SAFE parsers never see them. ----------
+cov_hdr = "".join(f" {f'pt{l}':>7s} {f'xy{l}':>7s}" for l in COVERAGE_LEVELS) if predict_scale else ""
+print(f"\nRANKING  brierFDE = minFDE6 + (1 - p)^2, p = softmax score of the min-FDE mode; div = mean pairwise "
+      f"distance between the {K} modes at the final horizon step"
+      + ("; calibration of the top mode's Laplace: pt<L> = fraction of valid GT points inside the joint box "
+         "of per-coordinate sqrt(L%) central intervals (nominal L%), xy<L> = fraction of valid GT coordinates "
+         "inside the per-coordinate L% central interval (nominal L%)" if predict_scale else ""))
+print(f"RANK {'group':24s} {'n':>5s} {'minFDE6':>8s} {'brierFDE':>8s} {'div':>8s}{cov_hdr}")
+
+
+def rank_row(label, sel):
+    n = int(sel.sum())
+    if not n:
+        print(f"RANK {label:24s} {0:5d}")
+        return
+    cov = ""
+    if predict_scale:
+        npts = c["npts"][sel].sum().clamp(min=1)
+        cov = "".join(f" {c[f'cov{l}'][sel].sum() / npts:7.4f} {c[f'covxy{l}'][sel].sum() / (2 * npts):7.4f}"
+                      for l in COVERAGE_LEVELS)
+    print(f"RANK {label:24s} {n:5d} {c['fde6'][sel].mean():8.3f} {c['bfde'][sel].mean():8.3f} "
+          f"{c['div'][sel].mean():8.3f}{cov}")
+
+
+for key in sorted(set(keys)):
+    rank_row(f"{key[0]} {key[1]}", torch.tensor([k == key for k in keys]) & valid)
+rank_row("ALL", valid)
