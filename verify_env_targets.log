@@ -1,0 +1,12 @@
+cache: 385901 targets, 14904 samples, manifest commit af265e9
+  manifest builder_dirty=False, frame_rate_hz=5.0, horizon_s=6.0, hist_s=1.6
+  train   samples 10488 (scoping 10488), before 298747 (scoping 298747), kept 267669 (scoping 267669)  OK
+  tuning  samples 2208 (scoping 2208), before 63372 (scoping 63372), kept 56809 (scoping 56809)  OK
+  test    samples 2208 (scoping 2208), before 68270 (scoping 68270), kept 61423 (scoping 61423)  OK
+  kept class shares a/b/c (0.619, 0.204, 0.178) vs scoping (0.619, 0.204, 0.178)  OK
+loading raw JSON (once) ...
+
+50 random targets: fields exact 50/50; their samples' kept sets + n_removed exact 50/50; max |cache float32 - float64 re-derivation| 7.57e-06 m/rad
+vis of the 50: a=34, b=5, c=11
+
+RESULT: PASS
