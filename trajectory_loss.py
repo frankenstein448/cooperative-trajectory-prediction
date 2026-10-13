@@ -248,6 +248,8 @@ def loss_predicts_scale(name: str) -> bool:
 
 
 if __name__ == "__main__":
+    from coord_transform import warn_legacy_script
+    warn_legacy_script("trajectory_loss.py")
     from ego_stream import EgoStream
     from ego_sensor_encoder import load_semantic_lidar
     from ego_camera_encoder import load_image

@@ -1,0 +1,23 @@
+v1 reference: scene_split.py at b0133a7
+D sample list: 14904 samples
+
+1. v1 unchanged
+  OK   default: train/tuning/test index lists identical to b0133a7 (10488/2208/2208)
+  OK   split_version='v1': train/tuning/test index lists identical to b0133a7 (10488/2208/2208)
+
+2. v2
+  OK   v2 scene sets == scene_split_proposal.json (approved)
+  OK   v2 splits disjoint and cover all 54 scenes
+  OK   every sample in exactly one split (10488+2208+2208 = 14904)
+  train   10488 samples (0.704)  Town03 1380  Town04 1932  Town05 7176  scenes 38
+  tuning   2208 samples (0.148)  Town03 276  Town04 276  Town05 1656  scenes 8
+  test     2208 samples (0.148)  Town03 276  Town04 276  Town05 1656  scenes 8
+  OK   v2 tuning: 8 scenes, 2,208 samples (7-of-8 rule, --expect-n 2208)
+  v1 test scenes in v2 test: [78]; v1 tuning scenes in v2 test: []
+
+3. Configs
+  OK   runs/D_seed0 config (no key) -> v1
+  OK   train.py: --split-version default v2, written to config.json, passed to three_way_scene_split
+  OK   eval_scenes.py: split_version from the run's config
+
+RESULT: PASS

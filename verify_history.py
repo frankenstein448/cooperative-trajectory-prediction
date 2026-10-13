@@ -19,6 +19,8 @@ import torch
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from motion_utils import get_cv_velocity
 from end_to_end_model import EndToEndFusion
+from coord_transform import warn_legacy_script
+warn_legacy_script("verify_history.py")
 
 H = 8
 N_CHECK = 50

@@ -32,9 +32,16 @@ GT_OFFROAD_UNRELIABLE = 0.05   # a town whose GT off-road rate exceeds this gets
 
 
 class LaneCentrelines:
-    """One KD-tree per town over dense_waypoints_<town>.npy (CARLA x, y)."""
-    def __init__(self, towns):
-        self.trees = {t: cKDTree(np.load(f"dense_waypoints_{t.lower()}.npy")) for t in towns}
+    """One KD-tree per town over the lane-centre points (CARLA x, y) of the run's map transform `kind`:
+    legacy = dense_waypoints_<town>.npy (driving lanes; unchanged), mirror = every point of
+    lane_polylines_<town>.npz (export_lane_polylines.py: driving lanes, plus Town03's Parking lanes, on which
+    V2X-Sim's traffic drives)."""
+    def __init__(self, towns, kind="legacy"):
+        if kind == "mirror":
+            self.trees = {t: cKDTree(np.load(f"lane_polylines_{t.lower()}.npz")["points"]) for t in towns}
+        else:
+            assert kind == "legacy", f"unknown map_transform {kind!r}"
+            self.trees = {t: cKDTree(np.load(f"dense_waypoints_{t.lower()}.npy")) for t in towns}
 
     def offroad(self, town, pts_carla):
         """pts_carla: [..., 2] -> bool [...] (True = farther than OFFROAD_THRESHOLD_M from every waypoint)."""

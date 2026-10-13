@@ -1,0 +1,15 @@
+OFFROAD_THRESHOLD_M=2.5, UNRELIABLE above 5%
+
+v2 tuning: 2208 samples; GT off-road rate per town
+  variant                         Town03    Town04    Town05       ALL
+  legacy (Part 1)                 0.3228    0.2862    0.4678    0.4269  UNRELIABLE: Town03, Town04, Town05
+  mirror, driving lanes only      0.0000    0.0000    0.0351    0.0263  UNRELIABLE: none
+  mirror, all lanes (used)        0.0000    0.0000    0.0351    0.0263  UNRELIABLE: none
+
+v2 train: 10488 samples; GT off-road rate per town
+  variant                         Town03    Town04    Town05       ALL
+  legacy (Part 1)                 0.4654    0.5117    0.3682    0.4074  UNRELIABLE: Town03, Town04, Town05
+  mirror, driving lanes only      0.2220    0.0000    0.0037    0.0318  UNRELIABLE: Town03
+  mirror, all lanes (used)        0.0000    0.0000    0.0037    0.0026  UNRELIABLE: none
+
+DONE

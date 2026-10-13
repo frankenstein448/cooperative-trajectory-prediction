@@ -92,4 +92,6 @@ def main():
 
 
 if __name__ == "__main__":
+    from coord_transform import warn_legacy_script
+    warn_legacy_script("train_ablation.py")
     main()

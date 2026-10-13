@@ -18,6 +18,8 @@ from rgcn_map_encoder import get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
 from ground_truth_extractor import get_future_trajectory
 from scene_split import scene_split
+from coord_transform import warn_legacy_script
+warn_legacy_script("profile_getitem.py")
 
 random.seed(0)
 N = 100

@@ -240,7 +240,7 @@ if predict_scale:
     for lvl in COVERAGE_LEVELS:
         cols[f"cov{lvl}"], cols[f"covxy{lvl}"] = [], []
     cols["npts"] = []
-lanes = LaneCentrelines(sorted(dataset.town_graphs))
+lanes = LaneCentrelines(sorted(dataset.town_graphs), map_transform)
 junctions = JunctionAreas(sorted(dataset.town_graphs))
 score_idx = None
 n_sensors = 0  # ego + coop LiDARs seen, to cross-check the fallback counter

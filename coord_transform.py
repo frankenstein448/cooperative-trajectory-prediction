@@ -87,3 +87,11 @@ def carla_yaw_to_v2xsim(yaw, town, kind="legacy"):
         return -np.asarray(yaw)
     assert kind == "legacy", f"unknown map_transform {kind!r}"
     return np.asarray(yaw) - np.radians(TOWN_TRANSFORMS[town]["theta"])
+
+
+def warn_legacy_script(script):
+    """Printed by scripts that predate map_transform / split_version and always use legacy + v1."""
+    bar = "!" * 100
+    print(f"{bar}\n!! {script}: LEGACY map transform (coord_transform.TOWN_TRANSFORMS, wrong away from its fit area) "
+          f"/ v1 split (leaky,\n!! scene_split.py). Not for new results; new runs use train.py / eval_scenes.py "
+          f"(map_transform mirror, split_version v2).\n{bar}", flush=True)
