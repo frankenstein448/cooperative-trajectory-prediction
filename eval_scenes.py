@@ -41,11 +41,50 @@ parser.add_argument("--metrics-only-reeval", action="store_true",
                      help="with --split test: re-run an evaluation already in runs/TEST_EVALS.log (same run-dir and "
                           "ckpt) only to add metrics (miss / off-road); refused if no such earlier entry exists, "
                           "and recorded in the log as a metrics-only re-evaluation")
+parser.add_argument("--confirmatory-turning-test", action="store_true",
+                     help="with --split test: the confirmatory condition evaluation of runs/DECISION_RULES_TURNING_TEST.md; "
+                          "output (stdout and stderr) is written to eval_<run>_test_cond.log and the evaluation is recorded "
+                          "in the log with that purpose. A re-run is allowed only if every earlier attempt's log has no "
+                          "COND line; the earlier log is then kept as eval_<run>_test_cond_attempt<N>.log")
 args = parser.parse_args()
 
 TEST_EVALS_LOG = "runs/TEST_EVALS.log"
+CONFIRMATORY_TURNING_PURPOSE = "confirmatory condition evaluation (turning hypothesis from tuning)"
+CONFIRMATORY_RERUN_SUFFIX = " (re-run after crash, no results seen)"
+
+
+class _Tee:
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, s):
+        for st in self.streams:
+            st.write(s)
+            st.flush()
+
+    def flush(self):
+        for st in self.streams:
+            st.flush()
+
+
+def logged_test_evals():
+    """(run_dir, ckpt, purpose) of every entry in TEST_EVALS_LOG, paths normalised."""
+    entries = []
+    if os.path.exists(TEST_EVALS_LOG):
+        with open(TEST_EVALS_LOG) as f:
+            for line in f:
+                fields = dict(kv.split("=", 1) for kv in line.rstrip("\n").split("\t")[1:] if "=" in kv)
+                entries.append((os.path.normpath(fields.get("run_dir", "")), os.path.normpath(fields.get("ckpt", "")),
+                                fields.get("purpose", "")))
+    return entries
+
+
 if args.metrics_only_reeval and args.split != "test":
     parser.error("--metrics-only-reeval is for re-running an already-logged test evaluation (--split test)")
+if args.confirmatory_turning_test and args.split != "test":
+    parser.error("--confirmatory-turning-test is a test-split evaluation (--split test)")
+if args.confirmatory_turning_test and args.metrics_only_reeval:
+    parser.error("--confirmatory-turning-test and --metrics-only-reeval are exclusive")
 if args.split == "test":
     if not args.run_dir:
         parser.error("--split test requires --run-dir (the test split only exists in three_way_scene_split)")
@@ -53,18 +92,44 @@ if args.split == "test":
         parser.error("--split test requires --confirm-final-test")
     if args.degrade:
         parser.error("--degrade is exploratory and tuning-split only; refusing --split test")
+    this_eval = (os.path.normpath(args.run_dir), os.path.normpath(args.ckpt))
     if args.metrics_only_reeval:
-        logged = []
-        if os.path.exists(TEST_EVALS_LOG):
-            with open(TEST_EVALS_LOG) as f:
-                for line in f:
-                    fields = dict(kv.split("=", 1) for kv in line.rstrip("\n").split("\t")[1:] if "=" in kv)
-                    if fields.get("purpose", "").startswith("metrics-only"):
-                        continue  # only an original evaluation counts as "already logged"
-                    logged.append((os.path.normpath(fields.get("run_dir", "")), os.path.normpath(fields.get("ckpt", ""))))
-        if (os.path.normpath(args.run_dir), os.path.normpath(args.ckpt)) not in logged:
+        # only an original evaluation counts as "already logged"
+        logged = [(r, c) for r, c, p in logged_test_evals() if not p.startswith("metrics-only")]
+        if this_eval not in logged:
             parser.error(f"--metrics-only-reeval: no earlier evaluation of run_dir={args.run_dir} ckpt={args.ckpt} "
                          f"in {TEST_EVALS_LOG}; refusing a new test evaluation under this flag")
+    if args.confirmatory_turning_test:
+        # runs/DECISION_RULES_TURNING_TEST.md: one evaluation per checkpoint; a re-run only if no earlier
+        # attempt got as far as any COND line (crashed before any condition result existed)
+        cond_log = f"eval_{os.path.basename(os.path.normpath(args.run_dir))}_test_cond.log"
+        stem = cond_log[:-len(".log")]
+        n_entries = sum(1 for r, c, p in logged_test_evals()
+                        if (r, c) == this_eval and p.startswith(CONFIRMATORY_TURNING_PURPOSE))
+        old_logs = sorted(f for f in os.listdir(".") if f.startswith(stem + "_attempt") and f.endswith(".log"))
+        old_logs += [cond_log] if os.path.exists(cond_log) else []
+        if n_entries > len(old_logs):
+            parser.error(f"--confirmatory-turning-test: {n_entries} earlier confirmatory entries for run_dir={args.run_dir} "
+                         f"ckpt={args.ckpt} in {TEST_EVALS_LOG} but only {len(old_logs)} attempt logs ({old_logs}); "
+                         f"cannot verify that no condition result was seen -- refusing")
+        for f_old in old_logs:
+            with open(f_old) as fh:
+                if any(line.startswith("COND") for line in fh):
+                    parser.error(f"--confirmatory-turning-test: {f_old} contains COND lines (condition results); "
+                                 f"that attempt is final -- refusing a re-run")
+        rerun = bool(old_logs) or n_entries > 0
+        if os.path.exists(cond_log):
+            attempt = f"{stem}_attempt{len(old_logs)}.log"  # attempts numbered from 1 in order
+            assert not os.path.exists(attempt), f"{attempt} already exists"
+            os.rename(cond_log, attempt)
+        log_fh = open(cond_log, "x")
+        sys.stdout = _Tee(sys.__stdout__, log_fh)
+        sys.stderr = _Tee(sys.__stderr__, log_fh)
+        print(f"Writing this output to {cond_log}")
+        if rerun:
+            kept = sorted(f for f in os.listdir(".") if f.startswith(stem + "_attempt") and f.endswith(".log"))
+            print(f"Confirmatory RE-RUN after crash: earlier attempt logs {kept} have no COND line; "
+                  f"{n_entries} earlier confirmatory entries in {TEST_EVALS_LOG}")
 if args.degrade:
     if not args.run_dir:
         parser.error("--degrade requires --run-dir (the log is named after the run)")
@@ -72,22 +137,6 @@ if args.degrade:
     degrade_log = f"eval_{run_name}_tuning_{args.degrade}.log"
     if os.path.exists(degrade_log):
         parser.error(f"{degrade_log} already exists; refusing to overwrite it")
-
-
-    class _Tee:
-        def __init__(self, *streams):
-            self.streams = streams
-
-        def write(self, s):
-            for st in self.streams:
-                st.write(s)
-                st.flush()
-
-        def flush(self):
-            for st in self.streams:
-                st.flush()
-
-
     sys.stdout = _Tee(sys.__stdout__, open(degrade_log, "w"))
     print(f"Writing this output to {degrade_log}")
     print(f"--degrade {args.degrade}: {degrade_config(args.degrade)}")
@@ -163,6 +212,8 @@ if args.run_dir:
             commit = f"<unavailable: {e}>"
         purpose = ("\tpurpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier "
                    "logged evaluation)") if args.metrics_only_reeval else ""
+        if args.confirmatory_turning_test:
+            purpose = f"\tpurpose={CONFIRMATORY_TURNING_PURPOSE}" + (CONFIRMATORY_RERUN_SUFFIX if rerun else "")
         with open(TEST_EVALS_LOG, "a") as f:
             f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
                     f"git_commit={commit}\tckpt={args.ckpt}{purpose}\n")

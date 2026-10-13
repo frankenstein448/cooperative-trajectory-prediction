@@ -23,7 +23,9 @@ D runs. Adopt laplace_mixture only if seed-mean ALL ADE1 is lower than D's AND s
 ADE1 is lower in >= 6 of 8 tuning scenes AND seed-mean ALL minADE6 is at most 0.1 m
 above D's AND seed-mean mode diversity (eval_scenes.py's RANK ALL row) is >= 50% of D's.
 Per-run and seed mean +/- std of ADE1, minADE6, minFDE6, Brier-minFDE, diversity and
-(L only) calibration are printed; ADE1 seed std is reported, not a criterion."""
+(L only) calibration are printed; ADE1 seed std is reported, not a criterion.
+--candidate wta_soft applies the same four criteria to wta_soft runs (W) as --full (the
+fallback section of runs/DECISION_RULES_LOSS.md); it only changes the labels."""
 import os
 import re
 import argparse
@@ -43,6 +45,8 @@ parser.add_argument("--rule", choices=["map", "history", "component", "loss"], d
 parser.add_argument("--full-suffix", default=None,
                     help="log suffix for the --full runs only (default: --suffix), e.g. e12_safety to read the "
                          "full model's safety metrics from run_safety_reeval.sh's logs (same accuracy rows as e12)")
+parser.add_argument("--candidate", choices=["laplace_mixture", "wta_soft"], default="laplace_mixture",
+                    help="--rule loss only: the loss of the --full runs (labels only; same criteria)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
 args = parser.parse_args()
 CLEAN_SUFFIX = "e12"
@@ -159,7 +163,8 @@ elif args.rule == "history":
     print(f"  ADE1 lower in {wins[1]}/8 scenes >= 6? {c3}")
     print("VERDICT:", "ADOPT history" if (c1 and c2 and c3) else "do NOT adopt history")
 elif args.rule == "loss":
-    # "full" = laplace_mixture runs (L), "no-map" = baseline runs (D) (labels reused)
+    # "full" = candidate-loss runs (L or W), "no-map" = baseline runs (D) (labels reused)
+    cand, cl = args.candidate, {"laplace_mixture": "L", "wta_soft": "W"}[args.candidate]
     missing = [n for n in FULL + NOMAP if n not in RANKING]
     assert not missing, f"no RANK ALL row (ranking metrics) in the logs of {', '.join(missing)}"
     print("\nRanking metrics, ALL, per run (minFDE6, brierFDE, div"
@@ -168,7 +173,7 @@ elif args.rule == "loss":
         r = RANKING[n]
         print(f"  {n:14s} {r[0]:.3f}  {r[1]:.3f}  {r[2]:.3f}" + "".join(f"  {x:.4f}" for x in r[3]))
     rank = lambda names, k: [RANKING[n][k] for n in names]
-    for label, names in (("L", FULL), ("D", NOMAP)):
+    for label, names in ((cl, FULL), ("D", NOMAP)):
         cols = [("ADE1", [runs[n][1][1] for n in names]), ("minADE6", [runs[n][1][0] for n in names]),
                 ("minFDE6", rank(names, 0)), ("brierFDE", rank(names, 1)), ("div", rank(names, 2))]
         if RANKING[names[0]][3]:
@@ -181,13 +186,13 @@ elif args.rule == "loss":
     l_div, d_div = st.mean(rank(FULL, 2)), st.mean(rank(NOMAP, 2))
     c1, c2 = l_ade1 < d_ade1, wins[1] >= 6
     c3, c4 = l_m6 - d_m6 <= 0.1, l_div >= 0.5 * d_div
-    print(f"\nLOSS RULE (full = laplace_mixture L, no-map = D):")
-    print(f"  ALL ADE1    L {l_ade1:.3f} < D {d_ade1:.3f}? {c1}")
+    print(f"\nLOSS RULE (full = {cand} {cl}, no-map = D):")
+    print(f"  ALL ADE1    {cl} {l_ade1:.3f} < D {d_ade1:.3f}? {c1}")
     print(f"  ADE1 lower in {wins[1]}/8 scenes >= 6? {c2}")
-    print(f"  ALL minADE6 L {l_m6:.3f} - D {d_m6:.3f} = {l_m6 - d_m6:+.3f} <= +0.100? {c3}")
-    print(f"  ALL div     L {l_div:.3f} >= 0.5 x D {d_div:.3f} = {0.5 * d_div:.3f}? {c4}")
-    print(f"  (reported, not a criterion) ADE1 seed std: L {l_ade1_sd:.3f}  D {d_ade1_sd:.3f}")
-    print("VERDICT:", "ADOPT laplace_mixture" if (c1 and c2 and c3 and c4) else "do NOT adopt laplace_mixture")
+    print(f"  ALL minADE6 {cl} {l_m6:.3f} - D {d_m6:.3f} = {l_m6 - d_m6:+.3f} <= +0.100? {c3}")
+    print(f"  ALL div     {cl} {l_div:.3f} >= 0.5 x D {d_div:.3f} = {0.5 * d_div:.3f}? {c4}")
+    print(f"  (reported, not a criterion) ADE1 seed std: {cl} {l_ade1_sd:.3f}  D {d_ade1_sd:.3f}")
+    print("VERDICT:", f"ADOPT {cand}" if (c1 and c2 and c3 and c4) else f"do NOT adopt {cand}")
 
 missing_clean = [n for n in FULL + NOMAP if not os.path.exists(f"eval_{n}_{CLEAN_SUFFIX}.log")]
 if args.suffix != CLEAN_SUFFIX and missing_clean:
