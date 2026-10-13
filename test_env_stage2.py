@@ -322,12 +322,15 @@ def test_train_args():
         sys.argv = ["train.py", "--out-dir", "x"]
         a = train.parse_args()
         assert a.task == "ego" and a.v2x is None and a.map_transform == "mirror" and a.split_version == "v2"
-        sys.argv = ["train.py", "--out-dir", "x", "--task", "env", "--v2x", "on", "--no-map"]
+        ENV = ["--use-speed", "--normalize-cam", "--drop-cam-xy"]
+        sys.argv = ["train.py", "--out-dir", "x", "--task", "env", "--v2x", "on", "--no-map"] + ENV
         a = train.parse_args()
         assert a.task == "env" and a.v2x == "on" and a.no_map
-        for bad in (["--task", "env"], ["--task", "env", "--v2x", "on", "--no-cpm"],
-                    ["--task", "env", "--v2x", "off", "--history-frames", "8"],
-                    ["--task", "env", "--v2x", "off", "--loss", "relaxed_wta"], ["--v2x", "on"]):
+        for bad in (["--task", "env"] + ENV, ["--task", "env", "--v2x", "on", "--no-cpm"] + ENV,
+                    ["--task", "env", "--v2x", "off", "--history-frames", "8"] + ENV,
+                    ["--task", "env", "--v2x", "off", "--loss", "relaxed_wta"] + ENV, ["--v2x", "on"],
+                    ["--task", "env", "--v2x", "on", "--use-speed", "--normalize-cam"],
+                    ["--task", "env", "--v2x", "on", "--normalize-cam", "--drop-cam-xy"]):
             sys.argv = ["train.py", "--out-dir", "x"] + bad
             try:
                 train.parse_args()
@@ -338,6 +341,34 @@ def test_train_args():
         quiet.__exit__(None, None, None)
         sys.argv = argv
     assert train.DEVICE.type == "cpu"
+
+
+def test_env_cam_keeps_only_speed():
+    """env_cam zeroes x, y and the world heading; EnvDataset.__getitem__ applies it (stub PilotDataset, no data)."""
+    cam = torch.tensor([0.3, -1.2, 2.5, 0.8])
+    out = ed.env_cam(cam)
+    assert out.tolist() == [0.0, 0.0, 0.0, pytest_approx(0.8)] and cam[2] == 2.5, "input must not be modified"
+
+    class StubPilot:
+        cam_norm = {"mean": [0, 0, 0, 0], "std": [1, 1, 1, 1]}
+
+        def __getitem__(self, r):
+            return {"cam": torch.tensor([1.0, 2.0, 3.0, 4.0]), "points": None}
+
+    ds = ed.EnvDataset.__new__(ed.EnvDataset)  # bypasses __init__: no PilotDataset, no metadata
+    ds.pilot, ds.cache, ds.rows, ds.v2x, ds.env_norm, ds.lanes = StubPilot(), synth_cache([2], [0, 1]), np.array([0]), "on", None, None
+    item = ds[0]
+    assert item["cam"].tolist() == [0.0, 0.0, 0.0, 4.0] and item["t_hist"].shape == (2, 8, 2)
+    ds.pilot.cam_norm = None
+    try:
+        ds[0]
+        raise AssertionError("loaded a sample without cam_norm")
+    except AssertionError as e:
+        assert "cam_norm" in str(e)
+
+
+def pytest_approx(x):
+    return float(np.float32(x))
 
 
 def test_ego_run_epoch_unchanged():
@@ -376,6 +407,146 @@ def test_ego_run_epoch_unchanged():
     (tr0, va0, p0), (tr1, va1, p1) = results
     assert tr0 == tr1 and va0 == va1, (tr0, tr1, va0, va1)
     assert all(torch.equal(a, b) for a, b in zip(p0, p1))
+
+
+# ---------------------------------------------------------------- Stage 3 / 4: env_metrics, eval_env, analyze_env
+import env_metrics as em
+
+
+def line_fut(n, vx=1.0, vy=0.0, T=30):
+    return np.tile(np.arange(1, T + 1)[None, :, None] * np.array([vx, vy])[None, None], (n, 1, 1))
+
+
+def test_displacement_and_baseline_metrics():
+    fut = line_fut(2)
+    mask = np.ones((2, 30), bool)
+    trajs = np.repeat(fut[:, None], 6, axis=1).copy()
+    trajs[:, 1:] += np.array([0.0, 1.0])            # modes 1..5 off by 1 m laterally; mode 0 exact
+    trajs[1, 3] += np.array([0.0, 2.0])             # sample 1, mode 3: 3 m off
+    logits = np.zeros((2, 6))
+    logits[0, 2] = 5.0                              # sample 0: top mode 2 (1 m off)
+    logits[1, 3] = 5.0                              # sample 1: top mode 3 (3 m off)
+    m = em.displacement_metrics(trajs, logits, fut, mask)
+    assert np.allclose(m["minade6"], 0) and np.allclose(m["minfde6"], 0)
+    assert np.allclose(m["ade1"], [1, 3]) and np.allclose(m["fde1"], [1, 3])
+    assert m["miss1"].tolist() == [0.0, 1.0] and m["miss6"].tolist() == [0.0, 0.0]
+    mask2 = mask.copy()
+    mask2[0, 20:] = False                           # FDE at the last VALID step
+    trajs[0, 0, 20:] += 50.0
+    assert np.isclose(em.displacement_metrics(trajs, logits, fut, mask2)["minfde6"][0], 0)
+    cv = em.cv_prediction(np.array([[1.0, 0.0], [0.0, 0.0]]))
+    b = em.baseline_metrics(cv, fut, mask)
+    assert np.isclose(b["ade"][0], 0) and np.isclose(b["ade"][1], np.mean(np.arange(1, 31)))
+    s = em.baseline_metrics(np.zeros_like(fut), fut, mask)
+    assert np.allclose(s["fde"], 30) and s["miss"].tolist() == [1.0, 1.0]
+
+
+def test_condition_labels_and_subsets():
+    straight = line_fut(1)[0]
+    ang = np.radians(np.linspace(0, 90, 31)[1:])
+    turn = np.stack([20 * np.sin(ang), 20 * (1 - np.cos(ang))], axis=1)  # quarter circle: 90 deg left turn
+    fut = np.stack([straight, turn, turn])
+    lab = em.condition_labels(fut, np.ones((3, 30), bool), np.array([True, True, False]))
+    assert lab["straight"].tolist() == [True, False, False] and lab["turning"].tolist() == [False, True, False]
+    assert lab["stationary"].tolist() == [False, False, True]
+    t = {"vis": np.array([0, 1, 0]), "cat4": np.array([0, 2, 3]), **lab}
+    m = em.subset_masks(t)
+    assert set(m) == set(em.SUBSETS)
+    assert m["a_moving"].tolist() == [True, False, False] and m["b_moving"].tolist() == [False, True, False]
+    assert m["two_wheeler"].tolist() == [False, True, True] and m["car_moving"].tolist() == [True, False, False]
+
+
+def test_coverage_counts():
+    c = synth_cache([3, 1, 2], [0, 1, 2, 2, 0, 1])
+    c["n_removed"] = np.array([1, 0, 4], np.int32)
+    off, on = em.coverage(c, [0, 1, 2], "off"), em.coverage(c, [0, 1, 2], "on")
+    assert (off["a"], off["b"], off["c"], off["all_kept"], off["removed"]) == (2, 2, 2, 6, 5)
+    assert off["predicted"] == 2 and on["predicted"] == 4
+    assert np.isclose(on["coverage"], 4 / 6) and np.isclose(on["coverage_incl_removed"], 4 / 11)
+
+
+def test_rule_forms():
+    scenes = list(range(8))
+    mk = lambda vals, all_v: {**{s: v for s, v in zip(scenes, vals)}, "ALL": all_v}
+    better = [mk([1.0] * 8, 1.00 + d) for d in (0.0, 0.01, -0.01)]
+    worse = [mk([1.5] * 8, 1.50 + d) for d in (0.0, 0.01, -0.01)]
+    r = em.rule(better, worse, scenes)
+    assert r["form"] == "full" and r["wins"] == 8 and r["helps"]
+    mixed = [mk([1.0] * 6 + [2.0] * 2, 1.0 + d) for d in (0.0, 0.01, -0.01)]
+    r = em.rule(mixed, worse, scenes)
+    assert r["wins"] == 6 and not r["helps"], "6/8 scenes must not pass"
+    noisy = [mk([1.0] * 8, v) for v in (1.0, 1.4, 1.8)]           # big seed std
+    assert not em.rule(noisy, worse, scenes)["helps"]
+    holes = [{**x, 7: None} for x in better]                # one scene without samples -> pooled form
+    r = em.rule(holes, worse, scenes)
+    assert r["form"] == "pooled" and r["scenes_with_samples"] == 7 and r["helps"]
+    base = [mk([1.2] * 8, 1.2)] * 3                               # deterministic baseline: sd 0
+    r = em.rule(better, base, scenes)
+    assert r["sd_without"] == 0 and r["helps"]
+    assert not em.rule(base, better, scenes)["helps"]
+
+
+def test_eval_collect_and_tables():
+    import eval_env
+    c = synth_cache([3, 2], [0, 1, 2, 0, 0])
+    c["fut_own"][:] = line_fut(5)
+    items = [ed.sample_features(c, 0, "on"), ed.sample_features(c, 1, "on")]
+    batch = ed.pad_targets(items)
+    batch.update(scene=[16, 41], town=["Town05", "Town05"])
+    B, T = batch["target_mask"].shape
+    trajs = torch.zeros(B, T, 6, 30, 2)
+    trajs[..., 0] = torch.arange(1, 31, dtype=torch.float32)       # every mode exact
+    t = eval_env.concat([eval_env.collect(batch, trajs, torch.zeros(B, T, 6))])
+    assert t["tid"].tolist() == [0, 1, 3, 4] and t["scene"].tolist() == [16, 16, 41, 41]
+    assert np.allclose(t["minade6"], 0) and np.allclose(t["stay_fde"], 30)
+    lines = eval_env.table_lines(t, [("Town05", 16), ("Town05", 41)])
+    allrow = [l for l in lines if l.split()[1:3] == ["ALL", "all"]][0]
+    assert int(allrow.split()[3]) == 4
+    assert any(l.split()[1:4] == ["05#41", "b", "0"] for l in lines)
+
+
+def test_analyze_env_end_to_end():
+    """analyze_env.py on fake per-target npz files (tmp dir): V2X clearly better than EgoOnly on (a),
+    map with no effect, V2X better than CV on (b)."""
+    import json as _json
+    import subprocess
+    import tempfile
+    here = os.path.dirname(os.path.abspath(__file__))
+    rng = np.random.default_rng(3)
+    scenes = [("Town03", 85), ("Town04", 30), ("Town05", 3), ("Town05", 14), ("Town05", 15), ("Town05", 16),
+              ("Town05", 21), ("Town05", 22)]
+    n = 400
+    base = {"tid": np.arange(n), "scene": np.array([scenes[i % 8][1] for i in range(n)]),
+            "town": np.array([scenes[i % 8][0] for i in range(n)]), "vis": (np.arange(n) % 3 == 0).astype(int),
+            "cat4": np.arange(n) % 4, "moving": (np.arange(n) // 8) % 2 == 0}   # every scene has moving targets
+    base["turning"] = base["moving"] & ((np.arange(n) // 16) % 2 == 0)
+    base["straight"] = base["moving"] & ~base["turning"]
+    base["stationary"] = ~base["moving"]
+    with tempfile.TemporaryDirectory() as tmp:
+        for g, v2x, nomap, level in (("EgoOnly", "off", False, 3.0), ("V2X", "on", False, 2.0), ("V2Xnomap", "on", True, 2.0)):
+            for s in range(3):
+                keep = base["vis"] == 0 if v2x == "off" else np.ones(n, bool)
+                t = {k: v[keep] for k, v in base.items()}
+                m = len(t["tid"])
+                for k in em.METRICS:
+                    t[k] = level + rng.normal(0, 0.01, m)
+                for k in ("cv_ade", "cv_fde", "cv_miss", "stay_ade", "stay_fde", "stay_miss"):
+                    t[k] = np.full(m, 4.0)
+                meta = {"split": "tuning", "split_version": "v2", "map_transform": "mirror", "v2x": v2x, "no_map": nomap,
+                        "scenes": [list(x) for x in scenes],
+                        "coverage": {"predicted": m, "all_kept": n + 10, "a": 1, "b": 1, "c": 10, "removed": 5,
+                                     "coverage": m / (n + 10), "coverage_incl_removed": m / (n + 15)}}
+                os.makedirs(f"{tmp}/runs/E_{g}_seed{s}")
+                np.savez(f"{tmp}/runs/E_{g}_seed{s}/eval_env_tuning_checkpoint_epoch12.npz", **t, meta=_json.dumps(meta))
+        out = subprocess.run([sys.executable, os.path.join(here, "analyze_env.py")], cwd=tmp, capture_output=True,
+                             text=True, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
+    assert out.returncode == 0, out.stderr[-2000:]
+    import re as _re
+    v = {_re.split(r"\s{2,}", l.strip())[0]: l for l in out.stdout.split("VERDICTS:")[1].split("\nCoverage")[0].splitlines()
+         if l.strip()}
+    assert "HELPS" in v["(1) V2X on (a)"] and "HELPS" in v["(2) V2X on (b) vs constant velocity"]
+    assert "no detectable" in v["(3) map, moving targets"]
+    assert out.stdout.count("form=full (scenes with samples 8/8)") == 4 and "Coverage per model" in out.stdout
 
 
 if __name__ == "__main__":

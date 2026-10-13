@@ -188,8 +188,11 @@ Changes against sections 2–5, all following the decisions made since:
   asserts the count and that the cache rows match PilotDataset's sample list exactly.
 - **Inputs per target:** history (own frame, z-scored with train-split `env_norm.json`), state (pose relative
   to the ego /50, cos and sin yaw, speed / 5, size w and l / 5, category one-hot), and the ego-frame pose for
-  the relative-pose interaction. The ego's CAM goes through D's CAMEncoder unchanged (normalized, x and y
-  dropped as in D); it still carries the ego's world heading, as in D.
+  the relative-pose interaction.
+- **Ego CAM, speed only (decision 2026-10-13, before any env result):** after normalization, `env_cam()`
+  zeroes x, y (as D's drop_cam_xy) **and the ego's absolute world heading**; only the speed is kept.
+  `train.py --task env` requires `--use-speed --normalize-cam --drop-cam-xy`, and `config.json` records
+  `env_cam`. Test: `test_env_stage2.test_env_cam_keeps_only_speed`.
 - **Coop with no CAV in range:** a learned "no coop" token. D's CoopSensorStream returns a CPU zero vector in
   that case.
 - **Parameters:** EgoOnly-env 896,494; V2X-env 1,061,262; V2X-env-nomap 903,246 (D: 740,942).
@@ -204,3 +207,20 @@ Still to do once the GPU is free (needs the data):
    1 m of the origin at about 0°); `--task ego` still strict-loads D's checkpoint with D's parameter count.
 2. Dry runs of the three env configs (per-batch time, peak memory).
 3. Stage 3 (evaluation) and Stage 4 (rules and run scripts), as planned.
+
+## 11. Stages 3 and 4 (2026-10-13; code and synthetic tests only)
+
+- `env_metrics.py`: per-target minADE6 / ADE1 / minFDE6 / FDE1 / miss rates (2 m), constant-velocity and
+  stay-put baselines, condition labels (Part 1 definitions on the own-frame ground truth), subsets
+  ((a)/(b), moving/stationary/turning/straight, car/two-wheeler), coverage, and the rule computation
+  (`rule`: full form ≥ 7/8 scenes AND gap > 2 × larger seed std; pooled form when a scene has no target of the
+  subset).
+- `eval_env.py`: tuning split only (the test split is refused); per tuning scene and ALL; writes
+  `runs/<run>/eval_env_tuning_<ckpt>.npz` with per-target arrays (cache target id, scene, labels, metrics,
+  baselines) and coverage. EnvDataset gives two extra non-input fields: `t_tid` and `t_cv_vel`.
+- `analyze_env.py`: checks the runs (split, scenes, transform, identical targets across seeds, EgoOnly's targets
+  = V2X's (a) targets), then applies `runs/DECISION_RULES_ENV.md`.
+- `run_env_seeds.sh`: preflight as in `run_corrected_seeds.sh`, plus the cache manifest and a committed
+  `verify_env_model.log` with `RESULT: PASS`.
+- Tests: `test_env_stage2.py`, 21/21 on synthetic data (hand-computed metric values, labels, subsets, coverage,
+  rule forms, `collect` on a padded batch, `analyze_env.py` end to end on fake per-run npz files).

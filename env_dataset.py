@@ -13,6 +13,10 @@ the same list for every model (every sample with a (b) target also has an (a) ta
 Known targets (inputs and prediction targets): v2x="off": vis == 0 (a); v2x="on": vis <= 1 ((a) and (b)).
 Class (c) is never loaded.
 
+Ego CAM: the env task keeps only the ego's speed. After PilotDataset's cam normalization, env_cam() zeroes
+x, y (as D's drop_cam_xy) AND the absolute world heading (DESIGN_ENV.md section 10), so no world-frame
+quantity reaches the model. EnvDataset requires drop_cam_xy=True and a cam_norm (set by train.py).
+
 Per known target (T per sample, padded per batch by env_collate_fn, target_mask marks real ones):
   t_hist  [T, 8, 2]   history in the target's own frame (hist_own), z-scored per coordinate with env_norm
                       (train-split stats over the model's known targets, saved as env_norm.json)
@@ -21,6 +25,8 @@ Per known target (T per sample, padded per batch by env_collate_fn, target_mask 
   t_pose  [T, 3]      x, y (m), yaw (rad) in the ego frame (raw; the model builds relative poses from it)
   t_fut   [T, 30, 2], t_fut_mask [T, 30]   prediction target, own frame (fut_own)
   t_vis, t_cat4, t_moving [T]              for evaluation splits (not model inputs)
+  t_tid [T] (cache target index), t_cv_vel [T, 2] (frame-1 -> frame displacement, own frame, raw m per frame:
+                      -hist_own[-1]; the constant-velocity baseline)   for evaluation (not model inputs)
   t_map, t_map_pt_mask, t_map_piece_mask   map v2 tokens (env_map.py), only with use_map
 """
 import json
@@ -42,6 +48,16 @@ N_CAT4 = 4
 EXPECTED_ENV_SAMPLES = 13384
 CACHE_KEYS = ("sample_agent", "sample_scene", "sample_frame", "sample_town", "sample_ptr", "vis", "cat4", "speed",
               "size", "cur_ego", "yaw_ego", "hist_own", "fut_own", "fut_mask", "xy_world", "yaw_world", "n_removed")
+
+
+CAM_KEEP = 3  # cam = (x, y, heading, speed): only index 3 (speed) is kept
+
+
+def env_cam(cam):
+    """Env-task ego CAM: a copy with x, y and the world heading zeroed; only the speed is kept."""
+    out = cam.clone()
+    out[:CAM_KEEP] = 0.0
+    return out
 
 
 def load_env_cache(cache_dir=ENV_CACHE_DIR):
@@ -108,6 +124,8 @@ def sample_features(cache, row, v2x, env_norm=None, lanes=None):
         "t_vis": torch.from_numpy(cache["vis"][idx].astype(np.int64)),
         "t_cat4": torch.from_numpy(cache["cat4"][idx].astype(np.int64)),
         "t_moving": torch.from_numpy(cache["speed"][idx] > 0),
+        "t_tid": torch.from_numpy(idx.astype(np.int64)),
+        "t_cv_vel": torch.from_numpy(-cache["hist_own"][idx, -1].astype(np.float32)),
     }
     if lanes is not None:
         town = str(cache["sample_town"][row])
@@ -124,7 +142,7 @@ def sample_features(cache, row, v2x, env_norm=None, lanes=None):
     return out
 
 
-ENV_KEYS = ("t_hist", "t_state", "t_pose", "t_fut", "t_fut_mask", "t_vis", "t_cat4", "t_moving",
+ENV_KEYS = ("t_hist", "t_state", "t_pose", "t_fut", "t_fut_mask", "t_vis", "t_cat4", "t_moving", "t_tid", "t_cv_vel",
             "t_map", "t_map_pt_mask", "t_map_piece_mask")
 
 
@@ -162,6 +180,7 @@ class EnvDataset(Dataset):
         from pilot_dataset import PilotDataset
         for k in ("use_cpm", "use_coop", "require_prev_frame", "history_frames", "require_history_frames", "degrade"):
             assert k not in pilot_kwargs, f"EnvDataset sets / does not support {k}"
+        assert pilot_kwargs.get("drop_cam_xy"), "the env task requires drop_cam_xy=True (with --normalize-cam)"
         self.v2x, self.use_map, self.map_transform = v2x, use_map, map_transform
         known_mask([0], v2x)  # validates v2x
         self.cache = load_env_cache(cache_dir)
@@ -197,5 +216,7 @@ class EnvDataset(Dataset):
     def __getitem__(self, i):
         r = int(self.rows[i])
         item = self.pilot[r]
+        assert self.pilot.cam_norm is not None, "set cam_norm before loading env samples (train.py --normalize-cam)"
+        item["cam"] = env_cam(item["cam"])
         item.update(sample_features(self.cache, r, self.v2x, self.env_norm, self.lanes))
         return item

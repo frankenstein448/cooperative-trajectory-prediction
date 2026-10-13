@@ -182,6 +182,10 @@ def parse_args():
                                ("--loss other than wta", args.loss != "wta"), ("--degrade", args.degrade)) if on]
         if bad:
             parser.error(f"--task env does not take {', '.join(bad)} (CPM is always off; --v2x picks the coop stream)")
+        need = [f for f, on in (("--use-speed", args.use_speed), ("--normalize-cam", args.normalize_cam),
+                                ("--drop-cam-xy", args.drop_cam_xy)) if not on]
+        if need:
+            parser.error(f"--task env requires {', '.join(need)} (its ego CAM keeps only the speed)")
     elif args.v2x is not None:
         parser.error("--v2x is only for --task env")
     return args
@@ -230,6 +234,7 @@ def main():
     if args.task == "env":
         config["v2x"] = args.v2x
         config["no_cpm"] = True  # the env task never loads CPM objects
+        config["env_cam"] = "speed only (x, y and world heading zeroed after normalization; env_dataset.env_cam)"
     with open(os.path.join(args.out_dir, "config.json"), "w") as f:
         json.dump(config, f, indent=2)
     print(f"Wrote config: {config}")
