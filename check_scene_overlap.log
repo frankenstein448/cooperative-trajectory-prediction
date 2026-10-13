@@ -1,0 +1,69 @@
+scene pairs sharing > 5% of exact MOVING positions (share of the smaller scene), with split and log:
+    3 (test  ) -  15 (train ) 0.415  logs sumo-carla-town5-500.log / sumo-carla-town5-500.log  shared instance tokens 0   <-- CROSS-SPLIT
+    3 (test  ) -  16 (tuning) 0.476  logs sumo-carla-town5-500.log / sumo-carla-town5-500.log  shared instance tokens 0   <-- CROSS-SPLIT
+    9 (train ) -  20 (train ) 0.526  logs sumo-carla-town4-275.log / sumo-carla-town4-275.log  shared instance tokens 0
+    9 (train ) -  26 (train ) 0.377  logs sumo-carla-town4-275.log / sumo-carla-town4-275.log  shared instance tokens 0
+   15 (train ) -  16 (tuning) 0.526  logs sumo-carla-town5-500.log / sumo-carla-town5-500.log  shared instance tokens 0   <-- CROSS-SPLIT
+   20 (train ) -  26 (train ) 0.853  logs sumo-carla-town4-275.log / sumo-carla-town4-275.log  shared instance tokens 0
+   27 (train ) -  34 (train ) 0.275  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   27 (train ) -  35 (test  ) 0.338  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   27 (train ) -  36 (train ) 0.332  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   27 (train ) -  42 (tuning) 0.103  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   27 (train ) -  43 (train ) 0.333  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   27 (train ) -  46 (train ) 0.337  logs sumo-carla-town5-450.log / sumo-carla-town5-425.log  shared instance tokens 0
+   32 (train ) -  37 (test  ) 0.285  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   34 (train ) -  42 (tuning) 0.469  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   34 (train ) -  55 (train ) 0.054  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   34 (train ) -  62 (train ) 0.337  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   35 (test  ) -  36 (train ) 0.385  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   35 (test  ) -  43 (train ) 0.431  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   35 (test  ) -  46 (train ) 0.954  logs sumo-carla-town5-450.log / sumo-carla-town5-425.log  shared instance tokens 0   <-- CROSS-SPLIT
+   35 (test  ) -  55 (train ) 0.340  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   35 (test  ) -  62 (train ) 0.155  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   36 (train ) -  43 (train ) 0.954  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   36 (train ) -  46 (train ) 0.328  logs sumo-carla-town5-450.log / sumo-carla-town5-425.log  shared instance tokens 0
+   36 (train ) -  55 (train ) 0.332  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   37 (test  ) -  38 (train ) 0.302  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   37 (test  ) -  41 (tuning) 0.155  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   37 (test  ) -  62 (train ) 0.204  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   38 (train ) -  41 (tuning) 0.853  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   38 (train ) -  42 (tuning) 0.268  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   38 (train ) -  62 (train ) 0.338  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   39 (train ) -  45 (train ) 0.664  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   39 (train ) -  65 (tuning) 0.061  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   39 (train ) -  68 (train ) 0.962  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   39 (train ) -  86 (train ) 0.200  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   41 (tuning) -  42 (tuning) 0.433  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   41 (tuning) -  62 (train ) 0.341  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   42 (tuning) -  62 (train ) 0.340  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0   <-- CROSS-SPLIT
+   43 (train ) -  46 (train ) 0.375  logs sumo-carla-town5-450.log / sumo-carla-town5-425.log  shared instance tokens 0
+   43 (train ) -  55 (train ) 0.333  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   45 (train ) -  59 (train ) 0.140  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   45 (train ) -  68 (train ) 0.620  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   46 (train ) -  55 (train ) 0.339  logs sumo-carla-town5-425.log / sumo-carla-town5-450.log  shared instance tokens 0
+   46 (train ) -  62 (train ) 0.175  logs sumo-carla-town5-425.log / sumo-carla-town5-450.log  shared instance tokens 0
+   49 (test  ) -  50 (train ) 0.343  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   49 (test  ) -  71 (train ) 0.478  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   49 (test  ) -  72 (train ) 1.000  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   49 (test  ) -  73 (tuning) 0.190  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   50 (train ) -  51 (tuning) 0.695  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   50 (train ) -  72 (train ) 0.343  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   50 (train ) -  73 (tuning) 0.852  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   51 (tuning) -  52 (train ) 0.050  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   51 (tuning) -  73 (tuning) 0.851  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   55 (train ) -  62 (train ) 0.197  logs sumo-carla-town5-450.log / sumo-carla-town5-450.log  shared instance tokens 0
+   65 (tuning) -  68 (train ) 0.063  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   68 (train ) -  86 (train ) 0.242  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   71 (train ) -  72 (train ) 0.478  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0
+   72 (train ) -  73 (tuning) 0.190  logs sumo-carla-town5-550.log / sumo-carla-town5-550.log  shared instance tokens 0   <-- CROSS-SPLIT
+   76 (train ) - 100 (train ) 0.103  logs sumo-carla-town5-425.log / sumo-carla-town5-425.log  shared instance tokens 0
+   78 (test  ) -  89 (train ) 0.058  logs sumo-carla-town5-425.log / sumo-carla-town5-425.log  shared instance tokens 0   <-- CROSS-SPLIT
+   78 (test  ) -  91 (train ) 0.294  logs sumo-carla-town5-425.log / sumo-carla-town5-425.log  shared instance tokens 0   <-- CROSS-SPLIT
+   78 (test  ) -  95 (train ) 0.340  logs sumo-carla-town5-425.log / sumo-carla-town5-425.log  shared instance tokens 0   <-- CROSS-SPLIT
+   89 (train ) -  91 (train ) 0.321  logs sumo-carla-town5-425.log / sumo-carla-town5-425.log  shared instance tokens 0
+   92 (test  ) -  96 (tuning) 0.904  logs sumo-carla-town4-300.log / sumo-carla-town4-300.log  shared instance tokens 0   <-- CROSS-SPLIT
+   92 (test  ) -  97 (train ) 0.800  logs sumo-carla-town4-300.log / sumo-carla-town4-300.log  shared instance tokens 0   <-- CROSS-SPLIT
+   96 (tuning) -  97 (train ) 0.704  logs sumo-carla-town4-300.log / sumo-carla-town4-300.log  shared instance tokens 0   <-- CROSS-SPLIT
+   97 (train ) -  98 (train ) 0.153  logs sumo-carla-town4-300.log / sumo-carla-town4-300.log  shared instance tokens 0
+cross-split pairs: 35
+scene descriptions / nbr_samples of 49 and 72: [(49, 'an intersection of map town5', 100, '509x615a'), (72, 'an intersection of map town5', 100, '6qw1rv4g')]
