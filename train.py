@@ -4,6 +4,10 @@ End-to-end training: all encoders (ego, coop, v2x, map) are now trainable,
 not frozen. Uses EndToEndFusion (end_to_end_model.py) and PilotDataset's
 custom collate_fn (variable-size LiDAR/camera/coop data per sample).
 
+--task env (Part 2, runs/DESIGN_ENV.md): predict the other vehicles around the ego with EnvFusion
+(env_model.py) on EnvDataset (env_dataset.py); --v2x {off,on} picks the known targets and the coop stream,
+--no-map removes the map v2 tokens. The default --task ego is the unchanged ego-trajectory task.
+
 Run in gpu-test-venv.
 """
 import os
@@ -26,6 +30,8 @@ from trajectory_loss import (build_loss, loss_predicts_scale, LOSSES, RELAXED_WT
 from scene_split import three_way_scene_split, SPLIT_VERSIONS
 from sensor_degradation import DEGRADE_MODES, degrade_config
 from history_encoder import HISTORY_ENCODERS
+from env_dataset import EnvDataset, env_collate_fn, compute_env_norm, env_sample_rows
+from env_model import EnvFusion, env_wta_loss
 
 BATCH_SIZE = 8
 LR = 1e-4          # lower than the frozen-encoder run (1e-3) -- more parameters now training, needs more caution
@@ -55,7 +61,20 @@ def model_loss(model, batch, loss_fn, gt_traj, gt_mask):
     return loss_fn(trajs, conf, gt_traj, gt_mask, *scales)
 
 
-def run_epoch(model, loader, loss_fn, optimizer=None):
+def ego_step(model, batch, loss_fn):
+    gt_traj = batch["gt_traj"].to(DEVICE)
+    gt_mask = batch["gt_mask"].to(DEVICE)
+    return model_loss(model, batch, loss_fn, gt_traj, gt_mask)
+
+
+def env_step(model, batch, loss_fn):
+    """EnvFusion forward + D's loss on the batch's real targets (env_model.env_wta_loss)."""
+    trajs, logits = model(batch)
+    dev = lambda k: batch[k].to(DEVICE)
+    return env_wta_loss(loss_fn, trajs, logits, dev("t_fut"), dev("t_fut_mask"), dev("target_mask"))
+
+
+def run_epoch(model, loader, loss_fn, optimizer=None, step=ego_step):
     is_train = optimizer is not None
     model.train() if is_train else model.eval()
 
@@ -64,13 +83,10 @@ def run_epoch(model, loader, loss_fn, optimizer=None):
     context = torch.enable_grad() if is_train else torch.no_grad()
     with context:
         for batch in loader:
-            gt_traj = batch["gt_traj"].to(DEVICE)
-            gt_mask = batch["gt_mask"].to(DEVICE)
-
             if is_train:
                 optimizer.zero_grad()
 
-            loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
+            loss, info = step(model, batch, loss_fn)
 
             if is_train:
                 loss.backward()
@@ -142,6 +158,12 @@ def parse_args():
     parser.add_argument("--no-coop", action="store_true",
                          help="V2X ablation: cooperative sensor stream removed (dataset skips the neighbour search "
                               "and neighbour sensor loading, model has no coop_encoder)")
+    parser.add_argument("--task", choices=["ego", "env"], default="ego",
+                        help="ego: the ego-trajectory task (default, unchanged). env: Part 2 environment "
+                             "prediction (EnvDataset / EnvFusion, runs/DESIGN_ENV.md); requires --v2x")
+    parser.add_argument("--v2x", choices=["off", "on"], default=None,
+                        help="--task env only: off = ego-only model (class-(a) targets, no coop sensors); on = "
+                             "(a)+(b) targets and the cooperative sensor stream")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -151,6 +173,17 @@ def parse_args():
     assert not args.drop_cam_xy or args.normalize_cam, "--drop-cam-xy requires --normalize-cam"
     if args.history_frames and args.require_history_frames:
         parser.error("--require-history-frames is for the no-history control; --history-frames filters on its own")
+    if args.task == "env":
+        if args.v2x is None:
+            parser.error("--task env requires --v2x {off,on}")
+        bad = [f for f, on in (("--no-cpm", args.no_cpm), ("--no-coop", args.no_coop),
+                               ("--history-frames", args.history_frames), ("--history-encoder", args.history_encoder != "gru"),
+                               ("--require-history-frames", args.require_history_frames),
+                               ("--loss other than wta", args.loss != "wta"), ("--degrade", args.degrade)) if on]
+        if bad:
+            parser.error(f"--task env does not take {', '.join(bad)} (CPM is always off; --v2x picks the coop stream)")
+    elif args.v2x is not None:
+        parser.error("--v2x is only for --task env")
     return args
 
 
@@ -192,10 +225,17 @@ def main():
         "num_workers": NUM_WORKERS,
         "scene_split_seed": SCENE_SPLIT_SEED,
         "git_commit": git_commit(),
+        "task": args.task,
     }
+    if args.task == "env":
+        config["v2x"] = args.v2x
+        config["no_cpm"] = True  # the env task never loads CPM objects
     with open(os.path.join(args.out_dir, "config.json"), "w") as f:
         json.dump(config, f, indent=2)
     print(f"Wrote config: {config}")
+
+    if args.task == "env":
+        return main_env(args, config)
 
     dataset = PilotDataset(use_image_cache=args.use_image_cache,
                             require_prev_frame=REQUIRE_PREV_FRAME,
@@ -266,38 +306,83 @@ def main():
     print(f"Trainable parameters: {n_params:,}")
 
     if args.dry_run:
-        print("DRY RUN: 2 train batches + 2 val batches, no checkpoints will be saved")
-        model.train()
-        for i, batch in enumerate(train_loader):
+        return dry_run(model, train_loader, val_loader, loss_fn, optimizer)
+    fit(model, train_loader, val_loader, loss_fn, optimizer, args)
+
+
+def dry_run(model, train_loader, val_loader, loss_fn, optimizer, step=ego_step):
+    print("DRY RUN: 2 train batches + 2 val batches, no checkpoints will be saved")
+    model.train()
+    for i, batch in enumerate(train_loader):
+        if i >= 2:
+            break
+        t0 = time.time()
+        optimizer.zero_grad()
+        loss, info = step(model, batch, loss_fn)
+        loss.backward()
+        optimizer.step()
+        print(f"  train batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f} "
+              f"({time.time() - t0:.2f}s)")
+
+    model.eval()
+    with torch.no_grad():
+        for i, batch in enumerate(val_loader):
             if i >= 2:
                 break
-            gt_traj = batch["gt_traj"].to(DEVICE)
-            gt_mask = batch["gt_mask"].to(DEVICE)
-            optimizer.zero_grad()
-            loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
-            loss.backward()
-            optimizer.step()
-            print(f"  train batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f}")
+            loss, info = step(model, batch, loss_fn)
+            print(f"  val batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f}")
+    if torch.cuda.is_available():
+        print(f"  peak GPU memory {torch.cuda.max_memory_allocated() / 1e9:.2f} GB")
+    print("DRY RUN complete -- no checkpoints saved, exiting.")
 
-        model.eval()
-        with torch.no_grad():
-            for i, batch in enumerate(val_loader):
-                if i >= 2:
-                    break
-                gt_traj = batch["gt_traj"].to(DEVICE)
-                gt_mask = batch["gt_mask"].to(DEVICE)
-                loss, info = model_loss(model, batch, loss_fn, gt_traj, gt_mask)
-                print(f"  val batch {i}: loss={loss.item():.4f} reg={info['reg_loss']:.4f} cls={info['cls_loss']:.4f}")
 
-        print("DRY RUN complete -- no checkpoints saved, exiting.")
-        return
+def main_env(args, config):
+    """--task env: EnvDataset / EnvFusion / D's WTA loss on the known targets (runs/DESIGN_ENV.md)."""
+    dataset = EnvDataset(v2x=args.v2x, use_map=not args.no_map, map_transform=args.map_transform,
+                         use_image_cache=args.use_image_cache, use_speed=args.use_speed, drop_cam_xy=args.drop_cam_xy)
+    config["env_cache_commit"] = dataset.cache["manifest"]["git_commit"]
+    config["n_env_samples"] = len(dataset)
+    with open(os.path.join(args.out_dir, "config.json"), "w") as f:
+        json.dump(config, f, indent=2)
+    train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED,
+                                                            split_version=args.split_version)
+    print(f"split_version={args.split_version}; Train: {len(train_set)} | Tuning: {len(tuning_set)} "
+          f"| Test: {len(test_set)} samples (never used here)")
 
+    if args.normalize_cam:
+        cam_values = torch.stack([dataset.get_cam_features(*dataset.samples[i][:3]) for i in train_set.indices])
+        cam_norm = {"mean": cam_values.mean(0).tolist(), "std": (cam_values.std(0) + 1e-6).tolist()}
+        with open(os.path.join(args.out_dir, "cam_norm.json"), "w") as f:
+            json.dump(cam_norm, f, indent=2)
+        dataset.cam_norm = cam_norm
+        print(f"Computed cam_norm from {len(train_set.indices)} train samples: {cam_norm}")
+    env_norm = compute_env_norm(dataset.cache, dataset.rows[train_set.indices], args.v2x)
+    with open(os.path.join(args.out_dir, "env_norm.json"), "w") as f:
+        json.dump(env_norm, f, indent=2)
+    dataset.env_norm = env_norm
+    print(f"Computed env_norm (target history, own frame) over the train split's known targets: {env_norm}")
+
+    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
+                              num_workers=NUM_WORKERS, collate_fn=env_collate_fn)
+    val_loader = DataLoader(tuning_set, batch_size=BATCH_SIZE, shuffle=False,
+                            num_workers=NUM_WORKERS, collate_fn=env_collate_fn)
+    model = EnvFusion(device=DEVICE, v2x=args.v2x == "on", use_map=not args.no_map).to(DEVICE)
+    loss_fn = build_loss("wta")
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    print(f"EnvFusion v2x={args.v2x}, use_map={not args.no_map}; trainable parameters: "
+          f"{sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
+    if args.dry_run:
+        return dry_run(model, train_loader, val_loader, loss_fn, optimizer, step=env_step)
+    fit(model, train_loader, val_loader, loss_fn, optimizer, args, step=env_step)
+
+
+def fit(model, train_loader, val_loader, loss_fn, optimizer, args, step=ego_step):
     best_val_loss = float("inf")
 
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
-        train_loss, train_reg, train_cls = run_epoch(model, train_loader, loss_fn, optimizer)
-        val_loss, val_reg, val_cls = run_epoch(model, val_loader, loss_fn, optimizer=None)
+        train_loss, train_reg, train_cls = run_epoch(model, train_loader, loss_fn, optimizer, step=step)
+        val_loss, val_reg, val_cls = run_epoch(model, val_loader, loss_fn, optimizer=None, step=step)
         elapsed = time.time() - t0
 
         print(f"Epoch {epoch}/{args.epochs} ({elapsed:.1f}s) | "
