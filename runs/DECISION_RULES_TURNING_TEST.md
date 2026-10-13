@@ -31,14 +31,30 @@ untouched for these models, but no condition label or condition-based number has
 
 ## Evaluation (`run_turning_test.sh`)
 
-Each checkpoint is evaluated **exactly once**:
-`eval_scenes.py --split test --confirm-final-test --confirmatory-turning-test` → `eval_<run>_test_cond.log`.
+Each checkpoint has **one evaluation that produces condition results**:
+`eval_scenes.py --split test --confirm-final-test --confirmatory-turning-test`, which writes its own
+stdout and stderr to `eval_<run>_test_cond.log`.
 
-- Each evaluation is appended to `runs/TEST_EVALS.log` before it runs, with
+- Each evaluation is appended to `runs/TEST_EVALS.log` before it evaluates, with
   `purpose=confirmatory condition evaluation (turning hypothesis from tuning)`.
-- `eval_scenes.py` refuses `--confirmatory-turning-test` for a run-dir/ckpt that already has such an
-  entry, and the script refuses to start if any `eval_<run>_test_cond.log` already exists. A crashed or
-  interrupted evaluation still counts as that checkpoint's one evaluation; it is reported, not re-run.
+- **Re-run after a crash** (amendment, committed before any launch): a re-run for a checkpoint is
+  allowed only if **every** earlier attempt's log contains **no line starting with `COND`**, i.e. the
+  attempt crashed before any condition result existed. `eval_scenes.py` enforces this:
+  - The earlier attempts are the existing `eval_<run>_test_cond.log` and every
+    `eval_<run>_test_cond_attempt<N>.log`. If `runs/TEST_EVALS.log` has more confirmatory entries for the
+    checkpoint than there are attempt logs, the re-run is refused (a missing log cannot be checked).
+  - Any attempt log with a `COND` line makes that attempt **final**: the re-run is refused. This includes
+    the `CONDITIONS` header line that precedes the condition rows, so an attempt that got as far as
+    the condition block is final even if no row was printed.
+  - On an allowed re-run, the earlier `eval_<run>_test_cond.log` is kept, renamed
+    `eval_<run>_test_cond_attempt<N>.log` (N = 1, 2, … in order of the attempts), and the re-run is
+    logged in `runs/TEST_EVALS.log` with
+    `purpose=confirmatory condition evaluation (turning hypothesis from tuning) (re-run after crash, no results seen)`.
+  - An attempt that crashed before its `runs/TEST_EVALS.log` entry was written (e.g. while loading the
+    data) still has a log and counts as an attempt; a re-run after it is also marked as a re-run.
+- `run_turning_test.sh` skips a checkpoint whose `eval_<run>_test_cond.log` already has `COND` lines,
+  so re-launching it after a crash re-runs only the checkpoints the rule allows. All attempt logs and
+  `runs/TEST_EVALS.log` entries are reported.
 - Each run's accuracy rows (per-scene and ALL) must match its original `eval_<run>_test.log` exactly
   (same checkpoint and data). Any difference stops the script before the analysis, and is reported.
 
