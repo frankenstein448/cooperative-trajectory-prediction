@@ -43,7 +43,7 @@ from rgcn_map_encoder import get_nearby_lane_nodes
 from coord_transform import v2xsim_to_carla
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
-from scene_split import three_way_scene_split
+from scene_split import three_way_scene_split, split_version_of
 
 PAIRING_SEED = 0
 
@@ -75,7 +75,7 @@ dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy,
                         **load_history_settings(args.run_dir, run_config), **load_v2x_settings(run_config),
                         map_transform=map_transform_of(run_config))
-train_set, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
+train_set, tuning_set, _ = three_way_scene_split(dataset, seed=42, split_version=split_version_of(run_config))  # 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
 model = load_model(ckpt_path, use_map=True, history_frames=dataset.history_frames,

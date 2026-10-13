@@ -10,6 +10,38 @@ KNOWN_TUNING_SCENES = {
     "Town05": {16, 41, 42, 51, 65, 73},
 }
 
+# split_version (recorded in a run's config.json; absent = "v1", so old runs reproduce exactly):
+#   v1: three_way_scene_split's original draw (tuning = scene_split(), test = test_scenes.json). It leaks:
+#       scenes cut from one SUMO simulation overlap in time (check_scene_overlap.py; 49 (test) == 72 (train)).
+#   v2: whole overlap components (scenes sharing > 1% of moving-vehicle positions) per split, stratified by
+#       town, ~70/15/15 by samples (check_scene_components.py, approved 2026-10-13). Tuning below, test in
+#       test_scenes_v2.json, train = every other scene. Test scene 78 was evaluated once in Part 1 (v1 test;
+#       no model choice depended on it). New runs default to v2 (train.py --split-version).
+SPLIT_VERSIONS = ("v1", "v2")
+TUNING_SCENES_V2 = {
+    "Town03": {85},
+    "Town04": {30},
+    "Town05": {3, 14, 15, 16, 21, 22},
+}
+TEST_SCENES_V2_PATH = "test_scenes_v2.json"
+
+
+def split_version_of(run_config):
+    """A run's split version from its config.json dict; configs without the key are v1."""
+    v = run_config.get("split_version", "v1")
+    assert v in SPLIT_VERSIONS, f"unknown split_version {v!r}"
+    return v
+
+
+def v2_scene_sets(test_scenes_path=TEST_SCENES_V2_PATH):
+    """{town: (tuning set, test set)} of split v2; test_scenes_v2.json must exist (it is never drawn)."""
+    with open(test_scenes_path) as f:
+        test = {t: set(v) for t, v in json.load(f).items()}
+    assert set(test) == set(TUNING_SCENES_V2), f"{test_scenes_path}: towns {sorted(test)}"
+    for t in test:
+        assert not (test[t] & TUNING_SCENES_V2[t]), f"{t}: tuning and test overlap"
+    return {t: (TUNING_SCENES_V2[t], test[t]) for t in test}
+
 
 def scene_split(dataset, val_fraction=0.15, seed=42):
     """Hold out whole scenes: per town, at least one scene, about val_fraction of its scenes."""
@@ -27,8 +59,12 @@ def scene_split(dataset, val_fraction=0.15, seed=42):
     return Subset(dataset, train_idx), Subset(dataset, val_idx)
 
 
-def three_way_scene_split(dataset, tuning_fraction=0.15, seed=42, test_scenes_path="test_scenes.json"):
+def three_way_scene_split(dataset, tuning_fraction=0.15, seed=42, test_scenes_path="test_scenes.json",
+                          split_version="v1"):
     """Train / tuning / test, holding out whole scenes, stratified by town.
+
+    split_version="v2": the fixed scene lists above (TUNING_SCENES_V2, test_scenes_v2.json); every other
+    scene is train. tuning_fraction / seed / test_scenes_path are not used. Default v1 = the original:
 
     Tuning is obtained by calling scene_split() itself -- not a re-implementation
     of its draw -- so it is guaranteed identical to the existing train/val split,
@@ -40,6 +76,15 @@ def three_way_scene_split(dataset, tuning_fraction=0.15, seed=42, test_scenes_pa
     deterministic draw is asserted to match it -- it is never silently
     redrawn or overwritten.
     """
+    assert split_version in SPLIT_VERSIONS, f"unknown split_version {split_version!r}"
+    if split_version == "v2":
+        sets = v2_scene_sets()
+        idx = {"train": [], "tuning": [], "test": []}
+        for i, (_, scene, _, town) in enumerate(dataset.samples):
+            tun, tst = sets[town]
+            idx["tuning" if scene in tun else "test" if scene in tst else "train"].append(i)
+        return Subset(dataset, idx["train"]), Subset(dataset, idx["tuning"]), Subset(dataset, idx["test"])
+
     train_full, tuning = scene_split(dataset, tuning_fraction, seed)
 
     tuning_scenes = {}
