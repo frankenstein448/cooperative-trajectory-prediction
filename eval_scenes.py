@@ -41,11 +41,33 @@ parser.add_argument("--metrics-only-reeval", action="store_true",
                      help="with --split test: re-run an evaluation already in runs/TEST_EVALS.log (same run-dir and "
                           "ckpt) only to add metrics (miss / off-road); refused if no such earlier entry exists, "
                           "and recorded in the log as a metrics-only re-evaluation")
+parser.add_argument("--confirmatory-turning-test", action="store_true",
+                     help="with --split test: the confirmatory condition evaluation of runs/DECISION_RULES_TURNING_TEST.md; "
+                          "recorded in the log with that purpose, and refused if this run-dir/ckpt already has one")
 args = parser.parse_args()
 
 TEST_EVALS_LOG = "runs/TEST_EVALS.log"
+CONFIRMATORY_TURNING_PURPOSE = "confirmatory condition evaluation (turning hypothesis from tuning)"
+
+
+def logged_test_evals():
+    """(run_dir, ckpt, purpose) of every entry in TEST_EVALS_LOG, paths normalised."""
+    entries = []
+    if os.path.exists(TEST_EVALS_LOG):
+        with open(TEST_EVALS_LOG) as f:
+            for line in f:
+                fields = dict(kv.split("=", 1) for kv in line.rstrip("\n").split("\t")[1:] if "=" in kv)
+                entries.append((os.path.normpath(fields.get("run_dir", "")), os.path.normpath(fields.get("ckpt", "")),
+                                fields.get("purpose", "")))
+    return entries
+
+
 if args.metrics_only_reeval and args.split != "test":
     parser.error("--metrics-only-reeval is for re-running an already-logged test evaluation (--split test)")
+if args.confirmatory_turning_test and args.split != "test":
+    parser.error("--confirmatory-turning-test is a test-split evaluation (--split test)")
+if args.confirmatory_turning_test and args.metrics_only_reeval:
+    parser.error("--confirmatory-turning-test and --metrics-only-reeval are exclusive")
 if args.split == "test":
     if not args.run_dir:
         parser.error("--split test requires --run-dir (the test split only exists in three_way_scene_split)")
@@ -53,18 +75,17 @@ if args.split == "test":
         parser.error("--split test requires --confirm-final-test")
     if args.degrade:
         parser.error("--degrade is exploratory and tuning-split only; refusing --split test")
+    this_eval = (os.path.normpath(args.run_dir), os.path.normpath(args.ckpt))
     if args.metrics_only_reeval:
-        logged = []
-        if os.path.exists(TEST_EVALS_LOG):
-            with open(TEST_EVALS_LOG) as f:
-                for line in f:
-                    fields = dict(kv.split("=", 1) for kv in line.rstrip("\n").split("\t")[1:] if "=" in kv)
-                    if fields.get("purpose", "").startswith("metrics-only"):
-                        continue  # only an original evaluation counts as "already logged"
-                    logged.append((os.path.normpath(fields.get("run_dir", "")), os.path.normpath(fields.get("ckpt", ""))))
-        if (os.path.normpath(args.run_dir), os.path.normpath(args.ckpt)) not in logged:
+        # only an original evaluation counts as "already logged"
+        logged = [(r, c) for r, c, p in logged_test_evals() if not p.startswith("metrics-only")]
+        if this_eval not in logged:
             parser.error(f"--metrics-only-reeval: no earlier evaluation of run_dir={args.run_dir} ckpt={args.ckpt} "
                          f"in {TEST_EVALS_LOG}; refusing a new test evaluation under this flag")
+    if args.confirmatory_turning_test:
+        if this_eval + (CONFIRMATORY_TURNING_PURPOSE,) in logged_test_evals():
+            parser.error(f"--confirmatory-turning-test: run_dir={args.run_dir} ckpt={args.ckpt} already has a "
+                         f"confirmatory condition evaluation in {TEST_EVALS_LOG}; one per checkpoint")
 if args.degrade:
     if not args.run_dir:
         parser.error("--degrade requires --run-dir (the log is named after the run)")
@@ -163,6 +184,8 @@ if args.run_dir:
             commit = f"<unavailable: {e}>"
         purpose = ("\tpurpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier "
                    "logged evaluation)") if args.metrics_only_reeval else ""
+        if args.confirmatory_turning_test:
+            purpose = f"\tpurpose={CONFIRMATORY_TURNING_PURPOSE}"
         with open(TEST_EVALS_LOG, "a") as f:
             f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
                     f"git_commit={commit}\tckpt={args.ckpt}{purpose}\n")
