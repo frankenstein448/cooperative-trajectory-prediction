@@ -17,7 +17,7 @@ eval_scenes.py measures how much this, and the V2X-Sim -> CARLA alignment
 Trajectories are agent-centric (ground_truth_extractor convention: offset from the
 current position, rotated by -heading); they are taken back to V2X-Sim world
 coordinates with the agent's RAW pose (never the normalized cam), then into CARLA
-with coord_transform.TOWN_TRANSFORMS.
+with coord_transform's map transform (`kind`: legacy = TOWN_TRANSFORMS, mirror = (x, -y)).
 """
 import math
 import numpy as np
@@ -49,12 +49,12 @@ def raw_pose(loader, agent_id, scene, frame):
     return x, y, quaternion_to_yaw(pose["rotation"])
 
 
-def agent_to_carla(local_xy, pose, town):
+def agent_to_carla(local_xy, pose, town, kind="legacy"):
     """local_xy: [..., 2] agent-centric (rotated by -heading) -> [..., 2] CARLA world.
     Undoes ground_truth_extractor's rotation (rotate by +heading), adds the current
-    position, then applies coord_transform's per-town rigid transform."""
+    position, then applies coord_transform's map transform `kind` (legacy = the per-town rigid transform)."""
     x, y, h = pose
     c, s = math.cos(h), math.sin(h)
     lx, ly = local_xy[..., 0], local_xy[..., 1]
     world = np.stack([x + lx * c - ly * s, y + lx * s + ly * c], axis=-1)
-    return v2xsim_to_carla_batch(world.reshape(-1, 2), town).reshape(world.shape)
+    return v2xsim_to_carla_batch(world.reshape(-1, 2), town, kind).reshape(world.shape)

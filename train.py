@@ -18,6 +18,7 @@ import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy("file_system")
 from torch.utils.data import DataLoader
 
+from coord_transform import MAP_TRANSFORMS
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion
 from trajectory_loss import (build_loss, loss_predicts_scale, LOSSES, RELAXED_WTA_EPS,
@@ -112,6 +113,9 @@ def parse_args():
                               f"trajectory-level Laplace-mixture NLL, model gets a scale head (b = softplus + "
                               f"{LAPLACE_SCALE_FLOOR} m). wta_soft: WTA regression, mode scores trained against "
                               f"softmax(-ADE/tau), tau={WTA_SOFT_TAU} m fixed")
+    parser.add_argument("--map-transform", choices=MAP_TRANSFORMS, default="mirror",
+                        help="V2X-Sim -> CARLA for the map lookup (coord_transform.py); recorded in config.json. "
+                             "Runs before this option used legacy (their configs lack the key).")
     parser.add_argument("--no-map", action="store_true",
                          help="EndToEndFusion(use_map=False): map stream removed, for the ablation "
                               "(replaces train_ablation.py for new runs)")
@@ -169,6 +173,7 @@ def main():
         "laplace_scale_floor": LAPLACE_SCALE_FLOOR if args.loss == "laplace_mixture" else None,
         "wta_soft_tau": WTA_SOFT_TAU if args.loss == "wta_soft" else None,
         "no_map": args.no_map,
+        "map_transform": args.map_transform,
         "degrade": degrade_config(args.degrade),
         "history_frames": args.history_frames,
         "history_encoder": args.history_encoder if args.history_frames > 0 else None,
@@ -196,7 +201,8 @@ def main():
                             history_frames=args.history_frames,
                             require_history_frames=args.require_history_frames,
                             use_cpm=not args.no_cpm,
-                            use_coop=not args.no_coop)
+                            use_coop=not args.no_coop,
+                            map_transform=args.map_transform)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED)

@@ -25,7 +25,7 @@ from ego_sensor_encoder import load_semantic_lidar
 from ego_camera_encoder import load_image, IMG_SIZE
 from find_coop_neighbors import find_coop_neighbors
 from rgcn_map_encoder import load_graph, get_nearby_lane_nodes
-from coord_transform import v2xsim_to_carla
+from coord_transform import v2xsim_to_carla, MAP_TRANSFORMS
 from motion_utils import get_cv_velocity
 from sensor_degradation import DEGRADE_MODES, degrade_points, degrade_images
 
@@ -73,7 +73,7 @@ class PilotDataset(Dataset):
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
                  cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None,
                  history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None,
-                 use_cpm: bool = True, use_coop: bool = True):
+                 use_cpm: bool = True, use_coop: bool = True, map_transform: str = "legacy"):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
         assert history_frames >= 0 and require_history_frames >= 0
@@ -112,6 +112,10 @@ class PilotDataset(Dataset):
         # The sample list is unaffected. The ego's own CAM is always returned.
         self.use_cpm = use_cpm
         self.use_coop = use_coop
+        # V2X-Sim -> CARLA for the nearest-lane lookup (coord_transform.MAP_TRANSFORMS). Default legacy, so
+        # every existing caller is unchanged; train.py / eval_scenes.py pass the run's map_transform.
+        assert map_transform in MAP_TRANSFORMS, f"unknown map_transform={map_transform!r}"
+        self.map_transform = map_transform
         # Like cam_norm: {"mean": [2], "std": [2]} per coordinate, from the train
         # split, settable post-construction, applied to the returned copy only.
         self.history_norm = history_norm
@@ -135,7 +139,7 @@ class PilotDataset(Dataset):
               + f"degrade={degrade}, history_frames={history_frames}, "
               + f"require_history_frames={require_history_frames}, "
               + f"history_norm={'on' if history_norm is not None else 'off'}, "
-              + f"use_cpm={use_cpm}, use_coop={use_coop}")
+              + f"use_cpm={use_cpm}, use_coop={use_coop}, map_transform={map_transform}")
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -271,7 +275,7 @@ class PilotDataset(Dataset):
         # Uses cam_raw, NOT the (possibly normalized) cam built below -- this
         # lookup needs real V2X-Sim world coordinates, not z-scored values.
         ego_x, ego_y = cam_raw[0].item(), cam_raw[1].item()
-        carla_x, carla_y = v2xsim_to_carla(ego_x, ego_y, town)
+        carla_x, carla_y = v2xsim_to_carla(ego_x, ego_y, town, self.map_transform)
         agent_pos = torch.tensor([[carla_x, carla_y]], dtype=torch.float32)
         agent_pos_norm = (agent_pos - graph["mean"]) / graph["std"]
         nearby_idx = get_nearby_lane_nodes(agent_pos_norm, graph["data"].x, k=K_NEAREST_LANES)  # [k] for single agent
