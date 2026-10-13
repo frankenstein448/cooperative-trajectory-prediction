@@ -38,8 +38,8 @@ vs two-wheeler (bicycle, motorcycle).
 
 ## Rule form (`env_metrics.rule`, `analyze_env.py`)
 
-All rules use **MOVING targets** and **minADE6**, seed means and sample standard deviations (n = 3), on the
-8 tuning scenes:
+All rules use **MOVING targets**, seed means and sample standard deviations (n = 3), on the 8 tuning scenes.
+The metric is minADE6 for rules 1 and 3 and ADE1 for rule 2:
 
 - **Full form** (every tuning scene has at least one target of the rule's subset): "with" is better only if its
   seed-mean is lower in **≥ 7 of the 8 tuning scenes** AND the ALL gap (without − with) is **> 2 × the larger
@@ -54,9 +54,10 @@ standard deviation 0.
 ## Pre-registered comparisons
 
 1. **V2X on (a):** E_V2X vs E_EgoOnly, minADE6 on moving class-(a) targets (the targets both models predict).
-2. **V2X on (b):** E_V2X's minADE6 vs the constant-velocity baseline's ADE, on moving class-(b) targets. EgoOnly
-   cannot predict (b) at all. Note that this compares the best of 6 modes with a single prediction, which favours
-   the model. E_V2X's ADE1 against the same baseline is reported next to it, descriptively.
+2. **V2X on (b):** E_V2X's **ADE1** (its top-scored mode) vs the constant-velocity baseline's ADE, on moving
+   class-(b) targets: one prediction against one prediction. EgoOnly cannot predict (b) at all. E_V2X's minADE6
+   vs the same baseline is reported **descriptively only** (best of 6 vs a single prediction favours the model).
+   (Changed from minADE6 to ADE1 on 2026-10-13, before any env-task model was trained.)
 3. **Map:** E_V2X vs E_V2Xnomap, minADE6 on moving targets ((a) + (b)). **Secondary:** the same on turning
    targets.
 

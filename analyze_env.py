@@ -1,16 +1,17 @@
 """
 analyze_env.py
 Applies runs/DECISION_RULES_ENV.md to the env runs' per-target evaluations (eval_env.py ->
-runs/<run>/eval_env_tuning_checkpoint_epoch12.npz). All rules use MOVING targets, minADE6, the tuning split (v2),
+runs/<run>/eval_env_tuning_checkpoint_epoch12.npz). All rules use MOVING targets and the tuning split (v2),
 and Part 1's rule form (env_metrics.rule): full form = seed-mean lower in >= 7 of the 8 tuning scenes AND ALL gap
 > 2 x the larger seed std; pooled form (if any tuning scene has no target of the subset) = seed-mean ALL lower AND
 the same gap condition. Which form applies is decided by the ground-truth labels alone (identical for every run).
 
   (1) V2X on (a):   E_V2X vs E_EgoOnly, minADE6 on moving class-(a) targets.
-  (2) V2X on (b):   E_V2X minADE6 vs the constant-velocity baseline's ADE on moving class-(b) targets (the
-                    baseline is deterministic: its seed std is 0).
+  (2) V2X on (b):   E_V2X ADE1 (its top-scored mode) vs the constant-velocity baseline's ADE on moving class-(b)
+                    targets (the baseline is deterministic: its seed std is 0). E_V2X minADE6 vs the same baseline
+                    is printed as a descriptive comparison only (best of 6 vs a single prediction).
   (3) Map:          E_V2X vs E_V2Xnomap, minADE6 on moving targets ((a) + (b)); secondary: on turning targets.
-Everything else (ADE1, minFDE6, miss rates, stationary / straight / category rows, baselines, coverage) is
+Everything else (other metrics, minFDE6, miss rates, stationary / straight / category rows, baselines, coverage) is
 descriptive.
 
 Run in gpu-test-venv:  python analyze_env.py [--prefix E_] [--npz eval_env_tuning_checkpoint_epoch12.npz]
@@ -25,12 +26,16 @@ from env_metrics import subset_masks, scene_values, rule, METRICS, SUBSETS
 
 GROUPS = ("EgoOnly", "V2X", "V2Xnomap")
 EXPECT = {"EgoOnly": ("off", False), "V2X": ("on", False), "V2Xnomap": ("on", True)}  # (v2x, no_map)
-RULES = (  # (label, with, without, subset, without metric; None = the run's minADE6)
-    ("(1) V2X on (a)", "V2X", "EgoOnly", "a_moving", None),
-    ("(2) V2X on (b) vs constant velocity", "V2X", "V2X", "b_moving", "cv_ade"),
-    ("(3) map, moving targets", "V2X", "V2Xnomap", "moving", None),
-    ("(3b) map, turning targets (secondary)", "V2X", "V2Xnomap", "turning", None),
+RULES = (  # (label, with group, with metric, without group, without metric, subset)
+    ("(1) V2X on (a)", "V2X", "minade6", "EgoOnly", "minade6", "a_moving"),
+    ("(2) V2X on (b) vs constant velocity", "V2X", "ade1", "V2X", "cv_ade", "b_moving"),
+    ("(3) map, moving targets", "V2X", "minade6", "V2Xnomap", "minade6", "moving"),
+    ("(3b) map, turning targets (secondary)", "V2X", "minade6", "V2Xnomap", "minade6", "turning"),
 )
+DESCRIPTIVE_COMPARISONS = (  # same computation, no verdict
+    ("(2-desc) V2X minADE6 on (b) vs constant velocity", "V2X", "minade6", "V2X", "cv_ade", "b_moving"),
+)
+METRIC_NAME = {"minade6": "minADE6", "ade1": "ADE1", "cv_ade": "constant velocity ADE"}
 
 
 def load(path):
@@ -103,22 +108,30 @@ def main():
         print(f"  baselines {sub:19s} cv ade={ref['cv_ade'][m].mean():.3f} fde={ref['cv_fde'][m].mean():.3f} "
               f"miss={ref['cv_miss'][m].mean():.3f} | stay ade={ref['stay_ade'][m].mean():.3f}")
 
-    print("\nRULES (runs/DECISION_RULES_ENV.md; minADE6 on moving targets; lower is better)")
-    verdicts = []
-    for label, gw, go, sub, base in RULES:
-        w = [scene_values(t, "minade6", subset_masks(t)[sub], scenes) for t in G[gw]]
-        o = [scene_values(t, base or "minade6", subset_masks(t)[sub], scenes) for t in G[go]]
+    def compare(label, gw, mw, go, mo, sub):
+        w = [scene_values(t, mw, subset_masks(t)[sub], scenes) for t in G[gw]]
+        o = [scene_values(t, mo, subset_masks(t)[sub], scenes) for t in G[go]]
         r = rule(w, o, scenes)
-        what = f"{go} {'constant velocity ADE' if base else 'minADE6'}"
-        print(f"\n{label}: {gw} minADE6 vs {what}, subset {sub}")
-        print(f"  per scene seed means ({gw} / {what}): " + "  ".join(
+        a, b = f"{gw} {METRIC_NAME[mw]}", f"{go} {METRIC_NAME[mo]}"
+        print(f"\n{label}: {a} vs {b}, subset {sub}")
+        print(f"  per scene seed means ({a} / {b}): " + "  ".join(
             f"#{s}: " + (f"{st.mean(x[s] for x in w):.3f}/{st.mean(x[s] for x in o):.3f}"
                          if all(x[s] is not None for x in w + o) else "n/a") for s in scenes))
         print(f"  form={r['form']} (scenes with samples {r['scenes_with_samples']}/8)  wins={r['wins']}  "
               f"ALL {r['with']:.3f} (sd {r['sd_with']:.3f}) vs {r['without']:.3f} (sd {r['sd_without']:.3f})  "
               f"gap {r['gap']:+.3f} > {r['threshold']:.3f}?")
-        verdicts.append((label, "HELPS / better" if r["helps"] else "no detectable effect"))
+        return r
+
+    print("\nRULES (runs/DECISION_RULES_ENV.md; moving targets; lower is better)")
+    verdicts = []
+    for spec in RULES:
+        r = compare(*spec)
+        verdicts.append((spec[0], "HELPS / better" if r["helps"] else "no detectable effect"))
         print(f"  -> {verdicts[-1][1]}")
+    print("\nDESCRIPTIVE comparisons (same computation, NO verdict):")
+    for spec in DESCRIPTIVE_COMPARISONS:
+        r = compare(*spec)
+        print(f"  -> descriptive only (the rule form would say: {'lower' if r['helps'] else 'not lower'})")
     print("\nVERDICTS:")
     for label, v in verdicts:
         print(f"  {label:42s} {v}")

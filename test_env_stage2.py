@@ -506,8 +506,9 @@ def test_eval_collect_and_tables():
 
 
 def test_analyze_env_end_to_end():
-    """analyze_env.py on fake per-target npz files (tmp dir): V2X clearly better than EgoOnly on (a),
-    map with no effect, V2X better than CV on (b)."""
+    """analyze_env.py on fake per-target npz files (tmp dir): V2X clearly better than EgoOnly on (a), map with no
+    effect; on (b) V2X's ADE1 is worse than CV but its minADE6 better -> rule (2) (ADE1) not met, minADE6 vs CV
+    only descriptive."""
     import json as _json
     import subprocess
     import tempfile
@@ -530,6 +531,8 @@ def test_analyze_env_end_to_end():
                 m = len(t["tid"])
                 for k in em.METRICS:
                     t[k] = level + rng.normal(0, 0.01, m)
+                if g == "V2X":   # rule (2) must use ADE1: top-1 worse than CV (4.0), best-of-6 better
+                    t["ade1"] = 5.0 + rng.normal(0, 0.01, m)
                 for k in ("cv_ade", "cv_fde", "cv_miss", "stay_ade", "stay_fde", "stay_miss"):
                     t[k] = np.full(m, 4.0)
                 meta = {"split": "tuning", "split_version": "v2", "map_transform": "mirror", "v2x": v2x, "no_map": nomap,
@@ -544,9 +547,14 @@ def test_analyze_env_end_to_end():
     import re as _re
     v = {_re.split(r"\s{2,}", l.strip())[0]: l for l in out.stdout.split("VERDICTS:")[1].split("\nCoverage")[0].splitlines()
          if l.strip()}
-    assert "HELPS" in v["(1) V2X on (a)"] and "HELPS" in v["(2) V2X on (b) vs constant velocity"]
+    assert "HELPS" in v["(1) V2X on (a)"] and "no detectable" in v["(2) V2X on (b) vs constant velocity"]
+    assert "(2-desc)" not in out.stdout.split("VERDICTS:")[1], "the minADE6-vs-CV comparison must not get a verdict"
+    desc = out.stdout.split("DESCRIPTIVE comparisons")[1].split("VERDICTS:")[0]
+    assert "V2X minADE6 vs V2X constant velocity ADE" in desc and "rule form would say: lower" in desc
     assert "no detectable" in v["(3) map, moving targets"]
-    assert out.stdout.count("form=full (scenes with samples 8/8)") == 4 and "Coverage per model" in out.stdout
+    rules_part = out.stdout.split("RULES (")[1].split("DESCRIPTIVE comparisons")[0]
+    assert rules_part.count("form=full (scenes with samples 8/8)") == 4 and "Coverage per model" in out.stdout
+    assert "V2X ADE1 vs V2X constant velocity ADE" in rules_part
 
 
 if __name__ == "__main__":
