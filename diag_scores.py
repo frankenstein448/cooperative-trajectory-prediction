@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from visualize_predictions import load_model
 from scene_split import scene_split
+from coord_transform import warn_legacy_script
+warn_legacy_script("diag_scores.py")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--ckpt", required=True)

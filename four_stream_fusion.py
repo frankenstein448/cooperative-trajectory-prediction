@@ -61,6 +61,8 @@ class FourStreamFusion(nn.Module):
 
 if __name__ == "__main__":
     # ---------- Ego stream (real) ----------
+    from coord_transform import warn_legacy_script
+    warn_legacy_script("four_stream_fusion.py")
     lidar_path = f"/home/karra/V2X-Sim-2.0/sweeps/SEMLIDAR_TOP_id_{AGENT_ID}/scene_{SCENE}_{FRAME:06d}.pcd.bin"
     points = load_semantic_lidar(lidar_path)
 

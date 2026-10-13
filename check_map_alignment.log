@@ -1,0 +1,169 @@
+loading raw JSON (once) ...
+rasters built (0.2 m); fitting 54 scenes
+  scene  79 Town03 test   n=  7843  old   9.79/119.50 fail  mirror  0.67/ 3.50 fail  new  0.67/ 3.50 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  80 Town03 train  n=  7688  old  24.87/116.51 fail  mirror  0.62/ 2.63 fail  new  0.62/ 2.63 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene   5 Town03 train  n=  7489  old  13.53/129.09 fail  mirror  0.65/ 3.51 fail  new  0.65/ 3.51 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  64 Town03 train  n=  9544  old  10.61/114.73 fail  mirror  0.64/ 3.51 fail  new  0.64/ 3.51 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene   4 Town03 tuning n=  8984  old  10.70/111.67 fail  mirror  0.64/ 3.07 fail  new  0.64/ 3.07 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  77 Town03 train  n= 17039  old  12.78/116.79 fail  mirror  0.69/ 3.50 fail  new  0.69/ 3.50 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene   6 Town04 train  n= 14797  old  14.31/103.84 fail  mirror  0.56/ 1.39 PASS  new  0.56/ 1.39 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  20 Town04 train  n= 14330  old  16.27/131.08 fail  mirror  0.55/ 1.32 PASS  new  0.55/ 1.32 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene   9 Town04 train  n= 14427  old  15.46/124.13 fail  mirror  0.54/ 1.38 PASS  new  0.54/ 1.38 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  85 Town03 train  n= 15004  old  14.03/120.11 fail  mirror  0.65/ 3.51 fail  new  0.65/ 3.51 fail  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  26 Town04 train  n= 14151  old  15.90/132.50 fail  mirror  0.56/ 1.38 PASS  new  0.56/ 1.38 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  30 Town04 train  n= 13733  old  15.93/115.85 fail  mirror  0.56/ 1.39 PASS  new  0.56/ 1.39 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  97 Town04 train  n= 17755  old  14.72/120.18 fail  mirror  0.57/ 1.27 PASS  new  0.57/ 1.27 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  96 Town04 tuning n= 18110  old  15.23/123.13 fail  mirror  0.57/ 1.26 PASS  new  0.57/ 1.26 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  92 Town04 test   n= 17880  old  15.06/123.33 fail  mirror  0.57/ 1.24 PASS  new  0.57/ 1.24 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene   3 Town05 test   n= 18950  old   5.12/ 59.87 fail  mirror  0.63/ 1.66 PASS  new  0.63/ 1.66 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  14 Town05 test   n= 23942  old   5.08/ 59.66 fail  mirror  0.59/ 1.64 PASS  new  0.59/ 1.64 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  98 Town04 train  n= 15711  old  15.82/ 94.44 fail  mirror  0.54/ 1.24 PASS  new  0.54/ 1.24 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  16 Town05 tuning n= 20599  old   4.32/ 53.13 fail  mirror  0.61/ 1.65 PASS  new  0.61/ 1.65 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  21 Town05 train  n= 20594  old   3.27/ 63.90 fail  mirror  0.60/ 1.71 PASS  new  0.60/ 1.71 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  22 Town05 train  n= 25345  old   4.73/ 67.00 fail  mirror  0.60/ 1.64 PASS  new  0.60/ 1.64 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  15 Town05 train  n= 20517  old   5.67/ 57.09 fail  mirror  0.61/ 1.62 PASS  new  0.61/ 1.62 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  27 Town05 train  n= 24230  old   4.15/ 49.25 fail  mirror  0.64/ 1.74 PASS  new  0.64/ 1.74 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  32 Town05 train  n= 22812  old   4.90/ 76.01 fail  mirror  0.59/ 1.67 PASS  new  0.59/ 1.67 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  35 Town05 test   n= 23396  old   4.28/ 47.49 fail  mirror  0.66/ 1.77 PASS  new  0.66/ 1.77 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  36 Town05 train  n= 22375  old   4.55/ 44.85 fail  mirror  0.64/ 1.78 PASS  new  0.64/ 1.78 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  34 Town05 train  n= 23147  old   4.45/ 49.19 fail  mirror  0.63/ 1.69 PASS  new  0.63/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  38 Town05 train  n= 24738  old   4.39/ 43.89 fail  mirror  0.61/ 1.64 PASS  new  0.61/ 1.64 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  37 Town05 test   n= 25061  old   4.49/ 60.98 fail  mirror  0.60/ 1.61 PASS  new  0.60/ 1.61 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  39 Town05 train  n= 28511  old   5.35/ 61.84 fail  mirror  0.61/ 1.69 PASS  new  0.61/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  41 Town05 tuning n= 25053  old   4.17/ 44.10 fail  mirror  0.62/ 1.64 PASS  new  0.62/ 1.64 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  42 Town05 tuning n= 23820  old   3.60/ 52.58 fail  mirror  0.62/ 1.66 PASS  new  0.62/ 1.66 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  45 Town05 train  n= 28705  old   4.99/ 56.60 fail  mirror  0.62/ 1.67 PASS  new  0.62/ 1.67 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  43 Town05 train  n= 22514  old   4.53/ 44.69 fail  mirror  0.64/ 1.78 PASS  new  0.64/ 1.78 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  49 Town05 test   n= 27461  old   5.31/ 60.96 fail  mirror  0.63/ 1.69 PASS  new  0.63/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  46 Town05 train  n= 23197  old   4.31/ 48.05 fail  mirror  0.66/ 1.77 PASS  new  0.66/ 1.77 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  51 Town05 tuning n= 25851  old   4.95/ 49.05 fail  mirror  0.63/ 1.66 PASS  new  0.63/ 1.66 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  50 Town05 train  n= 26062  old   4.93/ 51.85 fail  mirror  0.62/ 1.65 PASS  new  0.62/ 1.65 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  55 Town05 train  n= 24233  old   4.16/ 52.11 fail  mirror  0.64/ 1.75 PASS  new  0.64/ 1.75 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  52 Town05 train  n= 25126  old   4.91/ 49.56 fail  mirror  0.63/ 1.68 PASS  new  0.63/ 1.68 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  59 Town05 train  n= 29324  old   5.55/ 58.71 fail  mirror  0.63/ 1.66 PASS  new  0.63/ 1.66 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  62 Town05 train  n= 24733  old   4.21/ 50.51 fail  mirror  0.62/ 1.66 PASS  new  0.62/ 1.66 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  68 Town05 train  n= 28111  old   5.42/ 62.77 fail  mirror  0.61/ 1.69 PASS  new  0.61/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  71 Town05 train  n= 30278  old   5.34/ 59.67 fail  mirror  0.64/ 1.70 PASS  new  0.64/ 1.70 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  65 Town05 tuning n= 27619  old   5.45/ 63.10 fail  mirror  0.62/ 1.69 PASS  new  0.62/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  72 Town05 train  n= 27461  old   5.31/ 60.96 fail  mirror  0.63/ 1.69 PASS  new  0.63/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  73 Town05 tuning n= 25627  old   5.15/ 49.87 fail  mirror  0.63/ 1.64 PASS  new  0.63/ 1.64 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  76 Town05 train  n= 21935  old   3.52/ 54.70 fail  mirror  0.62/ 1.74 PASS  new  0.62/ 1.74 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  78 Town05 test   n= 23317  old   5.21/ 62.26 fail  mirror  0.62/ 1.70 PASS  new  0.62/ 1.70 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  86 Town05 train  n= 24499  old   5.34/ 67.96 fail  mirror  0.60/ 1.65 PASS  new  0.60/ 1.65 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  91 Town05 train  n= 21473  old   5.37/ 71.77 fail  mirror  0.64/ 1.68 PASS  new  0.64/ 1.68 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  89 Town05 train  n= 22753  old   5.38/ 71.68 fail  mirror  0.64/ 1.71 PASS  new  0.64/ 1.71 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene  95 Town05 train  n= 23267  old   5.48/ 59.26 fail  mirror  0.63/ 1.69 PASS  new  0.63/ 1.69 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+  scene 100 Town05 train  n= 23320  old   3.27/ 47.45 fail  mirror  0.63/ 1.72 PASS  new  0.63/ 1.72 PASS  refit mirror=True theta    0.00 t (   0.00,   0.00)
+
+Town check (SCENE_TO_TOWN vs scene description vs log location):
+  all consistent
+
+Per scene, grouped by source log: median / p95 (m) over all moving vehicles; 'CAV' = moving CAVs only (the positions D's map lookup uses). Pass = median <= 1.0 AND p95 <= 2.5.
+  log                        scene split       n |           old            old CAV |      y-mirror            mir CAV |         refit      | mirror theta, tx, ty
+  sumo-carla-town3-250.log      64 train    9544 |  10.61/114.73 fail   1.64/  4.92 |   0.64/  3.51 fail   1.00/  3.59 |   0.64/  3.51 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-300.log       4 tuning   8984 |  10.70/111.67 fail   1.28/ 12.99 |   0.64/  3.07 fail   0.67/  1.57 |   0.64/  3.07 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-300.log       5 train    7489 |  13.53/129.09 fail   1.79/ 20.66 |   0.65/  3.51 fail   0.75/  3.43 |   0.65/  3.51 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-350.log      79 test     7843 |   9.79/119.50 fail   1.00/ 18.61 |   0.67/  3.50 fail   0.82/  3.55 |   0.67/  3.50 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-350.log      80 train    7688 |  24.87/116.51 fail   4.81/ 23.95 |   0.62/  2.63 fail   1.39/  3.59 |   0.62/  2.63 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-450.log      85 train   15004 |  14.03/120.11 fail   1.34/ 33.10 |   0.65/  3.51 fail   0.68/  3.54 |   0.65/  3.51 fail | True     0.00    0.00    0.00
+  sumo-carla-town3-550.log      77 train   17039 |  12.78/116.79 fail   2.41/ 16.18 |   0.69/  3.50 fail   2.02/  3.60 |   0.69/  3.50 fail | True     0.00    0.00    0.00
+  sumo-carla-town4-275.log       6 train   14797 |  14.31/103.84 fail  22.03/ 25.21 |   0.56/  1.39 PASS   0.42/  0.87 |   0.56/  1.39 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-275.log       9 train   14427 |  15.46/124.13 fail  10.44/ 20.82 |   0.54/  1.38 PASS   0.53/  0.90 |   0.54/  1.38 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-275.log      20 train   14330 |  16.27/131.08 fail  11.86/ 23.99 |   0.55/  1.32 PASS   0.47/  0.93 |   0.55/  1.32 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-275.log      26 train   14151 |  15.90/132.50 fail   1.05/  2.64 |   0.56/  1.38 PASS   0.42/  0.93 |   0.56/  1.38 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-275.log      30 train   13733 |  15.93/115.85 fail   1.22/  4.85 |   0.56/  1.39 PASS   0.58/  0.94 |   0.56/  1.39 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-300.log      92 test    17880 |  15.06/123.33 fail  10.28/ 19.97 |   0.57/  1.24 PASS   0.44/  0.93 |   0.57/  1.24 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-300.log      96 tuning  18110 |  15.23/123.13 fail   3.26/ 15.96 |   0.57/  1.26 PASS   0.57/  1.00 |   0.57/  1.26 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-300.log      97 train   17755 |  14.72/120.18 fail   3.90/  4.23 |   0.57/  1.27 PASS   0.96/  1.02 |   0.57/  1.27 PASS | True     0.00    0.00    0.00
+  sumo-carla-town4-300.log      98 train   15711 |  15.82/ 94.44 fail   0.43/  3.82 |   0.54/  1.24 PASS   0.82/  0.99 |   0.54/  1.24 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      46 train   23197 |   4.31/ 48.05 fail   1.50/  4.36 |   0.66/  1.77 PASS   0.55/  1.20 |   0.66/  1.77 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      76 train   21935 |   3.52/ 54.70 fail   2.57/ 22.61 |   0.62/  1.74 PASS   0.62/  1.11 |   0.62/  1.74 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      78 test    23317 |   5.21/ 62.26 fail   1.02/  2.90 |   0.62/  1.70 PASS   0.52/  1.50 |   0.62/  1.70 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      89 train   22753 |   5.38/ 71.68 fail   1.99/  6.36 |   0.64/  1.71 PASS   0.80/  1.51 |   0.64/  1.71 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      91 train   21473 |   5.37/ 71.77 fail   1.87/  7.65 |   0.64/  1.68 PASS   0.62/  1.03 |   0.64/  1.68 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log      95 train   23267 |   5.48/ 59.26 fail   1.41/  6.04 |   0.63/  1.69 PASS   0.79/  1.55 |   0.63/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-425.log     100 train   23320 |   3.27/ 47.45 fail   2.96/  7.74 |   0.63/  1.72 PASS   0.68/  1.63 |   0.63/  1.72 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      27 train   24230 |   4.15/ 49.25 fail   2.55/  8.74 |   0.64/  1.74 PASS   0.50/  1.47 |   0.64/  1.74 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      32 train   22812 |   4.90/ 76.01 fail   1.59/ 11.55 |   0.59/  1.67 PASS   0.56/  1.10 |   0.59/  1.67 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      34 train   23147 |   4.45/ 49.19 fail   7.58/ 10.30 |   0.63/  1.69 PASS   0.70/  1.43 |   0.63/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      35 test    23396 |   4.28/ 47.49 fail   0.88/  2.12 |   0.66/  1.77 PASS   0.68/  1.10 |   0.66/  1.77 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      36 train   22375 |   4.55/ 44.85 fail   1.35/ 10.71 |   0.64/  1.78 PASS   0.43/  1.05 |   0.64/  1.78 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      37 test    25061 |   4.49/ 60.98 fail   1.26/  8.20 |   0.60/  1.61 PASS   0.63/  1.21 |   0.60/  1.61 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      38 train   24738 |   4.39/ 43.89 fail   0.96/  1.70 |   0.61/  1.64 PASS   0.60/  1.41 |   0.61/  1.64 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      41 tuning  25053 |   4.17/ 44.10 fail   1.17/ 13.20 |   0.62/  1.64 PASS   0.67/  1.67 |   0.62/  1.64 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      42 tuning  23820 |   3.60/ 52.58 fail   1.11/  1.78 |   0.62/  1.66 PASS   0.75/  1.67 |   0.62/  1.66 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      43 train   22514 |   4.53/ 44.69 fail   1.39/ 15.65 |   0.64/  1.78 PASS   0.63/  1.29 |   0.64/  1.78 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      55 train   24233 |   4.16/ 52.11 fail   1.62/ 17.32 |   0.64/  1.75 PASS   0.48/  1.36 |   0.64/  1.75 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-450.log      62 train   24733 |   4.21/ 50.51 fail   1.60/ 12.52 |   0.62/  1.66 PASS   0.68/  1.09 |   0.62/  1.66 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log       3 test    18950 |   5.12/ 59.87 fail   1.10/  5.25 |   0.63/  1.66 PASS   0.47/  1.25 |   0.63/  1.66 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log      14 test    23942 |   5.08/ 59.66 fail   7.23/ 14.04 |   0.59/  1.64 PASS   0.62/  1.45 |   0.59/  1.64 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log      15 train   20517 |   5.67/ 57.09 fail   1.02/  5.14 |   0.61/  1.62 PASS   0.66/  1.42 |   0.61/  1.62 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log      16 tuning  20599 |   4.32/ 53.13 fail   1.25/  7.81 |   0.61/  1.65 PASS   0.56/  1.12 |   0.61/  1.65 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log      21 train   20594 |   3.27/ 63.90 fail  11.38/ 13.65 |   0.60/  1.71 PASS   3.19/  3.35 |   0.60/  1.71 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-500.log      22 train   25345 |   4.73/ 67.00 fail   1.50/ 31.75 |   0.60/  1.64 PASS   0.67/  1.06 |   0.60/  1.64 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      39 train   28511 |   5.35/ 61.84 fail   4.99/ 15.99 |   0.61/  1.69 PASS   0.91/  1.79 |   0.61/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      45 train   28705 |   4.99/ 56.60 fail   0.92/  1.72 |   0.62/  1.67 PASS   0.52/  1.26 |   0.62/  1.67 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      49 test    27461 |   5.31/ 60.96 fail   1.66/ 18.19 |   0.63/  1.69 PASS   0.71/  3.24 |   0.63/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      50 train   26062 |   4.93/ 51.85 fail   1.50/ 18.86 |   0.62/  1.65 PASS   0.75/  1.98 |   0.62/  1.65 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      51 tuning  25851 |   4.95/ 49.05 fail   1.97/ 19.51 |   0.63/  1.66 PASS   0.61/  1.66 |   0.63/  1.66 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      52 train   25126 |   4.91/ 49.56 fail   5.58/ 18.98 |   0.63/  1.68 PASS   0.62/  1.17 |   0.63/  1.68 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      59 train   29324 |   5.55/ 58.71 fail   1.27/  1.55 |   0.63/  1.66 PASS   0.27/  0.87 |   0.63/  1.66 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      65 tuning  27619 |   5.45/ 63.10 fail   1.13/  4.98 |   0.62/  1.69 PASS   0.52/  1.05 |   0.62/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      68 train   28111 |   5.42/ 62.77 fail   3.93/ 13.93 |   0.61/  1.69 PASS   0.77/  1.36 |   0.61/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      71 train   30278 |   5.34/ 59.67 fail   8.01/ 14.15 |   0.64/  1.70 PASS   0.62/  1.33 |   0.64/  1.70 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      72 train   27461 |   5.31/ 60.96 fail   5.62/ 13.29 |   0.63/  1.69 PASS   0.59/  0.97 |   0.63/  1.69 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      73 tuning  25627 |   5.15/ 49.87 fail   5.82/ 14.77 |   0.63/  1.64 PASS   0.66/  1.38 |   0.63/  1.64 PASS | True     0.00    0.00    0.00
+  sumo-carla-town5-550.log      86 train   24499 |   5.34/ 67.96 fail   4.39/ 22.60 |   0.60/  1.65 PASS   0.76/  2.50 |   0.60/  1.65 PASS | True     0.00    0.00    0.00
+
+Refit per log: handedness chosen, and spread of the refit over its scenes (theta wrapped to (-180, 180]); objective of the other handedness for contrast
+  sumo-carla-town3-250.log   scenes  1: mirror Counter({True: 1}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.873 vs other handedness 1.684
+  sumo-carla-town3-300.log   scenes  2: mirror Counter({True: 2}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.838 vs other handedness 1.615
+  sumo-carla-town3-350.log   scenes  2: mirror Counter({True: 2}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.814 vs other handedness 1.341
+  sumo-carla-town3-450.log   scenes  1: mirror Counter({True: 1}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.858 vs other handedness 1.620
+  sumo-carla-town3-550.log   scenes  1: mirror Counter({True: 1}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.888 vs other handedness 1.573
+  sumo-carla-town4-275.log   scenes  5: mirror Counter({True: 5}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.599 vs other handedness 2.232
+  sumo-carla-town4-300.log   scenes  4: mirror Counter({True: 4}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.590 vs other handedness 2.253
+  sumo-carla-town5-425.log   scenes  7: mirror Counter({True: 7}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.713 vs other handedness 1.127
+  sumo-carla-town5-450.log   scenes 12: mirror Counter({True: 12}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.705 vs other handedness 1.199
+  sumo-carla-town5-500.log   scenes  6: mirror Counter({True: 6}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.681 vs other handedness 1.183
+  sumo-carla-town5-550.log   scenes 13: mirror Counter({True: 13}); theta   0.00..  0.00 deg, tx   0.00..  0.00, ty   0.00..  0.00 m; objective 0.687 vs other handedness 1.203
+
+train : 38 scenes, pass old  0, pass y-mirror 33, pass per-scene refit 33
+tuning:  8 scenes, pass old  0, pass y-mirror  7, pass per-scene refit  7
+test  :  8 scenes, pass old  0, pass y-mirror  7, pass per-scene refit  7
+ALL   : 54 scenes, pass old  0, pass y-mirror 47, pass per-scene refit 47
+  old     : scene medians 3.27..24.87 m, scene p95s 43.89..132.50 m
+  y-mirror: scene medians 0.54..0.69 m, scene p95s 1.24..3.51 m
+  refit   : scene medians 0.54..0.69 m, scene p95s 1.24..3.51 m
+
+Scenes failing BOTH the old transform and the per-scene refit (listed for exclusion): [4, 5, 64, 77, 79, 80, 85]
+  scene 4 (Town03, tuning, sumo-carla-town3-300.log): refit 0.64/3.07, y-mirror 0.64/3.07, CAVs under refit 0.67/1.57
+  scene 5 (Town03, train, sumo-carla-town3-300.log): refit 0.65/3.51, y-mirror 0.65/3.51, CAVs under refit 0.75/3.43
+  scene 64 (Town03, train, sumo-carla-town3-250.log): refit 0.64/3.51, y-mirror 0.64/3.51, CAVs under refit 1.00/3.59
+  scene 77 (Town03, train, sumo-carla-town3-550.log): refit 0.69/3.50, y-mirror 0.69/3.50, CAVs under refit 2.02/3.60
+  scene 79 (Town03, test, sumo-carla-town3-350.log): refit 0.67/3.50, y-mirror 0.67/3.50, CAVs under refit 0.82/3.55
+  scene 80 (Town03, train, sumo-carla-town3-350.log): refit 0.62/2.63, y-mirror 0.62/2.63, CAVs under refit 1.39/3.59
+  scene 85 (Town03, train, sumo-carla-town3-450.log): refit 0.65/3.51, y-mirror 0.65/3.51, CAVs under refit 0.68/3.54
+
+Part 1 impact: tuning / test scenes failing under the OLD per-town transform (used by D's map lookup):
+  tuning: 8 of 8 fail: [4, 16, 41, 42, 51, 65, 73, 96]
+    scene 4 (Town03): old 10.70/111.67; ego-type positions (CAVs) 1.28/12.99
+    scene 16 (Town05): old 4.32/53.13; ego-type positions (CAVs) 1.25/7.81
+    scene 41 (Town05): old 4.17/44.10; ego-type positions (CAVs) 1.17/13.20
+    scene 42 (Town05): old 3.60/52.58; ego-type positions (CAVs) 1.11/1.78
+    scene 51 (Town05): old 4.95/49.05; ego-type positions (CAVs) 1.97/19.51
+    scene 65 (Town05): old 5.45/63.10; ego-type positions (CAVs) 1.13/4.98
+    scene 73 (Town05): old 5.15/49.87; ego-type positions (CAVs) 5.82/14.77
+    scene 96 (Town04): old 15.23/123.13; ego-type positions (CAVs) 3.26/15.96
+  test: 8 of 8 fail: [3, 14, 35, 37, 49, 78, 79, 92]
+    scene 3 (Town05): old 5.12/59.87; ego-type positions (CAVs) 1.10/5.25
+    scene 14 (Town05): old 5.08/59.66; ego-type positions (CAVs) 7.23/14.04
+    scene 35 (Town05): old 4.28/47.49; ego-type positions (CAVs) 0.88/2.12
+    scene 37 (Town05): old 4.49/60.98; ego-type positions (CAVs) 1.26/8.20
+    scene 49 (Town05): old 5.31/60.96; ego-type positions (CAVs) 1.66/18.19
+    scene 78 (Town05): old 5.21/62.26; ego-type positions (CAVs) 1.02/2.90
+    scene 79 (Town03): old 9.79/119.50; ego-type positions (CAVs) 1.00/18.61
+    scene 92 (Town04): old 15.06/123.33; ego-type positions (CAVs) 10.28/19.97
+
+wrote map_alignment_per_scene.json
+DONE

@@ -12,6 +12,8 @@ import random
 import torch
 
 from pilot_dataset import PilotDataset
+from coord_transform import warn_legacy_script
+warn_legacy_script("verify_drop_cam_xy.py")
 
 random.seed(0)
 N = 50

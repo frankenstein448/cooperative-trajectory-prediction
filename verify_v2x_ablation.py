@@ -19,6 +19,8 @@ import torch
 
 from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion, EMBED_DIM
+from coord_transform import warn_legacy_script
+warn_legacy_script("verify_v2x_ablation.py")
 
 D_CKPT = "runs/D_seed0/checkpoint_epoch12.pt"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

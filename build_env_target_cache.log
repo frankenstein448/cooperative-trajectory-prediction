@@ -1,0 +1,83 @@
+ego samples (D filter): 14904  train=10488  tuning=2208  test=2208
+loading V2XMetadataLoader (once) ...
+  2000/14904 samples, 42013 targets
+  4000/14904 samples, 83509 targets
+  6000/14904 samples, 149699 targets
+  8000/14904 samples, 200243 targets
+  10000/14904 samples, 252532 targets
+  12000/14904 samples, 306289 targets
+  14000/14904 samples, 364205 targets
+
+saved /home/karra/hd_cache/env_targets/env_targets.npz (416 MB), manifest commit af265e9 (builder dirty=False)
+
+ego self-match: 1.0000 of samples, max distance 0.000 m
+
+Filter (vehicle.* within 50 m, ego excluded): before / removed / kept
+  split   town      before  removed     kept removed %
+  train   Town03     32277     3480    28797    10.78%
+  train   Town04     51934     5424    46510    10.44%
+  train   Town05    214536    22174   192362    10.34%
+  train   ALL       298747    31078   267669    10.40%
+  tuning  Town03      3933      386     3547     9.81%
+  tuning  Town04      5687      579     5108    10.18%
+  tuning  Town05     53752     5598    48154    10.41%
+  tuning  ALL        63372     6563    56809    10.36%
+  test    Town03      9767      974     8793     9.97%
+  test    Town04      4968      541     4427    10.89%
+  test    Town05     53535     5332    48203     9.96%
+  test    ALL        68270     6847    61423    10.03%
+  ALL     Town03     45977     4840    41137    10.53%
+  ALL     Town04     62589     6544    56045    10.46%
+  ALL     Town05    321823    33104   288719    10.29%
+  ALL     ALL       430389    44488   385901    10.34%
+  removed by reason (first failing check): short window (history or future)=42942, step > 10 m=1546
+
+Visibility (num_lidar_pts >= 5; coop = CAVs 1-4 within 200 m; RSU excluded), kept targets
+  split   town     targets  (a) ego (b) coop (c) none
+  train   Town03     28797    0.567    0.256    0.176
+  train   Town04     46510    0.495    0.257    0.248
+  train   Town05    192362    0.659    0.180    0.161
+  train   ALL       267669    0.621    0.202    0.178
+  tuning  Town03      3547    0.793    0.195    0.013
+  tuning  Town04      5108    0.597    0.306    0.097
+  tuning  Town05     48154    0.618    0.227    0.156
+  tuning  ALL        56809    0.627    0.232    0.142
+  test    Town03      8793    0.587    0.234    0.179
+  test    Town04      4427    0.515    0.130    0.355
+  test    Town05     48203    0.614    0.183    0.203
+  test    ALL        61423    0.603    0.186    0.211
+  ALL     Town03     41137    0.591    0.246    0.163
+  ALL     Town04     56045    0.506    0.251    0.243
+  ALL     Town05    288719    0.645    0.188    0.167
+  ALL     ALL       385901    0.619    0.204    0.178
+
+Category (kept targets): vehicle.car=286995, vehicle.bicycle=46743, vehicle.motorcycle=39279, vehicle.emergency.police=12884
+  train   car 0.767  truck 0.000  bicycle 0.133  motorcycle 0.100  | two-wheeler share by vis a/b/c: 0.202 0.221 0.357
+  tuning  car 0.802  truck 0.000  bicycle 0.090  motorcycle 0.107  | two-wheeler share by vis a/b/c: 0.154 0.172 0.433
+  test    car 0.799  truck 0.000  bicycle 0.096  motorcycle 0.105  | two-wheeler share by vis a/b/c: 0.159 0.175 0.342
+  ALL     car 0.777  truck 0.000  bicycle 0.121  motorcycle 0.102  | two-wheeler share by vis a/b/c: 0.188 0.206 0.363
+
+targets that are a CAV 1-4 (pose within 1.0 m): 1=7162, 2=7342, 3=7061, 4=6819
+current speed (m/frame): stationary (==0) 0.564, p50 0.00, p90 1.39, max 9.80
+distance to ego: p50 32.3 m, max 50.00 m; min 1.43 m
+
+box yaw vs motion direction (frame-1 -> frame, speed > 0.5 m/frame, n=83111): [0,5):0.8624  [5,15):0.1024  [15,45):0.0300  [45,135):0.0052  [135,180):0.0000
+  vehicle.bicycle            n=  13787  median 0.06 deg, p99 26.6, >45 deg 0.0044
+  vehicle.car                n=  57867  median 0.12 deg, p99 31.4, >45 deg 0.0046
+  vehicle.emergency.police   n=   3190  median 0.06 deg, p99 55.8, >45 deg 0.0138
+  vehicle.motorcycle         n=   8267  median 0.10 deg, p99 35.5, >45 deg 0.0076
+box yaw vs the CAV's own ego_pose yaw (CAV targets, n=28384): median 0.000 deg, max 0.00 deg
+own-frame sanity: |hist_own[-1] + (speed, 0)| p99 over moving targets = 0.849 m (0 iff the box yaw equals the motion direction)
+
+Per-frame steps inside kept windows (unique track steps): 5-10 m share per town, and their neighbours
+  Town03: 27453 steps, 5-10 m 846 (3.08%), steps 0 m 0.518
+    max |step - neighbour step|: <=0.1 m 0.240, <=0.5 m 0.408, <=2 m 0.988, >2 m 0.012
+    both neighbours also >= 4 m: 0.974; isolated spike (both neighbours < 2.5 m): 0.004; max heading change to a neighbour step: <=5 deg 0.652, >30 deg 0.022
+    speed implied: p50 124 km/h, max 177 km/h (5 Hz)
+  Town04: 37752 steps, 5-10 m 0 (0.00%), steps 0 m 0.611
+  Town05: 253351 steps, 5-10 m 3093 (1.22%), steps 0 m 0.519
+    max |step - neighbour step|: <=0.1 m 0.311, <=0.5 m 0.534, <=2 m 0.990, >2 m 0.010
+    both neighbours also >= 4 m: 0.980; isolated spike (both neighbours < 2.5 m): 0.002; max heading change to a neighbour step: <=5 deg 0.644, >30 deg 0.014
+    speed implied: p50 103 km/h, max 180 km/h (5 Hz)
+
+DONE

@@ -24,10 +24,11 @@ import math
 import torch
 from torch.utils.data import DataLoader
 
+from coord_transform import map_transform_of
 from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings, load_v2x_settings
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
-from scene_split import three_way_scene_split
+from scene_split import three_way_scene_split, split_version_of
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run-dir", default="runs/H8_seed0")
@@ -60,8 +61,9 @@ hist_std = torch.tensor(history_kwargs["history_norm"]["std"], dtype=torch.float
 dataset = PilotDataset(use_image_cache=run_config["use_image_cache"],
                         require_prev_frame=run_config["require_prev_frame"],
                         use_speed=run_config["use_speed"], cam_norm=cam_norm, drop_cam_xy=drop_cam_xy,
-                        **history_kwargs, **load_v2x_settings(run_config))
-_, tuning_set, _ = three_way_scene_split(dataset, seed=42)  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
+                        **history_kwargs, **load_v2x_settings(run_config),
+                        map_transform=map_transform_of(run_config))
+_, tuning_set, _ = three_way_scene_split(dataset, seed=42, split_version=split_version_of(run_config))  # tuning part; 42 matches train.py's SCENE_SPLIT_SEED
 loader = DataLoader(tuning_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
 
 model = load_model(ckpt_path, use_map=use_map, history_frames=H,

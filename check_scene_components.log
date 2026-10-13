@@ -1,0 +1,55 @@
+loading raw JSON (once) ...
+
+1. Scenes per source log (used scenes; D samples per scene in brackets)
+  Town03 sumo-carla-town3-250.log    1 scenes: 64(tr)
+  Town03 sumo-carla-town3-300.log    2 scenes: 4(tu) 5(tr)
+  Town03 sumo-carla-town3-350.log    2 scenes: 79(te) 80(tr)
+  Town03 sumo-carla-town3-450.log    1 scenes: 85(tr)
+  Town03 sumo-carla-town3-550.log    1 scenes: 77(tr)
+  Town04 sumo-carla-town4-275.log    5 scenes: 6(tr) 9(tr) 20(tr) 26(tr) 30(tr)
+  Town04 sumo-carla-town4-300.log    4 scenes: 92(te) 96(tu) 97(tr) 98(tr)
+  Town05 sumo-carla-town5-425.log    7 scenes: 46(tr) 76(tr) 78(te) 89(tr) 91(tr) 95(tr) 100(tr)
+  Town05 sumo-carla-town5-450.log   12 scenes: 27(tr) 32(tr) 34(tr) 35(te) 36(tr) 37(te) 38(tr) 41(tu) 42(tu) 43(tr) 55(tr) 62(tr)
+  Town05 sumo-carla-town5-500.log    6 scenes: 3(te) 14(te) 15(tr) 16(tu) 21(tr) 22(tr)
+  Town05 sumo-carla-town5-550.log   13 scenes: 39(tr) 45(tr) 49(te) 50(tr) 51(tu) 52(tr) 59(tr) 65(tu) 68(tr) 71(tr) 72(tr) 73(tu) 86(tr)
+  (tr/tu/te = old split)
+
+2. Connected components (link: shared moving positions > 1% of the smaller scene): 17
+  C00 Town03  1 scenes   276 samples  scenes [4]  logs ['sumo-carla-town3-300.log']  max pair share 0.000  old splits {'tuning': 1}
+  C01 Town03  1 scenes   276 samples  scenes [5]  logs ['sumo-carla-town3-300.log']  max pair share 0.000  old splits {'train': 1}
+  C02 Town03  1 scenes   276 samples  scenes [64]  logs ['sumo-carla-town3-250.log']  max pair share 0.000  old splits {'train': 1}
+  C03 Town03  1 scenes   276 samples  scenes [77]  logs ['sumo-carla-town3-550.log']  max pair share 0.000  old splits {'train': 1}
+  C04 Town03  1 scenes   276 samples  scenes [79]  logs ['sumo-carla-town3-350.log']  max pair share 0.000  old splits {'test': 1}
+  C05 Town03  1 scenes   276 samples  scenes [80]  logs ['sumo-carla-town3-350.log']  max pair share 0.000  old splits {'train': 1}
+  C06 Town03  1 scenes   276 samples  scenes [85]  logs ['sumo-carla-town3-450.log']  max pair share 0.000  old splits {'train': 1}
+  C07 Town04  1 scenes   276 samples  scenes [6]  logs ['sumo-carla-town4-275.log']  max pair share 0.000  old splits {'train': 1}
+  C08 Town04  3 scenes   828 samples  scenes [9, 20, 26]  logs ['sumo-carla-town4-275.log']  max pair share 0.853  old splits {'train': 3}
+  C09 Town04  1 scenes   276 samples  scenes [30]  logs ['sumo-carla-town4-275.log']  max pair share 0.000  old splits {'train': 1}
+  C10 Town04  4 scenes  1104 samples  scenes [92, 96, 97, 98]  logs ['sumo-carla-town4-300.log']  max pair share 0.904  old splits {'test': 1, 'tuning': 1, 'train': 2}
+  C11 Town05  5 scenes  1380 samples  scenes [3, 14, 15, 16, 21]  logs ['sumo-carla-town5-500.log']  max pair share 0.526  old splits {'test': 2, 'train': 2, 'tuning': 1}
+  C12 Town05  1 scenes   276 samples  scenes [22]  logs ['sumo-carla-town5-500.log']  max pair share 0.000  old splits {'train': 1}
+  C13 Town05 13 scenes  3588 samples  scenes [27, 32, 34, 35, 36, 37, 38, 41, 42, 43, 46, 55, 62]  logs ['sumo-carla-town5-425.log', 'sumo-carla-town5-450.log']  max pair share 0.954  old splits {'train': 9, 'test': 2, 'tuning': 2}
+  C14 Town05 13 scenes  3588 samples  scenes [39, 45, 49, 50, 51, 52, 59, 65, 68, 71, 72, 73, 86]  logs ['sumo-carla-town5-550.log']  max pair share 1.000  old splits {'train': 9, 'test': 1, 'tuning': 3}
+  C15 Town05  2 scenes   552 samples  scenes [76, 100]  logs ['sumo-carla-town5-425.log']  max pair share 0.103  old splits {'train': 2}
+  C16 Town05  4 scenes  1104 samples  scenes [78, 89, 91, 95]  logs ['sumo-carla-town5-425.log']  max pair share 0.340  old splits {'test': 1, 'train': 3}
+  pairs with some shared moving positions but <= 1% (not linked): 680, largest 0.0084 (14, 22)
+
+3. Proposal (whole components, per town, ~70/15/15 by samples)
+  Town03: 7 components, samples 1932: train 0.714, tuning 0.143, test 0.143
+    train : [4, 64, 77, 79, 80]  (old: {'tuning': 1, 'train': 3, 'test': 1})
+    tuning: [85]  (old: {'train': 1})
+    test  : [5]  (old: {'train': 1})
+  Town04: 4 components, samples 2484: train 0.778, tuning 0.111, test 0.111
+    train : [9, 20, 26, 92, 96, 97, 98]  (old: {'train': 5, 'test': 1, 'tuning': 1})
+    tuning: [30]  (old: {'train': 1})
+    test  : [6]  (old: {'train': 1})
+  Town05: 6 components, samples 10488: train 0.684, tuning 0.158, test 0.158
+    train : [27, 32, 34, 35, 36, 37, 38, 39, 41, 42, 43, 45, 46, 49, 50, 51, 52, 55, 59, 62, 65, 68, 71, 72, 73, 86]  (old: {'train': 18, 'test': 3, 'tuning': 5})
+    tuning: [3, 14, 15, 16, 21, 22]  (old: {'test': 2, 'train': 3, 'tuning': 1})
+    test  : [76, 78, 89, 91, 95, 100]  (old: {'train': 5, 'test': 1})
+  overall samples: train 10488 (0.704), tuning 2208 (0.148), test 2208 (0.148)
+  cross-split pairs with ANY shared moving position: 374, max share 0.0027: [(3, 27, 0.0011494252873563218), (3, 32, 0.0005172413793103448), (3, 34, 0.001379310344827586), (3, 35, 0.0008045977011494253), (3, 36, 0.000632183908045977), (3, 37, 0.0008045977011494253), (3, 38, 0.0005172413793103448), (3, 39, 0.0007471264367816092), (3, 41, 0.0005172413793103448), (3, 42, 0.0008045977011494253)]
+  old tuning scenes in the new test split: []; old test scenes in the new train split: [35, 37, 49, 79, 92]
+  wrote scene_split_proposal.json (a proposal only; test_scenes.json is untouched)
+
+DONE

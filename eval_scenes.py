@@ -12,11 +12,12 @@ from torch.utils.data import DataLoader
 from pilot_dataset import PilotDataset, pilot_collate_fn, load_history_settings, load_v2x_settings
 from motion_utils import get_cv_velocity
 from visualize_predictions import load_model
-from scene_split import scene_split, three_way_scene_split
+from scene_split import scene_split, three_way_scene_split, split_version_of
 from sensor_degradation import DEGRADE_MODES, degrade_config, fallback_counts, reset_fallback_counts
 from safety_metrics import (LaneCentrelines, raw_pose, agent_to_carla,
                             MISS_THRESHOLD_M, OFFROAD_THRESHOLD_M, GT_OFFROAD_UNRELIABLE)
 from trajectory_loss import loss_predicts_scale
+from coord_transform import map_transform_of
 from ranking_metrics import brier_min_fde, mode_diversity, laplace_coverage, COVERAGE_LEVELS
 from scene_conditions import (heading_change_deg, JunctionAreas, TURN_THRESHOLD_DEG, MIN_STEP_M,
                               JUNCTION_RADIUS_M)
@@ -182,6 +183,9 @@ if args.run_dir:
     predict_scale = loss_predicts_scale(run_loss)
     print(f"loss={run_loss}, predict_scale={predict_scale} (from config.json)")
     trained_degrade = run_config.get("degrade")  # absent in pre-degradation configs
+    map_transform = map_transform_of(run_config)  # absent in pre-mirror configs = legacy
+    split_version = split_version_of(run_config)  # absent in pre-v2 configs = v1
+    print(f"map_transform={map_transform}, split_version={split_version} (from config.json)")
     print(f"Trained with degrade={trained_degrade['mode'] if trained_degrade else None}; "
           f"evaluating with degrade={args.degrade}")
 else:
@@ -195,12 +199,14 @@ else:
     v2x_kwargs = {}
     history_encoder = "gru"
     predict_scale = False
+    map_transform = "legacy"
 
 dataset = PilotDataset(use_image_cache=use_image_cache, require_prev_frame=require_prev_frame,
                         use_speed=use_speed, cam_norm=cam_norm, drop_cam_xy=drop_cam_xy, degrade=args.degrade,
-                        **history_kwargs, **v2x_kwargs)
+                        **history_kwargs, **v2x_kwargs, map_transform=map_transform)
 if args.run_dir:
-    _, tuning_set, test_set = three_way_scene_split(dataset, seed=42)  # 42 matches train.py's SCENE_SPLIT_SEED
+    _, tuning_set, test_set = three_way_scene_split(dataset, seed=42,  # 42 matches train.py's SCENE_SPLIT_SEED
+                                                    split_version=split_version)
     val_set = test_set if args.split == "test" else tuning_set
     print(f"Evaluating on the {args.split.upper()} split ({len(val_set)} samples)")
     if args.split == "test":
@@ -216,7 +222,8 @@ if args.run_dir:
             purpose = f"\tpurpose={CONFIRMATORY_TURNING_PURPOSE}" + (CONFIRMATORY_RERUN_SUFFIX if rerun else "")
         with open(TEST_EVALS_LOG, "a") as f:
             f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
-                    f"git_commit={commit}\tckpt={args.ckpt}{purpose}\n")
+                    f"git_commit={commit}\tckpt={args.ckpt}{purpose}"
+                    + (f"\tsplit_version={split_version}" if split_version != "v1" else "") + "\n")
         print(f"Appended this test evaluation to {TEST_EVALS_LOG}")
 else:
     _, val_set = scene_split(dataset, 0.15, 42)  # unchanged old path
@@ -233,7 +240,7 @@ if predict_scale:
     for lvl in COVERAGE_LEVELS:
         cols[f"cov{lvl}"], cols[f"covxy{lvl}"] = [], []
     cols["npts"] = []
-lanes = LaneCentrelines(sorted(dataset.town_graphs))
+lanes = LaneCentrelines(sorted(dataset.town_graphs), map_transform)
 junctions = JunctionAreas(sorted(dataset.town_graphs))
 score_idx = None
 n_sensors = 0  # ego + coop LiDARs seen, to cross-check the fallback counter
@@ -290,15 +297,15 @@ with torch.no_grad():
         for i in range(B):
             town = batch["town"][i]
             pose = raw_pose(dataset.loader, batch["agent_id"][i], batch["scene"][i], batch["frame"][i])
-            off_modes = lanes.offroad(town, agent_to_carla(trajs_np[i], pose, town))  # [K, T]
-            off_gt = lanes.offroad(town, agent_to_carla(gt_np[i], pose, town))       # [T]
+            off_modes = lanes.offroad(town, agent_to_carla(trajs_np[i], pose, town, map_transform))  # [K, T]
+            off_gt = lanes.offroad(town, agent_to_carla(gt_np[i], pose, town, map_transform))       # [T]
             vm = valid_np[i]  # not `v`: that is the CV velocity above, still used for v_norm
             nv = max(int(vm.sum()), 1)
             or1[i] = off_modes[top_np[i]][vm].sum() / nv
             or6[i] = off_modes[:, vm].sum() / (nv * K)
             orgt[i] = off_gt[vm].sum() / nv
             hchg[i], nsteps[i] = heading_change_deg(gt_np[i], vm)
-            jdist[i] = junctions.distance(town, agent_to_carla(np.zeros(2), pose, town))
+            jdist[i] = junctions.distance(town, agent_to_carla(np.zeros(2), pose, town, map_transform))
 
         cols["ade6"].append(ade_modes.min(1).values.cpu())
         cols["fde6"].append(fde_modes.min(1).values.cpu())

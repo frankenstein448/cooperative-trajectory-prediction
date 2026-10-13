@@ -8,7 +8,12 @@ on the pooled (COND ALL) rows. ADE1, minFDE6 and per-town rows are reported, not
 
 --rule turning_test (runs/DECISION_RULES_TURNING_TEST.md): D and Dnomap only, on the TEST split's
 confirmatory logs (eval_<run>_test_cond.log, run_turning_test.sh). The same map rule, applied to
-the turning condition only; every other condition is reported descriptively (no verdict)."""
+the turning condition only; every other condition is reported descriptively (no verdict).
+
+--rule corrected (runs/DECISION_RULES_CORRECTED.md): the corrected Part 1 rerun (split v2, map_transform
+mirror), runs <prefix>D / <prefix>Dnomap / <prefix>EgoOnly (default prefix C_), their clean epoch-12 tuning
+logs (eval_<run>_e12.log, which carry the COND block). Secondary hypothesis: the same map rule on the
+turning condition only (pooled tuning split). V2X (D vs EgoOnly) and all other conditions: descriptive."""
 import re
 import argparse
 import statistics as st
@@ -16,27 +21,32 @@ import statistics as st
 from scene_conditions import CONDITIONS
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--rule", choices=["conditions", "turning_test"], default="conditions",
+parser.add_argument("--rule", choices=["conditions", "turning_test", "corrected"], default="conditions",
                     help="conditions: runs/DECISION_RULES_CONDITIONS.md (default). turning_test: "
                          "runs/DECISION_RULES_TURNING_TEST.md, D vs Dnomap, rule on turning only")
 parser.add_argument("--suffix", default=None,
                     help="log suffix: eval_<run>_<suffix>.log (default e12_cond; test_cond for --rule turning_test)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
+parser.add_argument("--prefix", default="C_", help="--rule corrected only: run-name prefix (C_D_seed0, ...)")
 args = parser.parse_args()
 TURNING_TEST = args.rule == "turning_test"
+CORRECTED = args.rule == "corrected"
 if args.suffix is None:
-    args.suffix = "test_cond" if TURNING_TEST else "e12_cond"
+    args.suffix = "test_cond" if TURNING_TEST else "e12" if CORRECTED else "e12_cond"
 SPLIT = "test" if TURNING_TEST else "tuning"
 
 GROUPS = {"D": ["D_seed0", "D_seed1", "D_seed2"],
           "Dnomap": ["Dnomap_seed0", "Dnomap_seed1", "Dnomap_seed2"],
           "EgoOnly": ["EgoOnly_seed0", "EgoOnly_seed1", "EgoOnly_seed2"]}
 COMPARISONS = (("map", "D", "Dnomap"), ("V2X", "D", "EgoOnly"))  # (effect, with, without)
-RULE_CONDITIONS = CONDITIONS
+RULE_CONDITIONS = {"map": CONDITIONS, "V2X": CONDITIONS}  # effect -> conditions with a verdict
 if TURNING_TEST:
     del GROUPS["EgoOnly"]
     COMPARISONS = (("map", "D", "Dnomap"),)
-    RULE_CONDITIONS = ("turning",)
+    RULE_CONDITIONS = {"map": ("turning",)}
+if CORRECTED:
+    GROUPS = {g: [args.prefix + n for n in names] for g, names in GROUPS.items()}
+    RULE_CONDITIONS = {"map": ("turning",), "V2X": ()}
 COND = re.compile(r"^COND (\S+)\s+(\S+)\s+(\d+)(?:\s+([\d.]+)\s+([\d.]+)\s+([\d.]+))?\s*$")
 ALL = re.compile(r"^ALL\s+(\d+)\s+[\d.]+m", re.M)
 STAT_ALL = re.compile(r"^    stationary \(ALL\): n=\s*(\d+)", re.M)
@@ -112,7 +122,11 @@ for town in towns:
         print(f"  {town:7s} {cond:18s} {first[(town, cond)][0]:5d} "
               + " ".join(f"{m:8.3f}" if m is not None else f"{'n/a':>8s}" for m in means))
 
-if TURNING_TEST:
+if CORRECTED:
+    print("\nRULE (runs/DECISION_RULES_CORRECTED.md, secondary hypothesis): the map lowers minADE6 on turning "
+          "vehicles only if seed-mean minADE6 D < Dnomap AND (Dnomap - D) > 2 x max(seed std D, seed std Dnomap); "
+          "pooled tuning split (split v2, map_transform mirror). V2X and other conditions: descriptive only")
+elif TURNING_TEST:
     print("\nRULE (runs/DECISION_RULES_TURNING_TEST.md, confirmatory, TEST split): the map lowers minADE6 on "
           "turning vehicles only if seed-mean minADE6 D < Dnomap AND (Dnomap - D) > 2 x max(seed std D, seed std "
           "Dnomap); pooled test split. Other conditions: same numbers, descriptive only (no verdict)")
@@ -123,7 +137,7 @@ verdicts = []
 for effect, with_g, without_g in COMPARISONS:
     print(f"\n{effect}: {with_g} (with) vs {without_g} (without)")
     for cond in CONDITIONS:
-        descriptive = cond not in RULE_CONDITIONS
+        descriptive = cond not in RULE_CONDITIONS[effect]
         mw, sw, _ = seed_stats(with_g, "ALL", cond, 1)
         mo, so, _ = seed_stats(without_g, "ALL", cond, 1)
         if mw is None or mo is None:
@@ -139,6 +153,12 @@ for effect, with_g, without_g in COMPARISONS:
         if not descriptive:
             verdicts.append((effect, cond, v))
 
+if CORRECTED:
+    effect, cond, v = verdicts[0]
+    print(f"\nVERDICT (secondary pre-registered hypothesis, tuning split v2): map on turning: "
+          + ("the map lowers minADE6 on turning vehicles" if v == "map HELPS"
+             else "no detectable effect" if v == "no detectable effect" else v))
+    raise SystemExit(0)
 if TURNING_TEST:
     effect, cond, v = verdicts[0]
     print(f"\nVERDICT (confirmatory, one pre-registered hypothesis, test split): map on turning: "

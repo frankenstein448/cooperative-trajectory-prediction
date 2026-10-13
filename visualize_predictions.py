@@ -276,6 +276,8 @@ def pick_town_representatives(dataset):
 
 
 if __name__ == "__main__":
+    from coord_transform import warn_legacy_script
+    warn_legacy_script("visualize_predictions.py")
     os.makedirs(OUT_DIR, exist_ok=True)
 
     print("Loading dataset and models...")

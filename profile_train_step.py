@@ -15,6 +15,8 @@ from pilot_dataset import PilotDataset, pilot_collate_fn
 from end_to_end_model import EndToEndFusion
 from trajectory_loss import WinnerTakesAllLoss
 from scene_split import scene_split
+from coord_transform import warn_legacy_script
+warn_legacy_script("profile_train_step.py")
 
 N_BATCHES = 50
 WARMUP = 5

@@ -23,6 +23,8 @@ import torch
 from pilot_dataset import PilotDataset
 from sensor_degradation import (DEGRADE_MODES, LIDAR_RANGE_M, FOG_CONTRAST, FOG_OFFSET, FOG_NOISE_STD,
                                 fallback_counts, reset_fallback_counts)
+from coord_transform import warn_legacy_script
+warn_legacy_script("verify_degrade.py")
 
 random.seed(0)
 N = 50
