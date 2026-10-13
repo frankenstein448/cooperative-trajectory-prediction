@@ -1,0 +1,5 @@
+Town03: 7092 waypoints, identical (count, order, float64 values) to dense_waypoints_town03.npy
+  lanes (road, section, lane): 417; reversed to travel order: 169; single-point lanes: 48; duplicate s within a lane: 0
+  pieces: 877; points per piece: min 1 p50 10 max 11; in-junction points 0.442
+  consecutive step length (m): p1 1.53 p50 2.00 p99 2.40 max 3.23; step direction vs yaw: p50 0.00 deg, p99 8.01, >90 deg 0.0000
+  wrote lane_polylines_town03.npz
