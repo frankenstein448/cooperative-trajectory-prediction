@@ -100,3 +100,54 @@ The result is reported whatever the outcome. For every run it includes ADE1, min
 minFDE6, Brier-minFDE and diversity (plus calibration for L), with seed mean ± std and the
 per-scene ADE1 / minADE6 table. The SAFE block (miss and off-road rates) is reported as
 descriptive only, as in the other studies.
+
+---
+
+# Fallback: wta_soft (W) vs D
+
+Written and committed **after** the laplace_mixture result (`analyze_seeds_loss.log`: do NOT
+adopt; criteria 2, 3 and 4 failed) and **before any wta_soft run**. Tuning split only; the
+test split is not used.
+
+## Loss (fixed, unchanged from the section above)
+
+`--loss wta_soft` (`WTASoftLoss`): WTA regression of the closest mode (identical to D's
+regression term and its gradient), and the mode scores trained with cross-entropy against
+`softmax(-ADE_k / tau)` with the ADE detached, **tau = 1.0 m** (`WTA_SOFT_TAU`, fixed, not a
+CLI knob). The model is exactly D's (`train.py` asserts D's parameter count; no scale head),
+so with the same `--seed` the initialisation and data order match D's run. Optimiser, LR,
+batch size and epochs are unchanged. `verify_loss.py` (CPU, random tensors) must pass; it
+runs first in `run_wta_soft_seeds.sh`.
+
+## Runs
+
+| Run | Extra flags | Note |
+|---|---|---|
+| `D_seed0..4` | none | existing; **not retrained or re-evaluated**. Logs: `eval_D_seed{0,1,2}_e12_rank.log`, `eval_D_seed{3,4}_e12.log` (the same logs used for the laplace_mixture rule) |
+| `W_seed0..4` | `--seed s --loss wta_soft` | D's flags, `checkpoint_epoch12.pt`, tuning split, ranking metrics → `eval_W_seed*_e12.log` |
+
+`run_wta_soft_seeds.sh` runs `verify_loss.py`, trains and evaluates W_seed0..4, then runs
+`analyze_seeds.py --rule loss --candidate wta_soft --expect-n 2208 --full W_seed0,...,W_seed4
+--nomap D_seed0:e12_rank,D_seed1:e12_rank,D_seed2:e12_rank,D_seed3,D_seed4`
+→ `analyze_seeds_wta_soft.log`. "full" means W and "no-map" means D.
+
+## Rule
+
+**wta_soft is adopted** only if all four of these hold (seed means over 5 seeds each) —
+the same four criteria as for laplace_mixture:
+
+1. W's seed-mean ALL **ADE1** is lower than D's, **and**
+2. W's seed-mean **ADE1** is lower than D's in **≥ 6 of the 8** tuning scenes (a tie does
+   not count as lower), **and**
+3. W's seed-mean ALL **minADE6** is not worse than D's by more than 0.1 m
+   (W − D ≤ +0.100 m, using the logged 3-decimal values), **and**
+4. W's seed-mean ALL **mode diversity** is **≥ 50%** of D's.
+
+The ADE1 seed std of W and D is reported, not a criterion. If any criterion fails, wta_soft
+is not adopted and D stays the baseline.
+
+## Reporting
+
+Reported whatever the outcome: for every run ADE1, minADE6, minFDE6, Brier-minFDE and
+diversity, seed mean ± std, and the per-scene ADE1 / minADE6 table. No calibration (W has no
+scales). SAFE block descriptive only.
