@@ -4,3 +4,9 @@
 2026-10-10T21:17:28	run_dir=runs/Dnomap_seed0	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed0/checkpoint_epoch12.pt
 2026-10-10T21:19:30	run_dir=runs/Dnomap_seed1	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed1/checkpoint_epoch12.pt
 2026-10-10T21:21:30	run_dir=runs/Dnomap_seed2	git_commit=da6b1da0e5bcc64e375024e575c1115703a1342a	ckpt=runs/Dnomap_seed2/checkpoint_epoch12.pt
+2026-10-12T11:28:44	run_dir=runs/D_seed0	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/D_seed0/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
+2026-10-12T11:30:46	run_dir=runs/D_seed1	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/D_seed1/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
+2026-10-12T11:32:49	run_dir=runs/D_seed2	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/D_seed2/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
+2026-10-12T11:34:49	run_dir=runs/Dnomap_seed0	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/Dnomap_seed0/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
+2026-10-12T11:36:47	run_dir=runs/Dnomap_seed1	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/Dnomap_seed1/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
+2026-10-12T11:38:47	run_dir=runs/Dnomap_seed2	git_commit=ce4eb909baa96030cd6420480c45a62eaaea1a32	ckpt=runs/Dnomap_seed2/checkpoint_epoch12.pt	purpose=metrics-only re-evaluation (adds miss/off-road; same checkpoint as the earlier logged evaluation)
