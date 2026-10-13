@@ -24,9 +24,17 @@ Per scene:
 Scenes failing both are listed for exclusion. Part 1 impact: tuning / test scenes failing the old transform.
 Writes stdout and map_alignment_per_scene.json (per-scene numbers and refit transforms; nothing reads it yet).
 
-Run in gpu-test-venv:  python check_map_alignment.py
+--mirror-check (no refit): the y-mirror alone, against lane_polylines_<town>.npz (export_lane_polylines.py;
+all lane types it holds, i.e. Driving, plus Parking where exported with --include-parking), same pass rule.
+Adds a heading check: at each moving vehicle's nearest lane waypoint, the lane yaw vs the vehicle's mirrored
+box heading (yaw_carla = -yaw_v2x); median |difference| per scene, and the share > 30 / > 90 deg.
+Writes check-specific stdout and map_alignment_mirror_per_scene.json.
+
+Run in gpu-test-venv:  python check_map_alignment.py [--mirror-check]
 """
 import re
+import sys
+import math
 import json
 import collections
 from multiprocessing import Pool
@@ -50,6 +58,7 @@ COARSE_T = np.arange(-60.0, 60.01, 2.0)          # around the per-town (tx, ty)
 FINE_THETA = np.arange(-3.0, 3.001, 0.1)         # around the coarse best
 FINE_T = np.arange(-3.0, 3.001, 0.1)
 OUT_JSON = "map_alignment_per_scene.json"
+MIRROR_OUT_JSON = "map_alignment_mirror_per_scene.json"
 
 
 def jl(name):
@@ -132,6 +141,51 @@ def fit_scene(job):
                    new=ev(P, th, tx, ty, mirror), new_cav=ev(P[cav], th, tx, ty, mirror))
 
 
+def mirror_check(pts, is_cav, yaw_v2x, split_of):
+    print("\n--mirror-check: y-mirror vs lane_polylines_<town>.npz, with the lane-heading check", flush=True)
+    maps = {}
+    for t in ("Town03", "Town04", "Town05"):
+        z = np.load(f"lane_polylines_{t.lower()}.npz")
+        maps[t] = (cKDTree(z["points"]), z["yaw_deg"], z["lane_type"])
+        print(f"  {t}: {len(z['points'])} lane points ({dict(collections.Counter(z['lane_type'].tolist()))})")
+    out = {}
+    print(f"  {'scene':>5s} {'town':6s} {'split':6s} {'n':>6s} | {'median':>6s} {'p95':>6s} {'':4s} | {'CAV med':>7s} {'p95':>6s} | "
+          f"{'heading |d| med':>15s} {'>30deg':>7s} {'>90deg':>7s} | nearest on Parking")
+    for s in ALL_SCENES:
+        town = SCENE_TO_TOWN[s]
+        tree, lyaw, ltype = maps[town]
+        P = np.asarray(pts[s]) * MIRROR
+        cav = np.asarray(is_cav[s])
+        d, idx = tree.query(P)
+        hd = np.abs((lyaw[idx] - np.degrees(-np.asarray(yaw_v2x[s])) + 180) % 360 - 180)
+        med, p95 = float(np.median(d)), float(np.percentile(d, 95))
+        r = dict(town=town, split=split_of(s), n_points=int(len(P)), median=med, p95=p95,
+                 ok=bool(med <= PASS_MEDIAN_M and p95 <= PASS_P95_M),
+                 cav_median=float(np.median(d[cav])) if cav.any() else None,
+                 cav_p95=float(np.percentile(d[cav], 95)) if cav.any() else None,
+                 heading_median_deg=float(np.median(hd)), heading_gt30=float(np.mean(hd > 30)),
+                 heading_gt90=float(np.mean(hd > 90)), nearest_parking=float(np.mean(ltype[idx] == "Parking")))
+        out[s] = r
+        print(f"  {s:5d} {town:6s} {r['split']:6s} {len(P):6d} | {med:6.2f} {p95:6.2f} {'PASS' if r['ok'] else 'fail':4s} | "
+              f"{r['cav_median'] or float('nan'):7.2f} {r['cav_p95'] or float('nan'):6.2f} | {r['heading_median_deg']:15.2f} "
+              f"{r['heading_gt30']:7.3f} {r['heading_gt90']:7.3f} | {r['nearest_parking']:.3f}")
+    with open(MIRROR_OUT_JSON, "w") as f:
+        json.dump({str(k): v for k, v in out.items()}, f, indent=1)
+    print()
+    for split in ("train", "tuning", "test", None):
+        sel = [s for s, r in out.items() if split is None or r["split"] == split]
+        print(f"{split or 'ALL':6s}: {len(sel):2d} scenes, pass {sum(out[s]['ok'] for s in sel):2d}")
+    for t in ("Town03", "Town04", "Town05"):
+        rs = [r for r in out.values() if r["town"] == t]
+        print(f"  {t}: pass {sum(r['ok'] for r in rs)}/{len(rs)}; medians {min(r['median'] for r in rs):.2f}..{max(r['median'] for r in rs):.2f}, "
+              f"p95 {min(r['p95'] for r in rs):.2f}..{max(r['p95'] for r in rs):.2f}; heading |d| median "
+              f"{min(r['heading_median_deg'] for r in rs):.2f}..{max(r['heading_median_deg'] for r in rs):.2f} deg, "
+              f"> 90 deg {min(r['heading_gt90'] for r in rs):.3f}..{max(r['heading_gt90'] for r in rs):.3f}")
+    fails = sorted(s for s, r in out.items() if not r["ok"])
+    print(f"failing scenes (listed for exclusion): {fails}")
+    print(f"wrote {MIRROR_OUT_JSON}\nDONE")
+
+
 def main():
     with open("test_scenes.json") as f:
         test = {t: set(v) for t, v in json.load(f).items()}
@@ -160,6 +214,7 @@ def main():
     used = set(ALL_SCENES)
     pts = collections.defaultdict(list)
     is_cav = collections.defaultdict(list)
+    yaw_v2x = collections.defaultdict(list)  # box heading (rad), V2X-Sim frame
     for a in ann:
         if not a["prev"] or not icat[a["instance_token"]].startswith("vehicle."):
             continue
@@ -174,8 +229,13 @@ def main():
         if step == 0 or step > MAX_STEP_M:
             continue
         pts[s].append(p)
+        w, x, y, z = a["rotation"]
+        yaw_v2x[s].append(math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)))
         is_cav[s].append(any(np.hypot(*(p - np.array(c))) <= 1.0 for c in cav_xy[a["sample_token"]]))
     del ann, by_tok
+
+    if "--mirror-check" in sys.argv[1:]:
+        return mirror_check(pts, is_cav, yaw_v2x, split_of)
 
     global TREES, FIELDS
     TREES, FIELDS = {}, {}

@@ -1,5 +1,5 @@
-Town04: 16919 waypoints, identical (count, order, float64 values) to dense_waypoints_town04.npy
-  lanes (road, section, lane): 463; reversed to travel order: 227; single-point lanes: 9; duplicate s within a lane: 0
-  pieces: 1809; points per piece: min 1 p50 10 max 11; in-junction points 0.254
+Town04: 16919 driving waypoints, identical (count, order, float64 values) to dense_waypoints_town04.npy
+  lanes (type, road, section, lane): 463 (0 Parking); reversed to travel order: 227; single-point lanes: 9; duplicate s within a lane: 0
+  pieces: 1809 (0 Parking); points per piece: min 1 p50 10 max 11; in-junction points 0.254
   consecutive step length (m): p1 1.53 p50 2.00 p99 2.45 max 2.84; step direction vs yaw: p50 0.00 deg, p99 8.45, >90 deg 0.0000
   wrote lane_polylines_town04.npz
