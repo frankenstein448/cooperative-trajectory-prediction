@@ -79,3 +79,13 @@ Commit hash of this file is recorded in git history.
 - Sensitivity, zero-width targets excluded: +5.13 pp (descriptive).
 - Tuning moving: +4.88 pp. Test v2 (descriptive): all +4.20 pp, moving +3.89 pp.
 - Largest gain Town04 (tuning moving +11.1 pp, test moving +13.3 pp); smallest test Town03 (+1.5 pp).
+
+### Implementation decisions (14 Oct 2026, before any E_V2X+RSU training)
+- H2 eligibility (counts only): tuning 7/8 scenes eligible (scene 21 < 20 moving R targets),
+  so H2 requires 7/7 wins; test 8/8 eligible. Eligible scenes hold only 5-30 distinct
+  RSU-only vehicles each (correlated samples; noted as a limitation).
+- H2/H3 pooled gap: pooled over all moving targets of the set in the split, including
+  ineligible scenes, as in env_metrics.rule for Part 2.
+- env_norm for E_V2XRSU: computed over its own known train targets (V union R), the same
+  convention as all existing env configs.
+- Run names: E_V2XRSU_seed{0,1,2}.
