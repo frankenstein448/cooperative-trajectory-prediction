@@ -165,3 +165,62 @@ the fly: about 1–2 ms per sample, so loading is not the bottleneck.
 4. **CPM dropped in the env task; common sample list of 13,384 samples for all three models.**
 
 Order: alignment check -> report -> CARLA export -> report. No Stage 2 model code yet.
+
+## 10. Stage 2 implementation (2026-10-13), updated with today's decisions
+
+Code: `env_map.py` (map v2 tokens), `env_dataset.py` (EnvDataset, pure feature functions, padding collate),
+`env_model.py` (EnvFusion, env_wta_loss), `train.py --task env --v2x {off,on} [--no-map]`. Tests:
+`test_env_stage2.py` (synthetic tensors only; no metadata, PilotDataset, cache or GPU).
+
+Changes against sections 2–5, all following the decisions made since:
+- **Map transform mirror for positions and headings.** Lane points and directions are taken from CARLA back to
+  V2X-Sim (`carla_to_v2xsim_batch`, `carla_yaw_to_v2xsim`), then expressed in the target's own frame (box
+  yaw). That is the frame of `hist_own` / `fut_own`, so map tokens and trajectories share one frame. No
+  absolute coordinates.
+- **Map v2 tokens** from `lane_polylines_<town>.npz` (Driving + Town03 Parking). Each token is one lane piece
+  (≤ 11 points in travel order). Every piece with a point within 30 m of the target, nearest first, at most 48.
+  Point features (6): x/30, y/30, cos and sin of (lane direction − target heading), is_junction,
+  **is_parking** (lane type). A learned "no lane" token is always present, so a target with no piece in range is
+  still well defined.
+- **Split v2:** `three_way_scene_split(dataset, split_version=...)` on `EnvDataset.samples`. The cache's own
+  `sample_split` field is the v1 split and is not used. The cache does not need rebuilding.
+- **Samples:** 13,384 (D's list minus samples without a class-(a) target), the same for all models; EnvDataset
+  asserts the count and that the cache rows match PilotDataset's sample list exactly.
+- **Inputs per target:** history (own frame, z-scored with train-split `env_norm.json`), state (pose relative
+  to the ego /50, cos and sin yaw, speed / 5, size w and l / 5, category one-hot), and the ego-frame pose for
+  the relative-pose interaction.
+- **Ego CAM, speed only (decision 2026-10-13, before any env result):** after normalization, `env_cam()`
+  zeroes x, y (as D's drop_cam_xy) **and the ego's absolute world heading**; only the speed is kept.
+  `train.py --task env` requires `--use-speed --normalize-cam --drop-cam-xy`, and `config.json` records
+  `env_cam`. Test: `test_env_stage2.test_env_cam_keeps_only_speed`.
+- **Coop with no CAV in range:** a learned "no coop" token. D's CoopSensorStream returns a CPU zero vector in
+  that case.
+- **Parameters:** EgoOnly-env 896,494; V2X-env 1,061,262; V2X-env-nomap 903,246 (D: 740,942).
+- **Ego task unchanged:** `train.py`'s epoch loop now takes a step function. Its default (`ego_step`) gives
+  the same losses and bit-identical parameters as the pre-env `run_epoch`
+  (`test_env_stage2.test_ego_run_epoch_unchanged`). The ego dry run additionally prints the per-batch time and
+  the peak GPU memory.
+
+Still to do once the GPU is free (needs the data):
+1. `verify_env_model.py` on about 50 real samples: EnvDataset vs the cache (target sets per model, no (c)
+   target, no coop with `--v2x off`); map tokens on real scenes (the target's own lane piece passes within about
+   1 m of the origin at about 0°); `--task ego` still strict-loads D's checkpoint with D's parameter count.
+2. Dry runs of the three env configs (per-batch time, peak memory).
+3. Stage 3 (evaluation) and Stage 4 (rules and run scripts), as planned.
+
+## 11. Stages 3 and 4 (2026-10-13; code and synthetic tests only)
+
+- `env_metrics.py`: per-target minADE6 / ADE1 / minFDE6 / FDE1 / miss rates (2 m), constant-velocity and
+  stay-put baselines, condition labels (Part 1 definitions on the own-frame ground truth), subsets
+  ((a)/(b), moving/stationary/turning/straight, car/two-wheeler), coverage, and the rule computation
+  (`rule`: full form ≥ 7/8 scenes AND gap > 2 × larger seed std; pooled form when a scene has no target of the
+  subset).
+- `eval_env.py`: tuning split only (the test split is refused); per tuning scene and ALL; writes
+  `runs/<run>/eval_env_tuning_<ckpt>.npz` with per-target arrays (cache target id, scene, labels, metrics,
+  baselines) and coverage. EnvDataset gives two extra non-input fields: `t_tid` and `t_cv_vel`.
+- `analyze_env.py`: checks the runs (split, scenes, transform, identical targets across seeds, EgoOnly's targets
+  = V2X's (a) targets), then applies `runs/DECISION_RULES_ENV.md`.
+- `run_env_seeds.sh`: preflight as in `run_corrected_seeds.sh`, plus the cache manifest and a committed
+  `verify_env_model.log` with `RESULT: PASS`.
+- Tests: `test_env_stage2.py`, 21/21 on synthetic data (hand-computed metric values, labels, subsets, coverage,
+  rule forms, `collect` on a padded batch, `analyze_env.py` end to end on fake per-run npz files).
