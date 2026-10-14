@@ -11,7 +11,9 @@ scene_split.three_way_scene_split(dataset, split_version=...) on dataset.samples
 Samples: D's sample list (require_prev_frame) minus samples without a class-(a) target -- 13,384 samples,
 the same list for every model (every sample with a (b) target also has an (a) target).
 Known targets (inputs and prediction targets): v2x="off": vis == 0 (a); v2x="on": vis <= 1 ((a) and (b)).
-Class (c) is never loaded.
+Class (c) is never loaded, except with use_rsu (v2x="on" only, runs/DECISION_RULES_RSU.md): then also the (c)
+targets the RSU sees (num_lidar_pts[0] >= RSU_VIS_PTS) -- set R; their t_vis stays 2, so an evaluation splits
+V (t_vis <= 1) from R (t_vis == 2). The sample list is unchanged (it depends on class (a) only).
 
 Ego CAM: the env task keeps only the ego's speed. After PilotDataset's cam normalization, env_cam() zeroes
 x, y (as D's drop_cam_xy) AND the absolute world heading (DESIGN_ENV.md section 10), so no world-frame
@@ -46,6 +48,7 @@ SIZE_SCALE_M = 5.0
 STATE_DIM = 11
 N_CAT4 = 4
 EXPECTED_ENV_SAMPLES = 13384
+RSU_VIS_PTS = 5        # = build_env_target_cache.VIS_PTS; num_lidar_pts index 0 = the RSU
 CACHE_KEYS = ("sample_agent", "sample_scene", "sample_frame", "sample_town", "sample_ptr", "vis", "cat4", "speed",
               "size", "cur_ego", "yaw_ego", "hist_own", "fut_own", "fut_mask", "xy_world", "yaw_world", "n_removed")
 
@@ -64,15 +67,20 @@ def load_env_cache(cache_dir=ENV_CACHE_DIR):
     """The numeric arrays the env task needs (token strings are left out), plus the manifest."""
     z = np.load(os.path.join(cache_dir, "env_targets.npz"))
     cache = {k: z[k] for k in CACHE_KEYS}
+    cache["rsu_vis"] = z["nlp"][:, 0] >= RSU_VIS_PTS  # the RSU sees the target (used only with use_rsu)
     with open(os.path.join(cache_dir, "manifest.json")) as f:
         cache["manifest"] = json.load(f)
     return cache
 
 
-def known_mask(vis, v2x):
-    """Targets a model knows (input + prediction): v2x off -> class (a); on -> (a) and (b). (c) never."""
+def known_mask(vis, v2x, rsu_vis=None):
+    """Targets a model knows (input + prediction): v2x off -> class (a); on -> (a) and (b); with rsu_vis (the
+    use_rsu model, v2x on only) also the (c) targets with rsu_vis (set R)."""
     assert v2x in ("off", "on"), f"v2x must be 'off' or 'on', got {v2x!r}"
     vis = np.asarray(vis)
+    if rsu_vis is not None:
+        assert v2x == "on", "use_rsu requires v2x on"
+        return (vis <= 1) | ((vis == 2) & np.asarray(rsu_vis, bool))
     return vis == 0 if v2x == "off" else vis <= 1
 
 
@@ -84,16 +92,16 @@ def env_sample_rows(cache):
     return np.nonzero(n_a > 0)[0]
 
 
-def target_rows(cache, row, v2x):
+def target_rows(cache, row, v2x, use_rsu=False):
     """Cache target indices of sample `row` known to the model, in cache order."""
     lo, hi = int(cache["sample_ptr"][row]), int(cache["sample_ptr"][row + 1])
     idx = np.arange(lo, hi)
-    return idx[known_mask(cache["vis"][lo:hi], v2x)]
+    return idx[known_mask(cache["vis"][lo:hi], v2x, cache["rsu_vis"][lo:hi] if use_rsu else None)]
 
 
-def compute_env_norm(cache, rows, v2x):
+def compute_env_norm(cache, rows, v2x, use_rsu=False):
     """Per-coordinate mean / std of hist_own over the known targets of the given sample rows (train split)."""
-    idx = np.concatenate([target_rows(cache, r, v2x) for r in rows])
+    idx = np.concatenate([target_rows(cache, r, v2x, use_rsu) for r in rows])
     h = cache["hist_own"][idx].reshape(-1, 2).astype(np.float64)
     return {"mean": h.mean(0).tolist(), "std": (h.std(0, ddof=1) + 1e-6).tolist()}
 
@@ -108,9 +116,9 @@ def state_features(cache, idx):
                            cache["size"][idx, :2].astype(np.float32) / SIZE_SCALE_M, onehot], axis=1)
 
 
-def sample_features(cache, row, v2x, env_norm=None, lanes=None):
+def sample_features(cache, row, v2x, env_norm=None, lanes=None, use_rsu=False):
     """Env inputs / targets of one cache sample row (dict of tensors; T = known targets, may be 0)."""
-    idx = target_rows(cache, row, v2x)
+    idx = target_rows(cache, row, v2x, use_rsu)
     hist = cache["hist_own"][idx].astype(np.float32)
     if env_norm is not None:
         hist = (hist - np.asarray(env_norm["mean"], dtype=np.float32)) / np.asarray(env_norm["std"], dtype=np.float32)
@@ -176,16 +184,16 @@ def env_collate_fn(batch):
 class EnvDataset(Dataset):
     """PilotDataset sensors + env targets. Building it loads the V2X-Sim metadata (PilotDataset)."""
     def __init__(self, v2x, use_map=True, map_transform="mirror", cache_dir=ENV_CACHE_DIR, env_norm=None,
-                 **pilot_kwargs):
+                 use_rsu=False, **pilot_kwargs):
         from pilot_dataset import PilotDataset
         for k in ("use_cpm", "use_coop", "require_prev_frame", "history_frames", "require_history_frames", "degrade"):
             assert k not in pilot_kwargs, f"EnvDataset sets / does not support {k}"
         assert pilot_kwargs.get("drop_cam_xy"), "the env task requires drop_cam_xy=True (with --normalize-cam)"
-        self.v2x, self.use_map, self.map_transform = v2x, use_map, map_transform
-        known_mask([0], v2x)  # validates v2x
+        self.v2x, self.use_map, self.map_transform, self.use_rsu = v2x, use_map, map_transform, use_rsu
+        known_mask([0], v2x, [False] if use_rsu else None)  # validates v2x (and v2x on with use_rsu)
         self.cache = load_env_cache(cache_dir)
         self.pilot = PilotDataset(require_prev_frame=True, use_cpm=False, use_coop=(v2x == "on"),
-                                  map_transform=map_transform, **pilot_kwargs)
+                                  map_transform=map_transform, use_rsu=use_rsu, **pilot_kwargs)
         c = self.cache
         ps = self.pilot.samples
         assert len(ps) == len(c["sample_agent"]) and all(
@@ -196,7 +204,8 @@ class EnvDataset(Dataset):
         self.samples = [ps[r] for r in self.rows]  # what three_way_scene_split reads
         self.env_norm = env_norm
         self.lanes = {t: LanePolylines(t, map_transform) for t in TOWNS} if use_map else None
-        print(f"EnvDataset: v2x={v2x}, use_map={use_map}, map_transform={map_transform}, {len(self.rows)} samples, "
+        print(f"EnvDataset: v2x={v2x}, use_map={use_map}, map_transform={map_transform}, "
+              + ("use_rsu=True, " if use_rsu else "") + f"{len(self.rows)} samples, "
               f"cache commit {c['manifest']['git_commit'][:7]}")
 
     @property
@@ -218,5 +227,5 @@ class EnvDataset(Dataset):
         item = self.pilot[r]
         assert self.pilot.cam_norm is not None, "set cam_norm before loading env samples (train.py --normalize-cam)"
         item["cam"] = env_cam(item["cam"])
-        item.update(sample_features(self.cache, r, self.v2x, self.env_norm, self.lanes))
+        item.update(sample_features(self.cache, r, self.v2x, self.env_norm, self.lanes, self.use_rsu))
         return item

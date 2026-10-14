@@ -1,0 +1,9 @@
+3726 RSU (scene, frame) keys over 54 scenes; expected size 2.09 GiB
+  built 500, skipped 0 so far (of 3726)
+  built 1000, skipped 0 so far (of 3726)
+  built 1500, skipped 0 so far (of 3726)
+  built 2000, skipped 0 so far (of 3726)
+  built 2500, skipped 0 so far (of 3726)
+  built 3000, skipped 0 so far (of 3726)
+  built 3500, skipped 0 so far (of 3726)
+Done: built 3726, skipped 0, total 3726; manifest {'img_size': 224, 'num_views': 4, 'views': ['CAM_id_0_0', 'CAM_id_0_1', 'CAM_id_0_2', 'CAM_id_0_3'], 'channels': 3, 'shape': [4, 3, 224, 224], 'dtype': 'uint8', 'file_count': 3726, 'keys_source': 'env_targets.npz sample_scene / sample_frame', 'git_commit': 'cf3983f50722edf18e9570c61ddb3d4162238edf'}

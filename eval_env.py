@@ -9,7 +9,8 @@ tuning scene and ALL, for the subsets of env_metrics.SUBSETS: visibility class (
 all kept targets (a + b + c) over every D sample of the split's scenes, with n_removed as the denominator note.
 
 Writes <run-dir>/eval_env_<split>_<ckpt stem>.npz (per-target arrays, read by analyze_env.py) and prints the
-tables (ENV / COV lines).
+tables (ENV / COV lines). use_rsu runs (config key use_rsu, runs/DECISION_RULES_RSU.md): known targets V + R,
+extra subsets v / v_moving / r / r_moving (env_metrics.RSU_SUBSETS) and the R count in the COV lines.
 
 --split test --confirm-final-test: the final test evaluation of runs/DECISION_RULES_FINAL_TEST.md (split v2 runs
 only). Output (stdout and stderr) goes to eval_env_<run>_test_final.log; the evaluation is recorded in
@@ -30,7 +31,7 @@ from torch.utils.data import DataLoader
 import final_test_guard
 
 from env_metrics import (displacement_metrics, baseline_metrics, cv_prediction, condition_labels, subset_masks,
-                         coverage, SUBSETS, METRICS, BASELINE_METRICS)
+                         rsu_subset_masks, coverage, SUBSETS, RSU_SUBSETS, METRICS, BASELINE_METRICS)
 
 PER_TARGET = ("tid", "scene", "town", "vis", "cat4", "moving", "turning", "straight", "stationary") + METRICS + \
     tuple(f"cv_{m}" for m in BASELINE_METRICS) + tuple(f"stay_{m}" for m in BASELINE_METRICS)
@@ -58,14 +59,18 @@ def concat(parts):
     return {k: np.concatenate([p[k] for p in parts]) for k in PER_TARGET}
 
 
-def table_lines(t, scenes):
+def table_lines(t, scenes, use_rsu=False):
     """ENV lines: per scene and ALL, per subset: n, the model's METRICS, then CV and stay-put (ade fde miss)."""
     lines = [f"ENV {'scene':>9s} {'subset':19s} {'n':>6s} | " + " ".join(f"{m:>7s}" for m in METRICS)
              + " | cv: ade fde miss | stay: ade fde miss"]
     masks = subset_masks(t)
+    subsets = SUBSETS
+    if use_rsu:
+        masks.update(rsu_subset_masks(t))
+        subsets = SUBSETS + RSU_SUBSETS
     keys = [("ALL", np.ones(len(t["tid"]), bool))] + [(f"{tw[-2:]}#{s}", np.asarray(t["scene"]) == s) for tw, s in scenes]
     for label, sel in keys:
-        for sub in SUBSETS:
+        for sub in subsets:
             m = sel & masks[sub]
             if not m.any():
                 lines.append(f"ENV {label:>9s} {sub:19s} {0:6d}")
@@ -110,14 +115,16 @@ def main():
         cfg = json.load(f)
     assert cfg.get("task") == "env", f"{args.run_dir} is not an env-task run"
     split_version = split_version_of(cfg)
+    use_rsu = cfg.get("use_rsu", False)  # absent in configs from before the RSU extension = off
     print(f"--run-dir {args.run_dir}: v2x={cfg['v2x']}, no_map={cfg['no_map']}, map_transform={cfg['map_transform']}, "
-          f"split_version={split_version} (from config.json)")
+          f"split_version={split_version}" + (", use_rsu=True" if use_rsu else "") + " (from config.json)")
     with open(os.path.join(args.run_dir, "cam_norm.json")) as f:
         cam_norm = json.load(f)
     with open(os.path.join(args.run_dir, "env_norm.json")) as f:
         env_norm = json.load(f)
     ds = EnvDataset(v2x=cfg["v2x"], use_map=not cfg["no_map"], map_transform=cfg["map_transform"], env_norm=env_norm,
-                    use_image_cache=cfg["use_image_cache"], use_speed=cfg["use_speed"], drop_cam_xy=cfg["drop_cam_xy"])
+                    use_image_cache=cfg["use_image_cache"], use_speed=cfg["use_speed"], drop_cam_xy=cfg["drop_cam_xy"],
+                    use_rsu=use_rsu)
     ds.cam_norm = cam_norm
     assert ds.cache["manifest"]["git_commit"] == cfg["env_cache_commit"], "env cache differs from the run's"
     _, tuning, test = three_way_scene_split(ds, seed=42, split_version=split_version)
@@ -128,7 +135,7 @@ def main():
         final_test_guard.record(args.run_dir, args.ckpt, final_rerun, split_version)  # before evaluating
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = EnvFusion(device=device, v2x=cfg["v2x"] == "on", use_map=not cfg["no_map"]).to(device)
+    model = EnvFusion(device=device, v2x=cfg["v2x"] == "on", use_map=not cfg["no_map"], use_rsu=use_rsu).to(device)
     model.load_state_dict(torch.load(args.ckpt, map_location=device)["model_state_dict"])
     model.eval()
     parts = []
@@ -139,30 +146,33 @@ def main():
     t = concat(parts)
     assert len(np.unique(t["tid"])) == len(t["tid"]), "a target was evaluated twice"
 
-    for line in table_lines(t, scenes):
+    for line in table_lines(t, scenes, use_rsu):
         print(line)
     c = ds.cache
     split_rows = np.nonzero(np.isin(c["sample_scene"], [s for _, s in scenes]))[0]  # every D sample of these scenes
     print(f"\nCOV coverage over all {len(split_rows)} D samples of the {args.split} scenes "
-          f"(predicted = known targets of v2x={cfg['v2x']}; all = kept targets a+b+c; removed = window-filtered):")
+          f"(predicted = known targets of v2x={cfg['v2x']}" + (" + RSU-only r" if use_rsu else "")
+          + "; all = kept targets a+b+c; removed = window-filtered):")
     for label, rows in [("ALL", split_rows)] + [(f"{tw[-2:]}#{s}", split_rows[c["sample_scene"][split_rows] == s])
                                                 for tw, s in scenes]:
-        cv = coverage(c, rows, cfg["v2x"])
+        cv = coverage(c, rows, cfg["v2x"], use_rsu)
         print(f"COV {label:>9s} samples={cv['samples']:5d} a={cv['a']:6d} b={cv['b']:6d} c={cv['c']:6d} "
+              + (f"r={cv['r']:6d} " if use_rsu else "") +
               f"all={cv['all_kept']:6d} removed={cv['removed']:5d} predicted={cv['predicted']:6d} "
               f"coverage={cv['coverage']:.4f} (incl. removed {cv['coverage_incl_removed']:.4f})")
     n_eval = len(t["tid"])
-    n_cov = coverage(c, split_rows, cfg["v2x"])["predicted"]
+    n_cov = coverage(c, split_rows, cfg["v2x"], use_rsu)["predicted"]
     assert n_eval == n_cov, f"evaluated {n_eval} targets, coverage counts {n_cov} predicted ones"
 
     stem = os.path.splitext(os.path.basename(args.ckpt))[0]
     out = os.path.join(args.run_dir, f"eval_env_{args.split}_{stem}.npz")
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     np.savez(out, **t, meta=json.dumps({"run_dir": args.run_dir, "ckpt": args.ckpt, "split": args.split,
-                                        "v2x": cfg["v2x"], "no_map": cfg["no_map"], "split_version": split_version,
+                                        "v2x": cfg["v2x"], "no_map": cfg["no_map"], "use_rsu": use_rsu,
+                                        "split_version": split_version,
                                         "map_transform": cfg["map_transform"], "git_commit": commit,
                                         "scenes": [[tw, s] for tw, s in scenes],
-                                        "coverage": coverage(c, split_rows, cfg["v2x"])}))
+                                        "coverage": coverage(c, split_rows, cfg["v2x"], use_rsu)}))
     print(f"\nwrote {out} ({n_eval} targets)")
 
 

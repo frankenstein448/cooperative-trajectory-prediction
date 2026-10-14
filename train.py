@@ -6,7 +6,8 @@ custom collate_fn (variable-size LiDAR/camera/coop data per sample).
 
 --task env (Part 2, runs/DESIGN_ENV.md): predict the other vehicles around the ego with EnvFusion
 (env_model.py) on EnvDataset (env_dataset.py); --v2x {off,on} picks the known targets and the coop stream,
---no-map removes the map v2 tokens. The default --task ego is the unchanged ego-trajectory task.
+--no-map removes the map v2 tokens, --use-rsu (with --v2x on) adds the RSU stream and the RSU-only targets
+(runs/DECISION_RULES_RSU.md). The default --task ego is the unchanged ego-trajectory task.
 
 Run in gpu-test-venv.
 """
@@ -164,6 +165,13 @@ def parse_args():
     parser.add_argument("--v2x", choices=["off", "on"], default=None,
                         help="--task env only: off = ego-only model (class-(a) targets, no coop sensors); on = "
                              "(a)+(b) targets and the cooperative sensor stream")
+    parser.add_argument("--use-rsu", action="store_true",
+                        help="--task env --v2x on only: RSU stream (agent 0: SEMLIDAR + 4 cameras, own encoder and "
+                             "type embedding) and RSU-only targets (num_lidar_pts[0] >= 5) as known targets "
+                             "(runs/DECISION_RULES_RSU.md). Default off: E_V2X unchanged")
+    parser.add_argument("--data-fraction", type=float, default=1.0,
+                        help="--task env, timing dry runs only: train / tune on a seeded random fraction of the "
+                             "train and tuning samples (recorded in config.json). Default 1.0 = everything")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--dry-run", action="store_true",
@@ -186,8 +194,12 @@ def parse_args():
                                 ("--drop-cam-xy", args.drop_cam_xy)) if not on]
         if need:
             parser.error(f"--task env requires {', '.join(need)} (its ego CAM keeps only the speed)")
-    elif args.v2x is not None:
-        parser.error("--v2x is only for --task env")
+        if args.use_rsu and args.v2x != "on":
+            parser.error("--use-rsu requires --v2x on")
+        if not 0 < args.data_fraction <= 1:
+            parser.error("--data-fraction must be in (0, 1]")
+    elif args.v2x is not None or args.use_rsu or args.data_fraction != 1.0:
+        parser.error("--v2x / --use-rsu / --data-fraction are only for --task env")
     return args
 
 
@@ -235,6 +247,9 @@ def main():
         config["v2x"] = args.v2x
         config["no_cpm"] = True  # the env task never loads CPM objects
         config["env_cam"] = "speed only (x, y and world heading zeroed after normalization; env_dataset.env_cam)"
+        config["use_rsu"] = args.use_rsu
+        if args.data_fraction != 1.0:
+            config["data_fraction"] = args.data_fraction
     with open(os.path.join(args.out_dir, "config.json"), "w") as f:
         json.dump(config, f, indent=2)
     print(f"Wrote config: {config}")
@@ -344,7 +359,8 @@ def dry_run(model, train_loader, val_loader, loss_fn, optimizer, step=ego_step):
 def main_env(args, config):
     """--task env: EnvDataset / EnvFusion / D's WTA loss on the known targets (runs/DESIGN_ENV.md)."""
     dataset = EnvDataset(v2x=args.v2x, use_map=not args.no_map, map_transform=args.map_transform,
-                         use_image_cache=args.use_image_cache, use_speed=args.use_speed, drop_cam_xy=args.drop_cam_xy)
+                         use_image_cache=args.use_image_cache, use_speed=args.use_speed, drop_cam_xy=args.drop_cam_xy,
+                         use_rsu=args.use_rsu)
     config["env_cache_commit"] = dataset.cache["manifest"]["git_commit"]
     config["n_env_samples"] = len(dataset)
     with open(os.path.join(args.out_dir, "config.json"), "w") as f:
@@ -353,6 +369,12 @@ def main_env(args, config):
                                                             split_version=args.split_version)
     print(f"split_version={args.split_version}; Train: {len(train_set)} | Tuning: {len(tuning_set)} "
           f"| Test: {len(test_set)} samples (never used here)")
+    if args.data_fraction < 1.0:  # timing only
+        rng = np.random.RandomState(0)
+        pick = lambda s: torch.utils.data.Subset(dataset, sorted(rng.choice(
+            s.indices, int(np.ceil(args.data_fraction * len(s.indices))), replace=False).tolist()))
+        train_set, tuning_set = pick(train_set), pick(tuning_set)
+        print(f"--data-fraction {args.data_fraction}: Train {len(train_set)} | Tuning {len(tuning_set)} samples (timing only)")
 
     if args.normalize_cam:
         cam_values = torch.stack([dataset.get_cam_features(*dataset.samples[i][:3]) for i in train_set.indices])
@@ -361,7 +383,7 @@ def main_env(args, config):
             json.dump(cam_norm, f, indent=2)
         dataset.cam_norm = cam_norm
         print(f"Computed cam_norm from {len(train_set.indices)} train samples: {cam_norm}")
-    env_norm = compute_env_norm(dataset.cache, dataset.rows[train_set.indices], args.v2x)
+    env_norm = compute_env_norm(dataset.cache, dataset.rows[train_set.indices], args.v2x, args.use_rsu)
     with open(os.path.join(args.out_dir, "env_norm.json"), "w") as f:
         json.dump(env_norm, f, indent=2)
     dataset.env_norm = env_norm
@@ -371,10 +393,10 @@ def main_env(args, config):
                               num_workers=NUM_WORKERS, collate_fn=env_collate_fn)
     val_loader = DataLoader(tuning_set, batch_size=BATCH_SIZE, shuffle=False,
                             num_workers=NUM_WORKERS, collate_fn=env_collate_fn)
-    model = EnvFusion(device=DEVICE, v2x=args.v2x == "on", use_map=not args.no_map).to(DEVICE)
+    model = EnvFusion(device=DEVICE, v2x=args.v2x == "on", use_map=not args.no_map, use_rsu=args.use_rsu).to(DEVICE)
     loss_fn = build_loss("wta")
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
-    print(f"EnvFusion v2x={args.v2x}, use_map={not args.no_map}; trainable parameters: "
+    print(f"EnvFusion v2x={args.v2x}, use_map={not args.no_map}, use_rsu={args.use_rsu}; trainable parameters: "
           f"{sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
     if args.dry_run:
         return dry_run(model, train_loader, val_loader, loss_fn, optimizer, step=env_step)

@@ -66,6 +66,17 @@ SUBSETS = ("all", "moving", "stationary", "turning", "straight", "a", "b", "a_mo
            "car", "two_wheeler", "car_moving", "two_wheeler_moving")
 
 
+# use_rsu runs only (runs/DECISION_RULES_RSU.md): V = targets some CAV sees (vis <= 1), R = RSU-only (vis == 2;
+# a use_rsu model's only class-(c) targets).
+RSU_SUBSETS = ("v", "v_moving", "r", "r_moving")
+
+
+def rsu_subset_masks(t):
+    """t: per-target arrays with vis, moving -> {subset: bool [N]} (RSU_SUBSETS)."""
+    vis, mov = np.asarray(t["vis"]), np.asarray(t["moving"], bool)
+    return {"v": vis <= 1, "v_moving": (vis <= 1) & mov, "r": vis == 2, "r_moving": (vis == 2) & mov}
+
+
 def subset_masks(t):
     """t: per-target arrays with vis, cat4, moving, turning, straight -> {subset: bool [N]} (SUBSETS)."""
     vis, cat, mov = np.asarray(t["vis"]), np.asarray(t["cat4"]), np.asarray(t["moving"], bool)
@@ -77,23 +88,32 @@ def subset_masks(t):
     return {k: m[k] for k in SUBSETS}
 
 
-def coverage(cache, rows, v2x):
+def coverage(cache, rows, v2x, use_rsu=False):
     """Coverage over the given cache sample rows (all of a split's D samples, including those without a class-(a)
     target): predicted = the model's known targets; all = kept targets (a + b + c). n_removed (vehicles within
-    50 m dropped by the window filter: too short a track, or a step > 10 m) is the denominator note."""
-    vis = []
+    50 m dropped by the window filter: too short a track, or a step > 10 m) is the denominator note.
+    use_rsu: also "r" = the (c) targets the RSU sees (cache rsu_vis), which the use_rsu model predicts."""
+    vis, rsu = [], []
     removed = 0
     for r in rows:
         lo, hi = int(cache["sample_ptr"][r]), int(cache["sample_ptr"][r + 1])
         vis.append(np.asarray(cache["vis"][lo:hi]))
+        if use_rsu:
+            rsu.append(np.asarray(cache["rsu_vis"][lo:hi], bool))
         removed += int(cache["n_removed"][r])
     vis = np.concatenate(vis) if vis else np.zeros(0, int)
     n = {k: int((vis == i).sum()) for i, k in enumerate("abc")}
     total = len(vis)
     predicted = n["a"] + (n["b"] if v2x == "on" else 0)
-    return {"samples": len(rows), "a": n["a"], "b": n["b"], "c": n["c"], "all_kept": total, "removed": removed,
-            "predicted": predicted, "coverage": predicted / max(total, 1),
-            "coverage_incl_removed": predicted / max(total + removed, 1)}
+    out = {"samples": len(rows), "a": n["a"], "b": n["b"], "c": n["c"], "all_kept": total, "removed": removed}
+    if use_rsu:
+        assert v2x == "on", "use_rsu requires v2x on"
+        rsu = np.concatenate(rsu) if rsu else np.zeros(0, bool)
+        out["r"] = int(((vis == 2) & rsu).sum())
+        predicted += out["r"]
+    out.update(predicted=predicted, coverage=predicted / max(total, 1),
+               coverage_incl_removed=predicted / max(total + removed, 1))
+    return out
 
 
 def scene_values(t, metric, mask, scenes):

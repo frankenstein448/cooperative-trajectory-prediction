@@ -18,6 +18,10 @@ EnvFusion: per-target trajectory prediction for the env task (runs/DESIGN_ENV.md
 4. Head: D's TrajectoryHead(128, 6 modes, 30 steps) per target -> trajs [B, T, 6, 30, 2] (target's own frame)
    and mode logits [B, T, 6].
 use_map=False removes the polyline encoder, the "no lane" token and every map attention (not zeroed).
+use_rsu=True (v2x only; runs/DECISION_RULES_RSU.md): one more scene token, the RSU (agent 0: SEMLIDAR + 4 cameras)
+through its own CoopSensorStream(n_views=4) (D's pooled coop encoder, separate weights; the RSU is always present,
+one per scene) plus its own learned type embedding. Built after every other module, so with the same seed the
+shared modules start from the same weights as E_V2X. use_rsu=False builds exactly E_V2X's modules.
 env_wta_loss: D's WinnerTakesAllLoss on the real targets of the batch, flattened to [N, ...].
 """
 import math
@@ -31,6 +35,7 @@ from v2x_message_stream import CAMEncoder
 from history_encoder import HistoryEncoder
 from end_to_end_model import TrajectoryHead
 from env_dataset import STATE_DIM, POS_SCALE_M
+from pilot_dataset import RSU_VIEWS
 from env_map import N_POINT_FEATS
 
 D_MODEL = 128
@@ -38,7 +43,8 @@ N_HEADS = 4
 N_BLOCKS = 2
 DROPOUT = 0.1
 PAIR_DIM = 5
-SCENE_TYPES = ("ego_sensors", "ego_cam", "coop")
+SCENE_TYPES = ("ego_sensors", "ego_cam", "coop")  # the RSU token has its own embedding (rsu_type)
+N_RSU_VIEWS = len(RSU_VIEWS)
 
 
 def rel_pose_features(pose_q, pose_k):
@@ -125,9 +131,10 @@ class EnvBlock(nn.Module):
 
 
 class EnvFusion(nn.Module):
-    def __init__(self, device, v2x=False, use_map=True, d=D_MODEL, n_blocks=N_BLOCKS, n_heads=N_HEADS):
+    def __init__(self, device, v2x=False, use_map=True, d=D_MODEL, n_blocks=N_BLOCKS, n_heads=N_HEADS, use_rsu=False):
         super().__init__()
-        self.device, self.v2x, self.use_map = device, v2x, use_map
+        assert v2x or not use_rsu, "use_rsu requires v2x"
+        self.device, self.v2x, self.use_map, self.use_rsu = device, v2x, use_map, use_rsu
         self.ego_encoder = EgoStream(out_dim=d)
         self.cam_encoder = CAMEncoder(out_dim=d)
         if v2x:
@@ -143,10 +150,13 @@ class EnvFusion(nn.Module):
         self.blocks = nn.ModuleList(EnvBlock(d, n_heads, use_map) for _ in range(n_blocks))
         self.ln_out = nn.LayerNorm(d)
         self.traj_head = TrajectoryHead(d)
+        if use_rsu:  # last, so the modules above are initialised exactly as without it
+            self.rsu_encoder = CoopSensorStream(out_dim=d, n_views=N_RSU_VIEWS)
+            self.rsu_type = nn.Embedding(1, d)
 
     # ---------- scene part: D's per-sample encoders ----------
     def scene_tokens(self, batch):
-        """-> scene [B, S, d] (S = 2, or 3 with v2x), cam_embed [B, d]."""
+        """-> scene [B, S, d] (S = 2, 3 with v2x, 4 with use_rsu), cam_embed [B, d]."""
         B = len(batch["points"])
         ego = torch.stack([self.ego_encoder(batch["points"][i].to(self.device),
                                             [img.to(self.device) for img in batch["images"][i]]) for i in range(B)])
@@ -162,6 +172,10 @@ class EnvFusion(nn.Module):
                     coop.append(self.coop_encoder([p.to(self.device) for p in pts],
                                                   [[im.to(self.device) for im in ims] for ims in batch["coop_images"][i]]))
             toks.append(torch.stack(coop) + self.scene_type.weight[2])
+        if self.use_rsu:
+            rsu = [self.rsu_encoder([batch["rsu_points"][i].to(self.device)],
+                                    [[im.to(self.device) for im in batch["rsu_images"][i]]]) for i in range(B)]
+            toks.append(torch.stack(rsu) + self.rsu_type.weight[0])
         return torch.stack(toks, dim=1), cam
 
     # ---------- target part: plain tensors (unit-testable) ----------

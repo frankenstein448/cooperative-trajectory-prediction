@@ -1,0 +1,3 @@
+manifest OK: 3726 files = 3726 env (scene, frame) keys, views ['CAM_id_0_0', 'CAM_id_0_1', 'CAM_id_0_2', 'CAM_id_0_3'], shape (4, 3, 224, 224) uint8
+OK: 50 random keys, all 4 views torch.equal (JPEG decode vs cache)
+RESULT: PASS

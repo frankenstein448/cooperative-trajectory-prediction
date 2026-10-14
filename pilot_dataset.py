@@ -39,6 +39,32 @@ K_NEAREST_LANES = 5
 # (decoded + resized, before ToTensor's float/255 conversion).
 IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images")
 
+# RSU (agent 0; env task use_rsu, runs/DECISION_RULES_RSU.md): SEMLIDAR_TOP_id_0 + 4 cameras CAM_id_0_<k>.
+# Its image cache (build_rsu_image_cache.py) is separate: one .npy per (scene, frame), uint8 [4, 3, 224, 224].
+RSU_AGENT_ID = 0
+RSU_VIEWS = ["CAM_id_0_0", "CAM_id_0_1", "CAM_id_0_2", "CAM_id_0_3"]
+RSU_IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images_rsu")
+
+
+def rsu_cache_path(scene, frame):
+    return os.path.join(RSU_IMAGE_CACHE_DIR, f"{RSU_AGENT_ID}_{scene}_{frame:06d}.npy")
+
+
+def load_rsu_images(scene, frame, use_image_cache):
+    """The RSU's 4 views as [3,224,224] float tensors in [0,1] (load_image's output). From the RSU cache if
+    use_image_cache: a missing key is a hard error, never a fallback to the JPEGs."""
+    if not use_image_cache:
+        return [load_image(f"{SWEEPS_ROOT}/{v}/scene_{scene}_{frame:06d}.jpg") for v in RSU_VIEWS]
+    path = rsu_cache_path(scene, frame)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"RSU image cache miss for (scene {scene}, frame {frame}): {path} not found; "
+                                f"build it with build_rsu_image_cache.py")
+    arr = np.load(path)
+    assert arr.shape == (len(RSU_VIEWS), 3, IMG_SIZE, IMG_SIZE), (
+        f"RSU image cache shape mismatch for {path}: got {arr.shape}, expected ({len(RSU_VIEWS)}, 3, {IMG_SIZE}, {IMG_SIZE})")
+    assert arr.dtype == np.uint8, f"RSU image cache dtype mismatch for {path}: got {arr.dtype}, expected uint8"
+    return [torch.from_numpy(arr[v]).float().div(255) for v in range(arr.shape[0])]
+
 TOWN03_SCENES = [4, 5, 64, 77, 79, 80, 85]
 TOWN04_SCENES = [6, 9, 20, 26, 30, 92, 96, 97, 98]
 TOWN05_SCENES = [
@@ -73,7 +99,7 @@ class PilotDataset(Dataset):
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
                  cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None,
                  history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None,
-                 use_cpm: bool = True, use_coop: bool = True, map_transform: str = "legacy"):
+                 use_cpm: bool = True, use_coop: bool = True, map_transform: str = "legacy", use_rsu: bool = False):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
         assert history_frames >= 0 and require_history_frames >= 0
@@ -116,6 +142,10 @@ class PilotDataset(Dataset):
         # every existing caller is unchanged; train.py / eval_scenes.py pass the run's map_transform.
         assert map_transform in MAP_TRANSFORMS, f"unknown map_transform={map_transform!r}"
         self.map_transform = map_transform
+        # use_rsu=True (env task, runs/DECISION_RULES_RSU.md): also return the RSU's (agent 0) SEMLIDAR points and
+        # its 4 camera views as "rsu_points" / "rsu_images". Default off: nothing else changes.
+        assert not (use_rsu and degrade), "use_rsu does not support degrade"
+        self.use_rsu = use_rsu
         # Like cam_norm: {"mean": [2], "std": [2]} per coordinate, from the train
         # split, settable post-construction, applied to the returned copy only.
         self.history_norm = history_norm
@@ -132,6 +162,11 @@ class PilotDataset(Dataset):
             assert manifest["img_size"] == IMG_SIZE, (
                 f"Image cache manifest img_size={manifest['img_size']} does not match "
                 f"expected {IMG_SIZE} (ego_camera_encoder.IMG_SIZE)")
+            if use_rsu:
+                with open(os.path.join(RSU_IMAGE_CACHE_DIR, "manifest.json")) as f:
+                    rsu_manifest = json.load(f)
+                assert (rsu_manifest["img_size"], rsu_manifest["views"]) == (IMG_SIZE, RSU_VIEWS), (
+                    f"RSU image cache manifest {rsu_manifest} does not match IMG_SIZE={IMG_SIZE}, RSU_VIEWS={RSU_VIEWS}")
         print(f"PilotDataset: use_image_cache={use_image_cache}"
               + (f" (dir={IMAGE_CACHE_DIR})" if use_image_cache else "")
               + f", require_prev_frame={require_prev_frame}, use_speed={use_speed}, "
@@ -139,7 +174,8 @@ class PilotDataset(Dataset):
               + f"degrade={degrade}, history_frames={history_frames}, "
               + f"require_history_frames={require_history_frames}, "
               + f"history_norm={'on' if history_norm is not None else 'off'}, "
-              + f"use_cpm={use_cpm}, use_coop={use_coop}, map_transform={map_transform}")
+              + f"use_cpm={use_cpm}, use_coop={use_coop}, map_transform={map_transform}"
+              + (f", use_rsu=True (dir={RSU_IMAGE_CACHE_DIR})" if use_rsu else ""))
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -270,6 +306,11 @@ class PilotDataset(Dataset):
             extra["coop_points"] = coop_points
             extra["coop_images"] = coop_images
 
+        if self.use_rsu:
+            extra["rsu_points"] = load_semantic_lidar(
+                f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{RSU_AGENT_ID}/scene_{scene}_{frame:06d}.pcd.bin")
+            extra["rsu_images"] = load_rsu_images(scene, frame, self.use_image_cache)
+
         # non-trainable geometry: coordinate transform + nearest-lane lookup
         # -- now town-aware, using this sample's own town's transform + graph.
         # Uses cam_raw, NOT the (possibly normalized) cam built below -- this
@@ -353,7 +394,7 @@ def pilot_collate_fn(batch):
     extra = {}
     if "history" in batch[0]:
         extra["history"] = torch.stack([b["history"] for b in batch], dim=0)  # [B, H, 2]
-    for key in ("cpm_objects", "coop_points", "coop_images"):  # absent with use_cpm / use_coop off
+    for key in ("cpm_objects", "coop_points", "coop_images", "rsu_points", "rsu_images"):  # absent when off
         if key in batch[0]:
             extra[key] = [b[key] for b in batch]
     return {

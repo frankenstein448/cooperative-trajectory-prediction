@@ -14,15 +14,16 @@ EMBED_DIM = 128
 
 
 class EgoStream(nn.Module):
-    """Fuses LiDAR + camera embeddings -> single [128] ego embedding, per agent."""
-    def __init__(self, out_dim=EMBED_DIM):
+    """Fuses LiDAR + camera embeddings -> single [128] ego embedding, per agent.
+    n_views: camera views per agent (3 for the CAVs; 4 for the RSU stream, env_model use_rsu)."""
+    def __init__(self, out_dim=EMBED_DIM, n_views=3):
         super().__init__()
         self.lidar_enc = EgoSensorEncoder(out_dim=out_dim)
-        self.camera_enc = EgoCameraEncoder(out_dim=out_dim)
+        self.camera_enc = EgoCameraEncoder(n_views=n_views, out_dim=out_dim)
         self.fuse = nn.Linear(out_dim * 2, out_dim)
 
     def forward(self, points: torch.Tensor, images: list[torch.Tensor]) -> torch.Tensor:
-        """points: [N,5] lidar for ONE agent. images: 3 camera views for ONE agent -> [128]."""
+        """points: [N,5] lidar for ONE agent. images: n_views camera views for ONE agent -> [128]."""
         lidar_embed = self.lidar_enc(points)      # [128]
         cam_embed = self.camera_enc(images)        # [128]
         concat = torch.cat([lidar_embed, cam_embed], dim=0)  # [256]

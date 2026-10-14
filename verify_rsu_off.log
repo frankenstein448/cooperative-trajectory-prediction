@@ -1,0 +1,9 @@
+reference cf3983f vs working tree (HEAD cf3983f, *.py dirty=True); run /home/karra/hd-maps/runs/E_V2X_seed0, ckpt /home/karra/hd-maps/runs/E_V2X_seed0/checkpoint_epoch12.pt
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, 13384 samples, cache commit af265e9
+probe: 50 samples, 3007 tensors -> /tmp/tmpp8bnm97o/ref.pt
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, 13384 samples, cache commit af265e9
+probe: 50 samples, 3007 tensors -> /tmp/tmpp8bnm97o/new.pt
+compared 3007 tensors: 50 samples' batches + outputs, 257 initial-weight tensors
+RESULT: PASS

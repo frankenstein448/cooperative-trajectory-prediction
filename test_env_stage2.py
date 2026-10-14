@@ -357,6 +357,7 @@ def test_env_cam_keeps_only_speed():
 
     ds = ed.EnvDataset.__new__(ed.EnvDataset)  # bypasses __init__: no PilotDataset, no metadata
     ds.pilot, ds.cache, ds.rows, ds.v2x, ds.env_norm, ds.lanes = StubPilot(), synth_cache([2], [0, 1]), np.array([0]), "on", None, None
+    ds.use_rsu = False
     item = ds[0]
     assert item["cam"].tolist() == [0.0, 0.0, 0.0, 4.0] and item["t_hist"].shape == (2, 8, 2)
     ds.pilot.cam_norm = None
@@ -562,6 +563,89 @@ def _analyze_env_end_to_end(split, scenes):
     assert rules_part.count("form=full (scenes with samples 8/8)") == 4 and "Coverage per model" in out.stdout
     assert "V2X ADE1 vs V2X constant velocity ADE" in rules_part
     assert f"split {split} (v2), scenes {[x for _, x in scenes]}" in out.stdout and f"{split.upper()} split v2)" in out.stdout
+
+
+
+# ---------------------------------------------------------------- RSU extension (runs/DECISION_RULES_RSU.md)
+def test_rsu_known_targets_and_coverage():
+    # sample 0: a, b, c(RSU sees), c(RSU does not); sample 1: c(RSU sees); sample 2: a, b(RSU sees)
+    c = synth_cache([4, 1, 2], [0, 1, 2, 2, 2, 0, 1])
+    c["rsu_vis"] = np.array([False, False, True, False, True, True, True])
+    assert list(ed.target_rows(c, 0, "on")) == [0, 1] and list(ed.target_rows(c, 0, "on", use_rsu=True)) == [0, 1, 2]
+    assert list(ed.target_rows(c, 1, "on", use_rsu=True)) == [4] and list(ed.target_rows(c, 2, "on", use_rsu=True)) == [5, 6]
+    assert list(ed.env_sample_rows(c)) == [0, 2], "the sample list must not depend on the RSU"
+    try:
+        ed.known_mask([0], "off", [True])
+        raise AssertionError("use_rsu accepted with v2x off")
+    except AssertionError as e:
+        assert "requires v2x on" in str(e)
+    on, rsu = em.coverage(c, [0, 1, 2], "on"), em.coverage(c, [0, 1, 2], "on", use_rsu=True)
+    assert "r" not in on and on["predicted"] == 4 and rsu["r"] == 2 and rsu["predicted"] == 6
+    assert list(rsu)[:6] == list(on)[:6] and np.isclose(rsu["coverage"], 6 / 7)
+    norm_on, norm_rsu = ed.compute_env_norm(c, [0, 1, 2], "on"), ed.compute_env_norm(c, [0, 1, 2], "on", True)
+    assert norm_on != norm_rsu  # R targets enter the train-split history statistics
+    s = ed.sample_features(c, 0, "on", use_rsu=True)
+    assert s["t_vis"].tolist() == [0, 1, 2] and s["t_tid"].tolist() == [0, 1, 2]
+    m = em.rsu_subset_masks({"vis": np.array([0, 1, 2, 2]), "moving": np.array([True, False, True, False])})
+    assert m["v"].tolist() == [True, True, False, False] and m["r_moving"].tolist() == [False, False, True, False]
+
+
+def test_rsu_model_init_and_forward():
+    torch.manual_seed(0)
+    base = EnvFusion(device="cpu", v2x=True, use_map=True)
+    torch.manual_seed(0)
+    rsu = EnvFusion(device="cpu", v2x=True, use_map=True, use_rsu=True)
+    sb, sr = base.state_dict(), rsu.state_dict()
+    extra = sorted(set(sr) - set(sb))
+    assert set(sb) <= set(sr) and all(k.startswith(("rsu_encoder.", "rsu_type.")) for k in extra) and extra
+    assert all(torch.equal(sb[k], sr[k]) for k in sb), "use_rsu changed the init of E_V2X's modules"
+    assert sr["rsu_encoder.shared_encoder.camera_enc.view_fuse.weight"].shape == (128, 4 * 128)
+    assert sb["coop_encoder.shared_encoder.camera_enc.view_fuse.weight"].shape == (128, 3 * 128)
+    try:
+        EnvFusion(device="cpu", v2x=False, use_rsu=True)
+        raise AssertionError("use_rsu accepted without v2x")
+    except AssertionError as e:
+        assert "requires v2x" in str(e)
+    x = tiny_model_inputs(B=2, T=3, n_real=(3, 2))
+    batch = {"points": [torch.randn(60, 5), torch.randn(40, 5)],
+             "images": [[torch.rand(3, 32, 32) for _ in range(3)] for _ in range(2)],
+             "cam": [torch.randn(4), torch.randn(4)],
+             "coop_points": [[torch.randn(30, 5)], []], "coop_images": [[[torch.rand(3, 32, 32) for _ in range(3)]], []],
+             "rsu_points": [torch.randn(50, 5), torch.randn(20, 5)],
+             "rsu_images": [[torch.rand(3, 32, 32) for _ in range(4)] for _ in range(2)],
+             **{k: v for k, v in x.items() if k not in ("scene", "cam_embed")}}
+    scene, _ = rsu.scene_tokens(batch)
+    assert scene.shape == (2, 4, 128) and base.scene_tokens(batch)[0].shape == (2, 3, 128)
+    trajs, logits = rsu(batch)
+    loss, _ = env_wta_loss(WinnerTakesAllLoss(), trajs, logits, torch.randn(2, 3, 30, 2),
+                           torch.ones(2, 3, 30, dtype=torch.bool), batch["target_mask"])
+    loss.backward()
+    assert rsu.rsu_type.weight.grad is not None and rsu.rsu_encoder.shared_encoder.fuse.weight.grad is not None
+
+
+def test_rsu_train_args():
+    import contextlib
+    import io
+    import train
+    argv = sys.argv
+    ENV = ["--use-speed", "--normalize-cam", "--drop-cam-xy"]
+    try:
+        with contextlib.redirect_stderr(io.StringIO()):
+            sys.argv = ["train.py", "--out-dir", "x", "--task", "env", "--v2x", "on", "--use-rsu"] + ENV
+            a = train.parse_args()
+            assert a.use_rsu and a.data_fraction == 1.0
+            sys.argv = ["train.py", "--out-dir", "x", "--task", "env", "--v2x", "on"] + ENV
+            assert not train.parse_args().use_rsu
+            for bad in (["--task", "env", "--v2x", "off", "--use-rsu"] + ENV, ["--use-rsu"], ["--data-fraction", "0.5"],
+                        ["--task", "env", "--v2x", "on", "--data-fraction", "0"] + ENV):
+                sys.argv = ["train.py", "--out-dir", "x"] + bad
+                try:
+                    train.parse_args()
+                    raise AssertionError(f"accepted {bad}")
+                except SystemExit:
+                    pass
+    finally:
+        sys.argv = argv
 
 
 if __name__ == "__main__":

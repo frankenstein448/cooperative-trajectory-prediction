@@ -4,7 +4,8 @@ Cooperative sensor stream: an encoder with EgoStream's architecture but its own
 weights (not shared with the ego stream) runs on OTHER agents' LiDAR+camera data
 and mean-pools across them -> one [128] embedding per ego agent. In the pipeline
 the cooperators are the other camera-equipped CAVs (pilot_dataset passes agents
-1-4 minus the ego to find_coop_neighbors); the RSU (agent 0) is not used.
+1-4 minus the ego to find_coop_neighbors). The env task's RSU stream (env_model use_rsu) is a separate
+instance with n_views=4 and its own weights, run on the RSU (agent 0) alone.
 Run in gpu-test-venv.
 """
 import torch
@@ -19,11 +20,11 @@ EMBED_DIM = 128
 
 class CoopSensorStream(nn.Module):
     """Encodes each cooperating agent with a shared EgoStream encoder, then mean-pools."""
-    def __init__(self, out_dim=EMBED_DIM):
+    def __init__(self, out_dim=EMBED_DIM, n_views=3):
         super().__init__()
         # Its own EgoStream instance: shared across all cooperating agents, but NOT
         # shared with EndToEndFusion's ego_encoder -- separate weights, same architecture.
-        self.shared_encoder = EgoStream(out_dim=out_dim)
+        self.shared_encoder = EgoStream(out_dim=out_dim, n_views=n_views)
 
     def forward(self, coop_points: list[torch.Tensor],
                 coop_images: list[list[torch.Tensor]]) -> torch.Tensor:
