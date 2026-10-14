@@ -71,3 +71,11 @@ Commit hash of this file is recorded in git history.
   uses all kept targets; H1 excluding zero-width targets is reported as a
   sensitivity check (descriptive, no verdict). Zero-width targets are also reported
   separately in H2/H3 tables.
+
+## Results
+### H1 coverage (14 Oct 2026, computed after rules commit e18347b)
+- Tuning, all kept targets: V 84.33% -> V+R 89.29%, gain +4.97 pp >= 2 pp.
+  VERDICT H1: the RSU adds coverage.
+- Sensitivity, zero-width targets excluded: +5.13 pp (descriptive).
+- Tuning moving: +4.88 pp. Test v2 (descriptive): all +4.20 pp, moving +3.89 pp.
+- Largest gain Town04 (tuning moving +11.1 pp, test moving +13.3 pp); smallest test Town03 (+1.5 pp).
