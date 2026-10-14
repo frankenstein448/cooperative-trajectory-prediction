@@ -13,7 +13,8 @@ the turning condition only; every other condition is reported descriptively (no 
 --rule corrected (runs/DECISION_RULES_CORRECTED.md): the corrected Part 1 rerun (split v2, map_transform
 mirror), runs <prefix>D / <prefix>Dnomap / <prefix>EgoOnly (default prefix C_), their clean epoch-12 tuning
 logs (eval_<run>_e12.log, which carry the COND block). Secondary hypothesis: the same map rule on the
-turning condition only (pooled tuning split). V2X (D vs EgoOnly) and all other conditions: descriptive."""
+turning condition only (pooled tuning split). V2X (D vs EgoOnly) and all other conditions: descriptive.
+--split test with --suffix test_final: the same on the final test logs (runs/DECISION_RULES_FINAL_TEST.md)."""
 import re
 import argparse
 import statistics as st
@@ -28,12 +29,16 @@ parser.add_argument("--suffix", default=None,
                     help="log suffix: eval_<run>_<suffix>.log (default e12_cond; test_cond for --rule turning_test)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
 parser.add_argument("--prefix", default="C_", help="--rule corrected only: run-name prefix (C_D_seed0, ...)")
+parser.add_argument("--split", choices=["tuning", "test"], default="tuning",
+                    help="--rule corrected only: which split the logs are (test = runs/DECISION_RULES_FINAL_TEST.md, "
+                         "--suffix test_final); the rule is unchanged")
 args = parser.parse_args()
 TURNING_TEST = args.rule == "turning_test"
 CORRECTED = args.rule == "corrected"
 if args.suffix is None:
     args.suffix = "test_cond" if TURNING_TEST else "e12" if CORRECTED else "e12_cond"
-SPLIT = "test" if TURNING_TEST else "tuning"
+SPLIT = "test" if TURNING_TEST else args.split if CORRECTED else "tuning"
+assert args.split == "tuning" or CORRECTED, "--split is for --rule corrected"
 
 GROUPS = {"D": ["D_seed0", "D_seed1", "D_seed2"],
           "Dnomap": ["Dnomap_seed0", "Dnomap_seed1", "Dnomap_seed2"],
@@ -125,7 +130,7 @@ for town in towns:
 if CORRECTED:
     print("\nRULE (runs/DECISION_RULES_CORRECTED.md, secondary hypothesis): the map lowers minADE6 on turning "
           "vehicles only if seed-mean minADE6 D < Dnomap AND (Dnomap - D) > 2 x max(seed std D, seed std Dnomap); "
-          "pooled tuning split (split v2, map_transform mirror). V2X and other conditions: descriptive only")
+          f"pooled {SPLIT} split (split v2, map_transform mirror). V2X and other conditions: descriptive only")
 elif TURNING_TEST:
     print("\nRULE (runs/DECISION_RULES_TURNING_TEST.md, confirmatory, TEST split): the map lowers minADE6 on "
           "turning vehicles only if seed-mean minADE6 D < Dnomap AND (Dnomap - D) > 2 x max(seed std D, seed std "
@@ -155,7 +160,7 @@ for effect, with_g, without_g in COMPARISONS:
 
 if CORRECTED:
     effect, cond, v = verdicts[0]
-    print(f"\nVERDICT (secondary pre-registered hypothesis, tuning split v2): map on turning: "
+    print(f"\nVERDICT (secondary pre-registered hypothesis, {SPLIT} split v2): map on turning: "
           + ("the map lowers minADE6 on turning vehicles" if v == "map HELPS"
              else "no detectable effect" if v == "no detectable effect" else v))
     raise SystemExit(0)

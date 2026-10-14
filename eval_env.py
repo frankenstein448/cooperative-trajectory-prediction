@@ -2,14 +2,19 @@
 eval_env.py
 Evaluation of an env-task run (train.py --task env; runs/DESIGN_ENV.md Stage 3, runs/DECISION_RULES_ENV.md).
 
-Per known target of the TUNING split (split_version from the run's config): minADE6, ADE1, minFDE6, FDE1, miss
+Per known target of the TUNING split (split_version from the run's config; or the TEST split, see below): minADE6, ADE1, minFDE6, FDE1, miss
 rates (top-1 / best-of-6, FDE > 2 m), and the constant-velocity and stay-put baselines (env_metrics.py). Rows by
 tuning scene and ALL, for the subsets of env_metrics.SUBSETS: visibility class (a) / (b), condition
 (moving / stationary / turning / straight), category (car / two-wheeler). Coverage: the model's known targets /
 all kept targets (a + b + c) over every D sample of the split's scenes, with n_removed as the denominator note.
 
 Writes <run-dir>/eval_env_<split>_<ckpt stem>.npz (per-target arrays, read by analyze_env.py) and prints the
-tables (ENV / COV lines). The test split is refused: it needs its own committed rules.
+tables (ENV / COV lines).
+
+--split test --confirm-final-test: the final test evaluation of runs/DECISION_RULES_FINAL_TEST.md (split v2 runs
+only). Output (stdout and stderr) goes to eval_env_<run>_test_final.log; the evaluation is recorded in
+runs/TEST_EVALS.log with purpose "final test evaluation (split v2)" before it starts; a re-run is allowed only if
+every earlier attempt's log has no ENV / COV line (final_test_guard.py). An existing test npz is never overwritten.
 
 Run in gpu-test-venv:  python eval_env.py --run-dir runs/E_V2X_seed0 --ckpt runs/E_V2X_seed0/checkpoint_epoch12.pt
 """
@@ -21,6 +26,8 @@ import subprocess
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+
+import final_test_guard
 
 from env_metrics import (displacement_metrics, baseline_metrics, cv_prediction, condition_labels, subset_masks,
                          coverage, SUBSETS, METRICS, BASELINE_METRICS)
@@ -75,9 +82,25 @@ def main():
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--ckpt", required=True)
     ap.add_argument("--split", choices=["tuning", "test"], default="tuning")
+    ap.add_argument("--confirm-final-test", action="store_true",
+                    help="required for --split test: the final, logged test evaluation (runs/DECISION_RULES_FINAL_TEST.md)")
     args = ap.parse_args()
+    final_rerun = False
     if args.split == "test":
-        ap.error("the env test split needs its own committed decision rules; refused")
+        if not args.confirm_final_test:
+            ap.error("--split test requires --confirm-final-test (runs/DECISION_RULES_FINAL_TEST.md)")
+        with open(os.path.join(args.run_dir, "config.json")) as f:
+            c0 = json.load(f)
+        if (c0.get("split_version"), c0.get("map_transform")) != ("v2", "mirror"):
+            ap.error(f"{args.run_dir}: the final test is for split v2 / mirror runs only")
+        npz = os.path.join(args.run_dir, f"eval_env_test_{os.path.splitext(os.path.basename(args.ckpt))[0]}.npz")
+        if os.path.exists(npz):
+            ap.error(f"{npz} exists: this checkpoint's test evaluation produced results; refusing")
+        run = os.path.basename(os.path.normpath(args.run_dir))
+        final_rerun = final_test_guard.guard(f"eval_env_{run}_test_final.log", args.run_dir, args.ckpt,
+                                             final_test_guard.is_env_result, ap.error)
+    elif args.confirm_final_test:
+        ap.error("--confirm-final-test is for --split test")
 
     from env_dataset import EnvDataset, env_collate_fn
     from env_model import EnvFusion
@@ -97,9 +120,12 @@ def main():
                     use_image_cache=cfg["use_image_cache"], use_speed=cfg["use_speed"], drop_cam_xy=cfg["drop_cam_xy"])
     ds.cam_norm = cam_norm
     assert ds.cache["manifest"]["git_commit"] == cfg["env_cache_commit"], "env cache differs from the run's"
-    _, tuning, _ = three_way_scene_split(ds, seed=42, split_version=split_version)
-    scenes = sorted({(ds.samples[i][3], ds.samples[i][1]) for i in tuning.indices})
-    print(f"Evaluating on the TUNING split: {len(tuning)} samples, scenes {[s for _, s in scenes]}")
+    _, tuning, test = three_way_scene_split(ds, seed=42, split_version=split_version)
+    part = test if args.split == "test" else tuning
+    scenes = sorted({(ds.samples[i][3], ds.samples[i][1]) for i in part.indices})
+    print(f"Evaluating on the {args.split.upper()} split: {len(part)} samples, scenes {[s for _, s in scenes]}")
+    if args.split == "test":
+        final_test_guard.record(args.run_dir, args.ckpt, final_rerun, split_version)  # before evaluating
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = EnvFusion(device=device, v2x=cfg["v2x"] == "on", use_map=not cfg["no_map"]).to(device)
@@ -107,7 +133,7 @@ def main():
     model.eval()
     parts = []
     with torch.no_grad():
-        for batch in DataLoader(tuning, batch_size=8, shuffle=False, num_workers=2, collate_fn=env_collate_fn):
+        for batch in DataLoader(part, batch_size=8, shuffle=False, num_workers=2, collate_fn=env_collate_fn):
             trajs, logits = model(batch)
             parts.append(collect(batch, trajs, logits))
     t = concat(parts)
@@ -117,7 +143,7 @@ def main():
         print(line)
     c = ds.cache
     split_rows = np.nonzero(np.isin(c["sample_scene"], [s for _, s in scenes]))[0]  # every D sample of these scenes
-    print(f"\nCOV coverage over all {len(split_rows)} D samples of the tuning scenes "
+    print(f"\nCOV coverage over all {len(split_rows)} D samples of the {args.split} scenes "
           f"(predicted = known targets of v2x={cfg['v2x']}; all = kept targets a+b+c; removed = window-filtered):")
     for label, rows in [("ALL", split_rows)] + [(f"{tw[-2:]}#{s}", split_rows[c["sample_scene"][split_rows] == s])
                                                 for tw, s in scenes]:

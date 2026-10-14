@@ -1,6 +1,7 @@
 """Applies the pre-registered map rule to the six seed runs (tuning split, epoch 12).
 Map 'helps' only if: seed-averaged full minADE6 is lower in >= 7 of 8 scenes AND
 the ALL minADE6 gap > 2 x the larger of the two seed standard deviations.
+--split test: the same rules on test logs (runs/DECISION_RULES_FINAL_TEST.md); "8 tuning scenes" reads "8 test scenes".
 
 --suffix picks the logs, eval_<run>_<suffix>.log (default e12 = clean tuning,
 epoch 12; e.g. tuning_fog for eval_scenes.py --degrade fog). For any suffix
@@ -48,6 +49,9 @@ parser.add_argument("--full-suffix", default=None,
 parser.add_argument("--candidate", choices=["laplace_mixture", "wta_soft"], default="laplace_mixture",
                     help="--rule loss only: the loss of the --full runs (labels only; same criteria)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
+parser.add_argument("--split", choices=["tuning", "test"], default="tuning",
+                    help="which split the logs are (label only; test = runs/DECISION_RULES_FINAL_TEST.md, e.g. "
+                         "--suffix test_final). With test, the increase over the clean tuning e12 logs is not printed")
 args = parser.parse_args()
 CLEAN_SUFFIX = "e12"
 
@@ -117,6 +121,7 @@ def summary(names, idx):
     return st.mean(vals), st.stdev(vals), vals
 
 
+print(f"Split: {args.split.upper()} (logs eval_<run>_{args.suffix}.log)")
 print("Per run, ALL (minADE6, ADE1):")
 for n in FULL + NOMAP:
     print(f"  {n:14s} {runs[n][1][0]:.3f}  {runs[n][1][1]:.3f}")
@@ -195,7 +200,9 @@ elif args.rule == "loss":
     print("VERDICT:", f"ADOPT {cand}" if (c1 and c2 and c3 and c4) else f"do NOT adopt {cand}")
 
 missing_clean = [n for n in FULL + NOMAP if not os.path.exists(f"eval_{n}_{CLEAN_SUFFIX}.log")]
-if args.suffix != CLEAN_SUFFIX and missing_clean:
+if args.split == "test":
+    pass  # the e12 logs are the tuning split: a test - tuning difference is not a degradation
+elif args.suffix != CLEAN_SUFFIX and missing_clean:
     # e.g. fog-trained runs, which have no clean eval
     print(f"\nIncrease vs clean ({CLEAN_SUFFIX}) skipped: no clean log for {', '.join(missing_clean)}")
 elif args.suffix != CLEAN_SUFFIX:

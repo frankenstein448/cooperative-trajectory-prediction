@@ -508,14 +508,20 @@ def test_eval_collect_and_tables():
 def test_analyze_env_end_to_end():
     """analyze_env.py on fake per-target npz files (tmp dir): V2X clearly better than EgoOnly on (a), map with no
     effect; on (b) V2X's ADE1 is worse than CV but its minADE6 better -> rule (2) (ADE1) not met, minADE6 vs CV
-    only descriptive."""
+    only descriptive. Run for the tuning split and for --split test (runs/DECISION_RULES_FINAL_TEST.md)."""
+    for split, scenes in (("tuning", [("Town03", 85), ("Town04", 30), ("Town05", 3), ("Town05", 14), ("Town05", 15),
+                                      ("Town05", 16), ("Town05", 21), ("Town05", 22)]),
+                          ("test", [("Town03", 5), ("Town04", 6), ("Town05", 76), ("Town05", 78), ("Town05", 89),
+                                    ("Town05", 91), ("Town05", 95), ("Town05", 100)])):
+        _analyze_env_end_to_end(split, scenes)
+
+
+def _analyze_env_end_to_end(split, scenes):
     import json as _json
     import subprocess
     import tempfile
     here = os.path.dirname(os.path.abspath(__file__))
     rng = np.random.default_rng(3)
-    scenes = [("Town03", 85), ("Town04", 30), ("Town05", 3), ("Town05", 14), ("Town05", 15), ("Town05", 16),
-              ("Town05", 21), ("Town05", 22)]
     n = 400
     base = {"tid": np.arange(n), "scene": np.array([scenes[i % 8][1] for i in range(n)]),
             "town": np.array([scenes[i % 8][0] for i in range(n)]), "vis": (np.arange(n) % 3 == 0).astype(int),
@@ -535,13 +541,13 @@ def test_analyze_env_end_to_end():
                     t["ade1"] = 5.0 + rng.normal(0, 0.01, m)
                 for k in ("cv_ade", "cv_fde", "cv_miss", "stay_ade", "stay_fde", "stay_miss"):
                     t[k] = np.full(m, 4.0)
-                meta = {"split": "tuning", "split_version": "v2", "map_transform": "mirror", "v2x": v2x, "no_map": nomap,
+                meta = {"split": split, "split_version": "v2", "map_transform": "mirror", "v2x": v2x, "no_map": nomap,
                         "scenes": [list(x) for x in scenes],
                         "coverage": {"predicted": m, "all_kept": n + 10, "a": 1, "b": 1, "c": 10, "removed": 5,
                                      "coverage": m / (n + 10), "coverage_incl_removed": m / (n + 15)}}
                 os.makedirs(f"{tmp}/runs/E_{g}_seed{s}")
-                np.savez(f"{tmp}/runs/E_{g}_seed{s}/eval_env_tuning_checkpoint_epoch12.npz", **t, meta=_json.dumps(meta))
-        out = subprocess.run([sys.executable, os.path.join(here, "analyze_env.py")], cwd=tmp, capture_output=True,
+                np.savez(f"{tmp}/runs/E_{g}_seed{s}/eval_env_{split}_checkpoint_epoch12.npz", **t, meta=_json.dumps(meta))
+        out = subprocess.run([sys.executable, os.path.join(here, "analyze_env.py"), "--split", split], cwd=tmp, capture_output=True,
                              text=True, env=dict(os.environ, CUDA_VISIBLE_DEVICES=""))
     assert out.returncode == 0, out.stderr[-2000:]
     import re as _re
@@ -555,6 +561,7 @@ def test_analyze_env_end_to_end():
     rules_part = out.stdout.split("RULES (")[1].split("DESCRIPTIVE comparisons")[0]
     assert rules_part.count("form=full (scenes with samples 8/8)") == 4 and "Coverage per model" in out.stdout
     assert "V2X ADE1 vs V2X constant velocity ADE" in rules_part
+    assert f"split {split} (v2), scenes {[x for _, x in scenes]}" in out.stdout and f"{split.upper()} split v2)" in out.stdout
 
 
 if __name__ == "__main__":

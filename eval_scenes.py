@@ -19,6 +19,7 @@ from safety_metrics import (LaneCentrelines, raw_pose, agent_to_carla,
 from trajectory_loss import loss_predicts_scale
 from coord_transform import map_transform_of
 from ranking_metrics import brier_min_fde, mode_diversity, laplace_coverage, COVERAGE_LEVELS
+import final_test_guard
 from scene_conditions import (heading_change_deg, JunctionAreas, TURN_THRESHOLD_DEG, MIN_STEP_M,
                               JUNCTION_RADIUS_M)
 
@@ -47,6 +48,12 @@ parser.add_argument("--confirmatory-turning-test", action="store_true",
                           "output (stdout and stderr) is written to eval_<run>_test_cond.log and the evaluation is recorded "
                           "in the log with that purpose. A re-run is allowed only if every earlier attempt's log has no "
                           "COND line; the earlier log is then kept as eval_<run>_test_cond_attempt<N>.log")
+parser.add_argument("--final-test", action="store_true",
+                     help="with --split test: the final test evaluation of runs/DECISION_RULES_FINAL_TEST.md (split v2, "
+                          "map_transform mirror runs only); output (stdout and stderr) is written to "
+                          "eval_<run>_test_final.log and recorded in runs/TEST_EVALS.log with purpose 'final test "
+                          "evaluation (split v2)'. A re-run is allowed only if every earlier attempt's log has no result "
+                          "line (final_test_guard.py); the earlier log is then kept as eval_<run>_test_final_attempt<N>.log")
 args = parser.parse_args()
 
 TEST_EVALS_LOG = "runs/TEST_EVALS.log"
@@ -86,6 +93,11 @@ if args.confirmatory_turning_test and args.split != "test":
     parser.error("--confirmatory-turning-test is a test-split evaluation (--split test)")
 if args.confirmatory_turning_test and args.metrics_only_reeval:
     parser.error("--confirmatory-turning-test and --metrics-only-reeval are exclusive")
+if args.final_test:
+    if args.split != "test":
+        parser.error("--final-test is a test-split evaluation (--split test)")
+    if args.confirmatory_turning_test or args.metrics_only_reeval:
+        parser.error("--final-test excludes --confirmatory-turning-test and --metrics-only-reeval")
 if args.split == "test":
     if not args.run_dir:
         parser.error("--split test requires --run-dir (the test split only exists in three_way_scene_split)")
@@ -131,6 +143,17 @@ if args.split == "test":
             kept = sorted(f for f in os.listdir(".") if f.startswith(stem + "_attempt") and f.endswith(".log"))
             print(f"Confirmatory RE-RUN after crash: earlier attempt logs {kept} have no COND line; "
                   f"{n_entries} earlier confirmatory entries in {TEST_EVALS_LOG}")
+    with open(os.path.join(args.run_dir, "config.json")) as fh:
+        _cfg = json.load(fh)
+    if split_version_of(_cfg) == "v2" and not args.final_test:
+        parser.error("the split v2 test split is evaluated only under runs/DECISION_RULES_FINAL_TEST.md (--final-test)")
+    if args.final_test:
+        # runs/DECISION_RULES_FINAL_TEST.md: split v2 / mirror runs only; one evaluation per checkpoint
+        if (split_version_of(_cfg), map_transform_of(_cfg)) != ("v2", "mirror"):
+            parser.error(f"--final-test: {args.run_dir} is not a split v2 / map_transform mirror run")
+        final_rerun = final_test_guard.guard(f"eval_{os.path.basename(os.path.normpath(args.run_dir))}_test_final.log",
+                                             args.run_dir, args.ckpt, final_test_guard.is_scenes_result,
+                                             parser.error)
 if args.degrade:
     if not args.run_dir:
         parser.error("--degrade requires --run-dir (the log is named after the run)")
@@ -220,11 +243,14 @@ if args.run_dir:
                    "logged evaluation)") if args.metrics_only_reeval else ""
         if args.confirmatory_turning_test:
             purpose = f"\tpurpose={CONFIRMATORY_TURNING_PURPOSE}" + (CONFIRMATORY_RERUN_SUFFIX if rerun else "")
-        with open(TEST_EVALS_LOG, "a") as f:
-            f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
-                    f"git_commit={commit}\tckpt={args.ckpt}{purpose}"
-                    + (f"\tsplit_version={split_version}" if split_version != "v1" else "") + "\n")
-        print(f"Appended this test evaluation to {TEST_EVALS_LOG}")
+        if args.final_test:
+            final_test_guard.record(args.run_dir, args.ckpt, final_rerun, split_version)
+        else:
+            with open(TEST_EVALS_LOG, "a") as f:
+                f.write(f"{datetime.now().isoformat(timespec='seconds')}\trun_dir={args.run_dir}\t"
+                        f"git_commit={commit}\tckpt={args.ckpt}{purpose}"
+                        + (f"\tsplit_version={split_version}" if split_version != "v1" else "") + "\n")
+            print(f"Appended this test evaluation to {TEST_EVALS_LOG}")
 else:
     _, val_set = scene_split(dataset, 0.15, 42)  # unchanged old path
 keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]

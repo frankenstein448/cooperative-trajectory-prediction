@@ -14,7 +14,10 @@ the same gap condition. Which form applies is decided by the ground-truth labels
 Everything else (other metrics, minFDE6, miss rates, stationary / straight / category rows, baselines, coverage) is
 descriptive.
 
-Run in gpu-test-venv:  python analyze_env.py [--prefix E_] [--npz eval_env_tuning_checkpoint_epoch12.npz]
+--split test (runs/DECISION_RULES_FINAL_TEST.md): the same rules and tables on the split v2 TEST evaluations
+(eval_env.py --split test -> eval_env_test_checkpoint_epoch12.npz); "8 tuning scenes" reads "8 test scenes".
+
+Run in gpu-test-venv:  python analyze_env.py [--split tuning|test] [--prefix E_] [--npz <file>]
 """
 import json
 import argparse
@@ -44,13 +47,13 @@ def load(path):
     return t, json.loads(str(z["meta"]))
 
 
-def check_runs(runs, metas):
+def check_runs(runs, metas, split="tuning"):
     """Same split / scenes / transform everywhere; each config's runs have identical target lists;
     EgoOnly's targets are exactly V2X's class-(a) targets."""
     m0 = next(iter(metas.values()))
     for name, m in metas.items():
-        assert m["split"] == "tuning" and m["split_version"] == "v2" and m["map_transform"] == "mirror", name
-        assert m["scenes"] == m0["scenes"], f"{name}: tuning scenes differ"
+        assert m["split"] == split and m["split_version"] == "v2" and m["map_transform"] == "mirror", name
+        assert m["scenes"] == m0["scenes"], f"{name}: {split} scenes differ"
     by_group = {}
     for name, t in runs.items():
         by_group.setdefault(name.rsplit("_seed", 1)[0], []).append(t)
@@ -67,22 +70,24 @@ def check_runs(runs, metas):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--prefix", default="E_")
-    ap.add_argument("--npz", default="eval_env_tuning_checkpoint_epoch12.npz")
+    ap.add_argument("--split", choices=["tuning", "test"], default="tuning")
+    ap.add_argument("--npz", default=None, help="default eval_env_<split>_checkpoint_epoch12.npz")
     ap.add_argument("--seeds", default="0,1,2")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
+    args.npz = args.npz or f"eval_env_{args.split}_checkpoint_epoch12.npz"
     runs, metas = {}, {}
     for g in GROUPS:
         for s in seeds:
             name = f"{args.prefix}{g}_seed{s}"
             runs[name], metas[name] = load(f"runs/{name}/{args.npz}")
             assert (metas[name]["v2x"], metas[name]["no_map"]) == EXPECT[g], f"{name}: wrong config {metas[name]}"
-    by_group = check_runs(runs, metas)
+    by_group = check_runs(runs, metas, args.split)
     G = {g: by_group[f"{args.prefix}{g}"] for g in GROUPS}
     ego_tid, v2x_tid = np.sort(G["EgoOnly"][0]["tid"]), G["V2X"][0]["tid"]
     assert np.array_equal(ego_tid, np.sort(v2x_tid[G["V2X"][0]["vis"] == 0])), "EgoOnly targets != V2X's (a) targets"
     scenes = [s for _, s in next(iter(metas.values()))["scenes"]]
-    print(f"runs: {', '.join(runs)}; tuning scenes {scenes}")
+    print(f"runs: {', '.join(runs)}; split {args.split} (v2), scenes {scenes}")
 
     ref = G["V2X"][0]
     masks = subset_masks(ref)
@@ -122,7 +127,7 @@ def main():
               f"gap {r['gap']:+.3f} > {r['threshold']:.3f}?")
         return r
 
-    print("\nRULES (runs/DECISION_RULES_ENV.md; moving targets; lower is better)")
+    print(f"\nRULES (runs/DECISION_RULES_ENV.md; moving targets; lower is better; {args.split.upper()} split v2)")
     verdicts = []
     for spec in RULES:
         r = compare(*spec)
@@ -135,7 +140,7 @@ def main():
     print("\nVERDICTS:")
     for label, v in verdicts:
         print(f"  {label:42s} {v}")
-    print("\nCoverage per model (all D samples of the tuning scenes; predicted / kept a+b+c; incl. removed):")
+    print(f"\nCoverage per model (all D samples of the {args.split} scenes; predicted / kept a+b+c; incl. removed):")
     for g in GROUPS:
         covs = {json.dumps(metas[f"{args.prefix}{g}_seed{s}"]["coverage"], sort_keys=True) for s in seeds}
         assert len(covs) == 1, f"{g}: coverage differs between seeds"
