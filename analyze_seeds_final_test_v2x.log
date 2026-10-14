@@ -1,0 +1,37 @@
+Split: TEST (logs eval_<run>_test_final.log)
+Per run, ALL (minADE6, ADE1):
+  C_D_seed0      2.729  6.894
+  C_D_seed1      2.601  6.460
+  C_D_seed2      2.944  6.893
+  C_EgoOnly_seed0 2.631  6.034
+  C_EgoOnly_seed1 2.811  7.063
+  C_EgoOnly_seed2 2.900  6.605
+
+ALL minADE6: full 2.758 +/- 0.173   no-map 2.781 +/- 0.137   gap (no-map - full) +0.023
+
+ALL ADE1: full 6.749 +/- 0.250   no-map 6.567 +/- 0.516   gap (no-map - full) -0.182
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #5       2.853     3.064  +0.211 |    8.093    10.361  +2.268
+Town04 #6       0.382     0.395  +0.013 |    2.393     2.181  -0.212
+Town05 #76      5.665     5.153  -0.512 |   12.627    11.293  -1.334
+Town05 #78      4.320     4.339  +0.019 |    7.342     7.484  +0.142
+Town05 #89      1.791     1.773  -0.017 |    4.249     3.163  -1.085
+Town05 #91      2.171     2.296  +0.125 |    5.647     5.209  -0.438
+Town05 #95      2.104     2.000  -0.104 |    5.541     4.981  -0.560
+Town05 #100     2.781     3.225  +0.445 |    8.101     7.865  -0.236
+Full better in 5/8 scenes (minADE6), 2/8 scenes (ADE1)
+
+RULE (minADE6): scenes 5/8 >= 7? False   gap +0.023 > 2 x max std 0.347? False
+(component rule: full = C_D_seed0,C_D_seed1,C_D_seed2, ablation = C_EgoOnly_seed0,C_EgoOnly_seed1,C_EgoOnly_seed2)
+VERDICT: no detectable effect of the removed component under the scene-held-out protocol
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.6224  0.4536  0.0444  0.1021  0.0000
+  full      stationary   0.3877  0.1838  0.0042  0.0643  0.0000
+  full      moving       0.8521  0.7177  0.0837  0.1391  0.0000
+  no-map    ALL          0.6160  0.4426  0.0559  0.1268  0.0000
+  no-map    stationary   0.3703  0.1529  0.0027  0.0820  0.0000
+  no-map    moving       0.8563  0.7261  0.1080  0.1705  0.0000
