@@ -57,3 +57,17 @@ Commit hash of this file is recorded in git history.
 
 ## Results
 (empty until runs finish)
+
+## Precondition outcome (recorded 14 Oct 2026, before Step 2)
+- Matching variant: LIDAR_TOP, raw RSU pose and extrinsic (no mirror), keyframe sweep.
+  Recount equals num_lidar_pts[0] for 6,451 / 6,451 RSU boxes with width > 0
+  (scenes 4, 6, 3, all 100 frames). Index 0 of num_lidar_pts is the RSU.
+- Cause of the mismatch: zero-width boxes (66.8% of bicycles; 8.5% of all annotations,
+  8.1% of kept env targets). Their dataset counts reach ~290 m while stored sweeps
+  reach ~70 m, so these counts cannot come from the stored point cloud.
+- Pass condition met: cause identified and documented.
+- Decision: visibility stays num_lidar_pts >= 5 for all agents including the RSU,
+  identical to E_V2X, so set V is unchanged and H3 stays comparable. The H1 verdict
+  uses all kept targets; H1 excluding zero-width targets is reported as a
+  sensitivity check (descriptive, no verdict). Zero-width targets are also reported
+  separately in H2/H3 tables.
