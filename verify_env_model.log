@@ -1,0 +1,50 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, 13384 samples, cache commit af265e9
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=False, map_transform=mirror
+EnvDataset: v2x=off, use_map=True, map_transform=mirror, 13384 samples, cache commit af265e9
+cam_norm (train split v2, 9424 samples): {'mean': [25.44208526611328, 38.18598937988281, 0.6245869994163513, 0.4126203656196594], 'std': [129.53204345703125, 129.03956604003906, 1.7902787923812866, 0.865959644317627]}
+
+1. dataset vs cache
+  OK   same 13384 sample rows for v2x on / off
+  OK   every env sample has a class-(a) target
+  OK   no known target at the ego: min |cur_ego| = 1.43 m over 317403 known targets (> 1.0 m)
+  50 samples: 1127 known targets with v2x on (258 class b), 869 with v2x off
+  OK   sample (agent, scene, frame, town) == cache row: 100/100
+  OK   target set == cache's known targets in cache order: 100/100
+  OK   no class-(c) target loaded
+  OK   t_hist / t_fut / t_fut_mask / t_pose / t_state / t_cv_vel / t_vis == cache: 100/100
+  OK   v2x off: no (b) target and no coop sensors
+  OK   v2x on: coop sensors loaded
+  OK   v2x on: the 50 samples include (b) targets
+  OK   CAM: x, y, heading zeroed, speed normalized: 100/100
+
+2. map tokens on real scenes
+  250 moving targets: same-direction segment distance p50 0.10 m, p90 1.30 m, p95 1.56 m, none within 30 deg: 0
+  OK   median distance of the same-direction segment 0.10 m (<= 0.5)
+  OK   own lane within 2.5 m at <= 30 deg: 0.988 (>= 0.95)
+  OK   median direction of the matched segment 0.08 deg (<= 5.0)
+  OK   feature ranges: |x|, |y| <= 2.0, |cos|, |sin| <= 1, flags 0 / 1
+  OK   padding zero; piece mask == any point
+
+3. world rotation + translation invariance
+  batch of 4 samples, 104 targets, 5 draws
+  OK   map tokens: max |diff| 7.28e-12 (<= 0.0001), masks identical
+  OK   EnvFusion outputs: max |diff| 0.00e+00 (<= 0.0001)
+
+4. loss and padding gradient
+  OK   batch has padding (32 padded slots)
+  OK   env_wta_loss 4.747988 == D's WTA on 104 stacked targets 4.747988
+  OK   gradient w.r.t. padded targets' t_hist / t_state / t_map is exactly 0
+  OK   gradient w.r.t. real targets' t_hist / t_state / t_map is nonzero
+  OK   parameter gradients finite
+  OK   perturbing padded targets' t_pose / t_hist leaves real outputs unchanged (max |diff| 0.0e+00)
+
+5. --task ego identity; env configs on a real batch
+  OK   EndToEndFusion defaults: 740,942 parameters vs D's 740,942; strict load of runs/D_seed0/checkpoint_epoch12.pt: True
+  OK   E_EgoOnly: 896,494 parameters, trajs (4, 29, 6, 30, 2), loss 5.307, outputs and gradients finite
+  OK   E_V2Xnomap: 903,246 parameters, trajs (4, 34, 6, 30, 2), loss 4.518, outputs and gradients finite
+  OK   E_V2X: 1,061,262 parameters, trajs (4, 34, 6, 30, 2), loss 4.590, outputs and gradients finite
+
+0 failed check(s)
+
+RESULT: PASS

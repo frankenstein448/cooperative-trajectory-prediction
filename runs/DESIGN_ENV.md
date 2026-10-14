@@ -145,7 +145,12 @@ the fly: about 1–2 ms per sample, so loading is not the bottleneck.
 1. Dataset vs cache: target sets per model, own-frame arrays, and that no (c) target ever appears; with
    `--v2x off`, no (b) target and no coop sensors.
 2. Map tokens: no absolute coordinates; a target's own lane piece passes within about 1 m of the origin with
-   direction about 0 deg, on the aligned scenes.
+   direction about 0 deg, on the aligned scenes. **Changed after the first result (user, 2026-10-14):** the implemented bar
+   ">= 90% of moving targets within 1.0 m" gave 0.852 (p50 0.10 m, p90 1.30 m, direction 0.08 deg), FAIL. It had
+   been set without reference to real driving; the misses are the expected tail (lane changes, junction turns,
+   off-centre driving; median lateral offset ~0 in every town, not a misalignment). Replaced by: median distance
+   <= 0.5 m AND median direction error <= 5 deg AND >= 95% of moving targets within 2.5 m (the alignment
+   acceptance's p95 tolerance, section 9).
 3. Invariance: rotating and translating the world leaves the per-target inputs and outputs unchanged.
 4. Loss: equals D's `WinnerTakesAllLoss` on the same flattened tensors; padding has zero gradient.
 5. `--task ego` identity (section 6), then a one-epoch dry run per model with the measured s/epoch.

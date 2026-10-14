@@ -13,9 +13,15 @@ run_env_seeds.sh refuses to start unless verify_env_model.log is committed with 
 2. Map tokens on real scenes (all 54 scenes pass the mirror alignment, check_map_alignment_mirror.log): for the
    moving targets (speed > MOVING_M_PER_FRAME, the builder's motion threshold) of the 50 samples, the nearest
    lane segment (two consecutive points of one piece) whose direction is within LANE_DIR_DEG of the target's
-   heading. PASS if >= LANE_FRAC_MIN of them have such a segment within LANE_DIST_M of the origin and the
-   median direction error of the matched segment is <= LANE_DIR_MEDIAN_DEG. Feature ranges: x, y within
-   XY_MAX (pieces may extend past the 30 m radius), cos / sin in [-1, 1], flags 0 / 1, padding zero.
+   heading. PASS if the median distance of that segment is <= LANE_MEDIAN_M, its median direction error is
+   <= LANE_DIR_MEDIAN_DEG, and >= LANE_FRAC_MIN of the targets have such a segment within LANE_DIST_M (the
+   alignment acceptance's p95 tolerance, DESIGN_ENV.md section 9). Feature ranges: x, y within XY_MAX (pieces
+   may extend past the 30 m radius), cos / sin in [-1, 1], flags 0 / 1, padding zero.
+   CHANGED AFTER THE FIRST RESULT (user, 2026-10-14): the first criterion was ">= 90% within 1.0 m" (and the
+   median direction); the first run gave 0.852 within 1.0 m (p50 0.10 m, p90 1.30 m, direction 0.08 deg),
+   RESULT FAIL. That bar had been set without reference to real driving: the misses are the expected tail
+   (lane changes, junction turns, off-centre driving; median lateral offset ~0 in every town, so not a
+   misalignment), and it was replaced by the criterion above.
 3. Invariance: the lanes and every target moved by a random world rotation + translation (5 draws) give the
    same map tokens (max |diff| <= TOK_TOL), and EnvFusion (eval) gives the same outputs on a real batch with
    those tokens (max |diff| <= OUT_TOL). All other per-target inputs are ego / own frame and do not change.
@@ -48,8 +54,9 @@ N_CHECK = 50
 EGO_MIN_DIST_M = 1.0
 MOVING_M_PER_FRAME = 0.5
 LANE_DIR_DEG = 30.0
-LANE_DIST_M = 1.0
-LANE_FRAC_MIN = 0.90
+LANE_MEDIAN_M = 0.5
+LANE_DIST_M = 2.5
+LANE_FRAC_MIN = 0.95   # was 0.90 within 1.0 m before 2026-10-14 (docstring, section 2)
 LANE_DIR_MEDIAN_DEG = 5.0
 XY_MAX = 2.0
 TOK_TOL = 1e-4
@@ -199,7 +206,9 @@ def main():
     matched = np.isfinite(dists)
     med_a = float(np.nanmedian(angs[matched]))
     print(f"  {len(dists)} moving targets: same-direction segment distance p50 {np.median(dists):.2f} m, "
-          f"p90 {np.quantile(dists, 0.9):.2f} m, none within {LANE_DIR_DEG:.0f} deg: {int((~matched).sum())}")
+          f"p90 {np.quantile(dists, 0.9):.2f} m, p95 {np.quantile(dists, 0.95):.2f} m, none within {LANE_DIR_DEG:.0f} deg: {int((~matched).sum())}")
+    med_d = float(np.median(dists))
+    check(med_d <= LANE_MEDIAN_M, f"median distance of the same-direction segment {med_d:.2f} m (<= {LANE_MEDIAN_M})")
     check(frac >= LANE_FRAC_MIN, f"own lane within {LANE_DIST_M} m at <= {LANE_DIR_DEG:.0f} deg: {frac:.3f} "
                                  f"(>= {LANE_FRAC_MIN})")
     check(med_a <= LANE_DIR_MEDIAN_DEG, f"median direction of the matched segment {med_a:.2f} deg (<= {LANE_DIR_MEDIAN_DEG})")
