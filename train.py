@@ -24,7 +24,7 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 from torch.utils.data import DataLoader
 
 from coord_transform import MAP_TRANSFORMS
-from pilot_dataset import PilotDataset, pilot_collate_fn
+from pilot_dataset import PilotDataset, pilot_collate_fn, MAP_VERSIONS
 from end_to_end_model import EndToEndFusion
 from trajectory_loss import (build_loss, loss_predicts_scale, LOSSES, RELAXED_WTA_EPS,
                              LAPLACE_SCALE_FLOOR, WTA_SOFT_TAU)
@@ -136,6 +136,9 @@ def parse_args():
     parser.add_argument("--map-transform", choices=MAP_TRANSFORMS, default="mirror",
                         help="V2X-Sim -> CARLA for the map lookup (coord_transform.py); recorded in config.json. "
                              "Runs before this option used legacy (their configs lack the key).")
+    parser.add_argument("--map-version", choices=MAP_VERSIONS, default="v1",
+                        help="--task ego: v1 = RGCN lane graph (default, D's map); v2 = the env task's lane-piece "
+                             "tokens around the ego (runs/DECISION_RULES_MAPV2_EGO.md)")
     parser.add_argument("--no-map", action="store_true",
                          help="EndToEndFusion(use_map=False): map stream removed, for the ablation "
                               "(replaces train_ablation.py for new runs)")
@@ -200,6 +203,9 @@ def parse_args():
             parser.error("--data-fraction must be in (0, 1]")
     elif args.v2x is not None or args.use_rsu or args.data_fraction != 1.0:
         parser.error("--v2x / --use-rsu / --data-fraction are only for --task env")
+    if args.map_version != "v1":
+        if args.task != "ego" or args.no_map or args.map_transform != "mirror":
+            parser.error("--map-version v2 is for --task ego with the map on and --map-transform mirror")
     return args
 
 
@@ -243,6 +249,8 @@ def main():
         "git_commit": git_commit(),
         "task": args.task,
     }
+    if args.map_version != "v1":  # absent = v1, so the config of every other run is unchanged
+        config["map_version"] = args.map_version
     if args.task == "env":
         config["v2x"] = args.v2x
         config["no_cpm"] = True  # the env task never loads CPM objects
@@ -266,7 +274,8 @@ def main():
                             require_history_frames=args.require_history_frames,
                             use_cpm=not args.no_cpm,
                             use_coop=not args.no_coop,
-                            map_transform=args.map_transform)
+                            map_transform=args.map_transform,
+                            map_version=args.map_version)
     print(f"Dataset size: {len(dataset)} samples")
 
     train_set, tuning_set, test_set = three_way_scene_split(dataset, seed=SCENE_SPLIT_SEED,
@@ -305,18 +314,20 @@ def main():
     model = EndToEndFusion(device=DEVICE, use_map=not args.no_map, history_frames=args.history_frames,
                             history_encoder=args.history_encoder, use_cpm=not args.no_cpm,
                             use_coop=not args.no_coop,
-                            predict_scale=loss_predicts_scale(args.loss)).to(DEVICE)
+                            predict_scale=loss_predicts_scale(args.loss), map_version=args.map_version).to(DEVICE)
     if args.history_frames == 0 and not args.no_cpm and not args.no_coop:
         # history, CPM and coop at their defaults must be exactly D's model: same parameters as one
         # built without any of those kwargs (verify_v2x_ablation.py also strict-loads D_seed0).
         # The only addition allowed is laplace_mixture's scale head.
         with torch.random.fork_rng(devices=[]):  # building the reference must not shift the run's RNG stream
-            n_ref = sum(p.numel() for p in EndToEndFusion(device="cpu", use_map=not args.no_map).parameters())
+            n_ref = sum(p.numel() for p in EndToEndFusion(device="cpu", use_map=not args.no_map,
+                                                          map_version=args.map_version).parameters())
         n_off = sum(p.numel() for p in model.parameters())
         n_scale = sum(p.numel() for p in model.traj_head.scale_mlp.parameters()) if model.traj_head.predict_scale else 0
         assert n_off - n_scale == n_ref, f"parameter count differs from D's: {n_off} - {n_scale} (scale head) vs {n_ref}"
     loss_fn = build_loss(args.loss)
-    print(f"Model use_map={not args.no_map}, use_cpm={not args.no_cpm}, use_coop={not args.no_coop}, loss={type(loss_fn).__name__}"
+    print(f"Model use_map={not args.no_map}" + (f", map_version={args.map_version}" if args.map_version != "v1" else "")
+          + f", use_cpm={not args.no_cpm}, use_coop={not args.no_coop}, loss={type(loss_fn).__name__}"
           + (f" (eps={loss_fn.eps})" if args.loss == "relaxed_wta" else "")
           + (f" (tau={loss_fn.tau} m)" if args.loss == "wta_soft" else "")
           + (f" (scale floor={LAPLACE_SCALE_FLOOR} m)" if args.loss == "laplace_mixture" else ""))

@@ -20,6 +20,12 @@ sensor stream is removed the same way as the map, not zeroed. All defaults
 (use_map=True, history_frames=0, use_cpm=True, use_coop=True, predict_scale=False)
 give run D's model.
 
+map_version="v2" (runs/DECISION_RULES_MAPV2_EGO.md; with use_map): the map stream uses the env task's lane-piece
+tokens (env_map.py, batch["map_tokens"] / "map_pt_mask" / "map_piece_mask", ego frame) instead of the RGCN lane
+graph: env_model.PolylineEncoder per piece, plus a learned "no lane" token that is always present, then the same
+MapCrossAttentionFusion (query = ego embedding) -> [B, 128] map stream. No graph buffers, no RGCN; the fuse layer
+is unchanged (4 streams). map_version="v1" (default) builds exactly the RGCN model.
+
 predict_scale=True (only for --loss laplace_mixture): the trajectory head gets one
 extra Linear (scale_mlp, same shape as traj_mlp) giving a per-mode, per-step, per-
 coordinate Laplace scale b = softplus(raw) + LAPLACE_SCALE_FLOOR, and forward()
@@ -83,10 +89,13 @@ class TrajectoryHead(nn.Module):
 class EndToEndFusion(nn.Module):
     def __init__(self, device, embed_dim=EMBED_DIM, n_modes=N_MODES, use_map=True,
                  history_frames=0, history_encoder="gru", use_cpm=True, use_coop=True,
-                 predict_scale=False):
+                 predict_scale=False, map_version="v1"):
         super().__init__()
         self.device = device
         self.use_map = use_map
+        assert map_version in ("v1", "v2") and (use_map or map_version == "v1"), \
+            f"map_version={map_version!r} (v2 needs use_map)"
+        self.map_version = map_version
         # V2X ablation, by removal like use_map: use_cpm=False drops V2XMessageStream's
         # cpm_enc (its fuse input shrinks); use_coop=False drops coop_encoder (the fuse
         # below loses a stream). The ego's own CAM is always kept.
@@ -103,7 +112,12 @@ class EndToEndFusion(nn.Module):
         if history_frames > 0:
             self.history_encoder = build_history_encoder(history_encoder, embed_dim, history_frames)
 
-        if self.use_map:
+        if self.use_map and map_version == "v2":
+            from env_model import PolylineEncoder  # env_model imports this module; import here, not at the top
+            self.poly_encoder = PolylineEncoder(d=128)
+            self.no_lane = nn.Parameter(torch.zeros(128))  # as env_model's "no lane" token
+            self.map_fusion = MapCrossAttentionFusion(agent_dim=embed_dim, lane_dim=128, d_model=128)
+        elif self.use_map:
             # Per-town graphs -- registered as buffers with per-town names so
             # .to(device) moves all of them automatically.
             for town in TOWNS:
@@ -161,7 +175,14 @@ class EndToEndFusion(nn.Module):
         streams.append(torch.stack(v2x_embeds, dim=0))  # [B, 128]
 
         # ---------- Map: per-town graph, per-sample lookup into ITS OWN town's embeddings ----------
-        if self.use_map:
+        if self.use_map and self.map_version == "v2":
+            pieces = self.poly_encoder(batch["map_tokens"].to(self.device),
+                                       batch["map_pt_mask"].to(self.device))                    # [B, K, 128]
+            tokens = torch.cat([self.no_lane.view(1, 1, -1).expand(B, 1, -1), pieces], dim=1)   # [B, K + 1, 128]
+            real = torch.cat([torch.ones(B, 1, dtype=torch.bool, device=self.device),
+                              batch["map_piece_mask"].to(self.device)], dim=1)                  # [B, K + 1]
+            streams.append(self.map_fusion(ego_embed, tokens, key_padding_mask=~real))         # [B, 128]
+        elif self.use_map:
             towns_in_batch = set(batch["town"])
             lane_embeds_by_town = {}
             for town in towns_in_batch:

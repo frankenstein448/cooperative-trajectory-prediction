@@ -14,7 +14,9 @@ the turning condition only; every other condition is reported descriptively (no 
 mirror), runs <prefix>D / <prefix>Dnomap / <prefix>EgoOnly (default prefix C_), their clean epoch-12 tuning
 logs (eval_<run>_e12.log, which carry the COND block). Secondary hypothesis: the same map rule on the
 turning condition only (pooled tuning split). V2X (D vs EgoOnly) and all other conditions: descriptive.
---split test with --suffix test_final: the same on the final test logs (runs/DECISION_RULES_FINAL_TEST.md)."""
+--split test with --suffix test_final: the same on the final test logs (runs/DECISION_RULES_FINAL_TEST.md).
+--map-full NAME (--rule corrected only; runs/DECISION_RULES_MAPV2_EGO.md): the "D" group is <prefix>NAME_seed0..2
+(e.g. Dmapv2) instead of <prefix>D; the EgoOnly group and the V2X comparison are dropped. Same turning rule."""
 import re
 import argparse
 import statistics as st
@@ -29,6 +31,9 @@ parser.add_argument("--suffix", default=None,
                     help="log suffix: eval_<run>_<suffix>.log (default e12_cond; test_cond for --rule turning_test)")
 parser.add_argument("--expect-n", type=int, default=2208, help="ALL sample count every log must show")
 parser.add_argument("--prefix", default="C_", help="--rule corrected only: run-name prefix (C_D_seed0, ...)")
+parser.add_argument("--map-full", default="D",
+                    help="--rule corrected only: run name of the map group (default D -> C_D_seed0..2); any other "
+                         "name drops EgoOnly and the V2X comparison (runs/DECISION_RULES_MAPV2_EGO.md: Dmapv2)")
 parser.add_argument("--split", choices=["tuning", "test"], default="tuning",
                     help="--rule corrected only: which split the logs are (test = runs/DECISION_RULES_FINAL_TEST.md, "
                          "--suffix test_final); the rule is unchanged")
@@ -39,6 +44,7 @@ if args.suffix is None:
     args.suffix = "test_cond" if TURNING_TEST else "e12" if CORRECTED else "e12_cond"
 SPLIT = "test" if TURNING_TEST else args.split if CORRECTED else "tuning"
 assert args.split == "tuning" or CORRECTED, "--split is for --rule corrected"
+assert args.map_full == "D" or CORRECTED, "--map-full is for --rule corrected"
 
 GROUPS = {"D": ["D_seed0", "D_seed1", "D_seed2"],
           "Dnomap": ["Dnomap_seed0", "Dnomap_seed1", "Dnomap_seed2"],
@@ -52,6 +58,11 @@ if TURNING_TEST:
 if CORRECTED:
     GROUPS = {g: [args.prefix + n for n in names] for g, names in GROUPS.items()}
     RULE_CONDITIONS = {"map": ("turning",), "V2X": ()}
+    if args.map_full != "D":
+        GROUPS["D"] = [f"{args.prefix}{args.map_full}_seed{s}" for s in range(3)]
+        del GROUPS["EgoOnly"]
+        COMPARISONS = (("map", "D", "Dnomap"),)
+        print(f"--map-full {args.map_full}: group D = {', '.join(GROUPS['D'])}; no V2X comparison")
 COND = re.compile(r"^COND (\S+)\s+(\S+)\s+(\d+)(?:\s+([\d.]+)\s+([\d.]+)\s+([\d.]+))?\s*$")
 ALL = re.compile(r"^ALL\s+(\d+)\s+[\d.]+m", re.M)
 STAT_ALL = re.compile(r"^    stationary \(ALL\): n=\s*(\d+)", re.M)

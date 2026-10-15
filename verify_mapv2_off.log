@@ -1,0 +1,7 @@
+reference b25c711 vs working tree (HEAD aa7ae26, *.py dirty=True); runs /home/karra/hd-maps/runs/C_D_seed0, /home/karra/hd-maps/runs/C_Dnomap_seed0 (checkpoint_epoch12.pt)
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True, map_transform=mirror
+probe: 50 samples, 2503 tensors -> /tmp/tmpx3vcwozt/ref.pt
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True, map_transform=mirror
+probe: 50 samples, 2503 tensors -> /tmp/tmpx3vcwozt/new.pt
+compared 2503 tensors: 50 samples' batches + C_D / C_Dnomap outputs, 153 initial-weight tensors
+RESULT: PASS

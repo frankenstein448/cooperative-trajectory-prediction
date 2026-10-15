@@ -1,0 +1,21 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True, map_transform=mirror, map_version=v2
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True, map_transform=mirror
+1. Frame: 3098 moving train + tuning samples (speed > 0.5 m/frame)
+   nearest lane point: median 0.61 m, p95 1.59 m; |lane direction - ego heading| median 0.07 deg, p95 14.95 deg
+  ok    nearest lane: median <= 1.0 m AND p95 <= 2.5 m
+  ok    median |lane direction - ego heading| <= 5 deg
+   first GT step direction, 484 moving samples: median |angle to +x| 0.12 deg
+  ok    gt_traj frame: x along the ego heading (median <= 5 deg)
+2. Coverage: 0 / 12696 train + tuning samples (0.00%) have no lane piece within 30 m
+3. Dataset: 20 random train + tuning samples
+  ok    map tokens = LanePolylines.tokens at the ego pose, env_map shapes
+  ok    every other key equals map_version v1's sample
+  ok    collate stacks the map tensors to [B, ...]
+4. Model
+  ok    v2: no graph buffers, no RGCN
+  ok    v2: poly_encoder, no_lane, map_fusion present
+  ok    v2: fuse, trajectory head and map_fusion shapes equal v1's
+  ok    forward on a real batch: finite outputs
+  ok    nonzero gradients: poly_encoder, no_lane, map_fusion
+  ok    every piece masked: finite outputs (no-lane token)
+RESULT: PASS

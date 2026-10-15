@@ -45,6 +45,10 @@ RSU_AGENT_ID = 0
 RSU_VIEWS = ["CAM_id_0_0", "CAM_id_0_1", "CAM_id_0_2", "CAM_id_0_3"]
 RSU_IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images_rsu")
 
+# Ego-task map input: v1 = RGCN lane graph (topology/*.pkl, nearby_idx); v2 = the env task's lane-piece tokens
+# (env_map.py; runs/DECISION_RULES_MAPV2_EGO.md).
+MAP_VERSIONS = ("v1", "v2")
+
 
 def rsu_cache_path(scene, frame):
     return os.path.join(RSU_IMAGE_CACHE_DIR, f"{RSU_AGENT_ID}_{scene}_{frame:06d}.npy")
@@ -99,7 +103,8 @@ class PilotDataset(Dataset):
                  use_image_cache: bool = False, require_prev_frame: bool = False, use_speed: bool = False,
                  cam_norm: dict = None, drop_cam_xy: bool = False, degrade: str = None,
                  history_frames: int = 0, require_history_frames: int = 0, history_norm: dict = None,
-                 use_cpm: bool = True, use_coop: bool = True, map_transform: str = "legacy", use_rsu: bool = False):
+                 use_cpm: bool = True, use_coop: bool = True, map_transform: str = "legacy", use_rsu: bool = False,
+                 map_version: str = "v1"):
         if use_speed:
             assert require_prev_frame, "use_speed=True requires require_prev_frame=True (frame-1 must exist)"
         assert history_frames >= 0 and require_history_frames >= 0
@@ -146,6 +151,17 @@ class PilotDataset(Dataset):
         # its 4 camera views as "rsu_points" / "rsu_images". Default off: nothing else changes.
         assert not (use_rsu and degrade), "use_rsu does not support degrade"
         self.use_rsu = use_rsu
+        # map_version="v2" (ego task, runs/DECISION_RULES_MAPV2_EGO.md): also return the env task's map v2 tokens
+        # (env_map.py) at the ego's pose, in the ego frame of gt_traj: "map_tokens" [K_PIECES, MAX_PIECE_POINTS,
+        # N_POINT_FEATS], "map_pt_mask", "map_piece_mask". Default v1: nothing else changes (nearby_idx is
+        # returned either way).
+        assert map_version in MAP_VERSIONS, f"unknown map_version={map_version!r}"
+        self.map_version = map_version
+        self.lanes = None
+        if map_version == "v2":
+            assert map_transform == "mirror", "map_version v2 requires map_transform mirror"
+            from env_map import LanePolylines
+            self.lanes = {t: LanePolylines(t, map_transform) for t in ("Town03", "Town04", "Town05")}
         # Like cam_norm: {"mean": [2], "std": [2]} per coordinate, from the train
         # split, settable post-construction, applied to the returned copy only.
         self.history_norm = history_norm
@@ -175,7 +191,8 @@ class PilotDataset(Dataset):
               + f"require_history_frames={require_history_frames}, "
               + f"history_norm={'on' if history_norm is not None else 'off'}, "
               + f"use_cpm={use_cpm}, use_coop={use_coop}, map_transform={map_transform}"
-              + (f", use_rsu=True (dir={RSU_IMAGE_CACHE_DIR})" if use_rsu else ""))
+              + (f", use_rsu=True (dir={RSU_IMAGE_CACHE_DIR})" if use_rsu else "")
+              + (", map_version=v2" if map_version == "v2" else ""))
 
         # graph kept here ONLY for the non-trainable nearest-node lookup.
         # Now per-town: each town has its own topology + normalization stats,
@@ -221,6 +238,14 @@ class PilotDataset(Dataset):
                         f"for (agent={agent_id}, scene={scene}, frame={frame})")
             cam[3] = math.hypot(vx, vy)  # metres per frame, from frame-1 -> frame displacement
         return cam
+
+    def map_tokens(self, agent_id, scene, frame, town):
+        """map_version v2: env_map tokens around the agent, in the frame of gt_traj (origin at the ego_pose
+        translation, x along quaternion_to_yaw(ego_pose rotation), as ground_truth_extractor.get_future_trajectory).
+        -> (feats, point_mask, piece_mask) numpy arrays."""
+        pose = self.loader.ego_pose[self.loader.find_sample_data(agent_id, scene, frame)["ego_pose_token"]]
+        x, y, _ = pose["translation"]
+        return self.lanes[town].tokens(np.array([x, y], dtype=np.float64), quaternion_to_yaw(pose["rotation"]))
 
     def get_history(self, agent_id, scene, frame):
         """Returns the RAW [H, 2] history: positions at frame-H .. frame-1 minus the
@@ -306,6 +331,12 @@ class PilotDataset(Dataset):
             extra["coop_points"] = coop_points
             extra["coop_images"] = coop_images
 
+        if self.lanes is not None:
+            feats, pt_mask, piece_mask = self.map_tokens(agent_id, scene, frame, town)
+            extra["map_tokens"] = torch.from_numpy(feats)
+            extra["map_pt_mask"] = torch.from_numpy(pt_mask)
+            extra["map_piece_mask"] = torch.from_numpy(piece_mask)
+
         if self.use_rsu:
             extra["rsu_points"] = load_semantic_lidar(
                 f"{SWEEPS_ROOT}/SEMLIDAR_TOP_id_{RSU_AGENT_ID}/scene_{scene}_{frame:06d}.pcd.bin")
@@ -378,6 +409,14 @@ def load_history_settings(run_dir, run_config):
             "history_norm": history_norm}
 
 
+def load_map_settings(run_config):
+    """map_version from a run's config.json (absent = v1, the RGCN lane graph). Same kwarg name for PilotDataset
+    and EndToEndFusion."""
+    v = run_config.get("map_version", "v1")
+    assert v in MAP_VERSIONS, f"unknown map_version {v!r}"
+    return {"map_version": v}
+
+
 def load_v2x_settings(run_config):
     """use_cpm / use_coop from a run's config.json (keys no_cpm / no_coop; absent in
     pre-ablation configs = both on). Same kwarg names for PilotDataset and EndToEndFusion."""
@@ -397,6 +436,9 @@ def pilot_collate_fn(batch):
     for key in ("cpm_objects", "coop_points", "coop_images", "rsu_points", "rsu_images"):  # absent when off
         if key in batch[0]:
             extra[key] = [b[key] for b in batch]
+    for key in ("map_tokens", "map_pt_mask", "map_piece_mask"):  # map_version v2 only; fixed size
+        if key in batch[0]:
+            extra[key] = torch.stack([b[key] for b in batch], dim=0)
     return {
         **extra,
         "agent_id": [b["agent_id"] for b in batch],
