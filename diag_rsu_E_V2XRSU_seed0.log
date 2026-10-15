@@ -1,0 +1,20 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror, use_rsu=True (dir=/home/karra/hd_cache/images_rsu)
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, use_rsu=True, 13384 samples, cache commit af265e9
+ckpt=runs/E_V2XRSU_seed0/checkpoint_epoch12.pt; tuning split (v2): 1984 samples
+Paired 1984 tuning samples with non-test partners (same town, other scene), seed 0
+real pass vs eval_env_tuning_checkpoint_epoch12.npz: max |ade1 diff| = 0.00e+00
+real pass vs eval_env_tuning_checkpoint_epoch12.npz: max |minade6 diff| = 0.00e+00
+
+Over 1984 tuning samples, 60173 known targets (real RSU input vs zeroed / swapped from another scene of the same town):
+
+  [moving V] n=19879
+    zero: ADE1 7.472 -> 8.184 (delta +0.711)  minADE6 3.093 -> 4.626 (delta +1.533)  top-1 shift 7.416 m (median 2.061)  mode-flip 0.3949
+    swap: ADE1 7.472 -> 7.187 (delta -0.286)  minADE6 3.093 -> 3.120 (delta +0.027)  top-1 shift 3.402 m (median 0.661)  mode-flip 0.1991
+
+  [moving R] n=1141
+    zero: ADE1 6.686 -> 7.677 (delta +0.991)  minADE6 2.548 -> 3.726 (delta +1.178)  top-1 shift 6.223 m (median 1.959)  mode-flip 0.3856
+    swap: ADE1 6.686 -> 7.032 (delta +0.346)  minADE6 2.548 -> 2.659 (delta +0.111)  top-1 shift 3.047 m (median 0.516)  mode-flip 0.2007
+
+  [ALL] n=60173
+    zero: ADE1 4.455 -> 4.057 (delta -0.399)  minADE6 1.646 -> 2.417 (delta +0.771)  top-1 shift 4.167 m (median 0.578)  mode-flip 0.2537
+    swap: ADE1 4.455 -> 4.180 (delta -0.276)  minADE6 1.646 -> 1.649 (delta +0.003)  top-1 shift 2.183 m (median 0.160)  mode-flip 0.1528
