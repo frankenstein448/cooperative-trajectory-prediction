@@ -89,3 +89,12 @@ Commit hash of this file is recorded in git history.
 - env_norm for E_V2XRSU: computed over its own known train targets (V union R), the same
   convention as all existing env configs.
 - Run names: E_V2XRSU_seed{0,1,2}.
+
+### H2/H3 tuning verdicts (15 Oct 2026; analyze_rsu.log, E_V2XRSU seeds 0-2, epoch 12)
+- H2 RSU-only moving vs constant velocity (ADE1): 6.544 +/- 0.366 vs 9.885, wins 6/7 eligible
+  scenes (7 needed; scene 30 lost: 6.535 vs 5.388), pooled gap +3.341 > 0.731.
+  VERDICT H2: no detectable effect.
+- H3 E_V2XRSU vs E_V2X, moving V (minADE6): 3.019 +/- 0.066 vs 2.928 +/- 0.062, wins 2/8,
+  gap -0.091. VERDICT H3: no detectable effect.
+- Descriptive: top-1 on moving V worse with RSU (ADE1 7.480 +/- 0.088 vs 6.411 +/- 0.120;
+  miss1 0.696 vs 0.645). Not a pre-registered hypothesis.
