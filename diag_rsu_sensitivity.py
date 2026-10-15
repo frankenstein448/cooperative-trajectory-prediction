@@ -20,7 +20,8 @@ the real pass's per-target ADE1 / minADE6 match <run-dir>/eval_env_tuning_<ckpt 
 Reports, per set (moving V = moving targets some CAV sees; moving R = moving RSU-only targets; env_metrics
 rsu_subset_masks), for zeroed and swapped: ADE1 and minADE6 real vs perturbed and the mean change, top-1 shift
 (L2 between the real and perturbed top-scored trajectories, masked mean over valid future steps, metres, target
-frame) and mode-flip rate (argmax mode changes). ALL known targets as context.
+frame) and mode-flip rate (argmax mode changes). ALL known targets as context. The swapped results are also split
+by partner origin (the partner sample's scene is a train or a tuning scene), with the partner counts per town.
 
 Run in gpu-test-venv:  python diag_rsu_sensitivity.py --run-dir runs/E_V2XRSU_seed0 2>&1 | tee diag_rsu_E_V2XRSU_seed0.log
 """
@@ -79,6 +80,7 @@ def rsu_input(scene, frame):
 pool_by_town = {}
 for i in sorted(train.indices + tuning.indices):
     pool_by_town.setdefault(ds.samples[i][3], []).append(i)
+tuning_idx = set(tuning.indices)
 rng = np.random.default_rng(PAIRING_SEED)
 partner_of = []
 for i in tuning.indices:
@@ -86,7 +88,12 @@ for i in tuning.indices:
     cands = [j for j in pool_by_town[town] if ds.samples[j][1] != scene]
     assert cands, f"no other-scene partner for tuning idx {i} ({town}, scene {scene})"
     partner_of.append(cands[rng.integers(len(cands))])
+partner_origin = np.array(["tuning" if j in tuning_idx else "train" for j in partner_of])
 print(f"Paired {len(partner_of)} tuning samples with non-test partners (same town, other scene), seed {PAIRING_SEED}")
+for town in sorted(pool_by_town):
+    sel = np.array([ds.samples[i][3] == town for i in tuning.indices])
+    print(f"  {town}: partners from train {int((sel & (partner_origin == 'train')).sum())}, "
+          f"from tuning {int((sel & (partner_origin == 'tuning')).sum())}")
 
 
 def top1(trajs, logits, tm):
@@ -99,6 +106,7 @@ def top1(trajs, logits, tm):
 parts = {k: [] for k in ("real", "zero", "swap")}
 shift = {k: [] for k in ("zero", "swap")}
 flip = {k: [] for k in ("zero", "swap")}
+origin = []  # partner origin per target (batch order, as collect())
 pos = 0
 with torch.no_grad():
     for batch in DataLoader(tuning, batch_size=8, shuffle=False, num_workers=2, collate_fn=env_collate_fn):
@@ -110,6 +118,7 @@ with torch.no_grad():
             assert torch.equal(p0, batch["rsu_points"][0]) and all(
                 torch.equal(a, b) for a, b in zip(im0, batch["rsu_images"][0])), "rsu_input disagrees with the batch"
         swap = [rsu_input(ds.samples[j][1], ds.samples[j][2]) for j in partner_of[pos:pos + B]]
+        origin.append(np.repeat(partner_origin[pos:pos + B], batch["target_mask"].sum(1).numpy()))
         pos += B
 
         variants = {
@@ -134,6 +143,8 @@ assert pos == len(tuning), f"consumed {pos} of {len(tuning)} tuning samples"
 t = {k: concat(v) for k, v in parts.items()}
 shift = {k: np.concatenate(v) for k, v in shift.items()}
 flip = {k: np.concatenate(v) for k, v in flip.items()}
+origin = np.concatenate(origin)
+assert len(origin) == len(t["real"]["tid"])
 for k in ("zero", "swap"):
     assert np.array_equal(t[k]["tid"], t["real"]["tid"]), f"{k}: targets differ from the real pass"
 
@@ -165,3 +176,15 @@ for label, sub in (("moving V", "v_moving"), ("moving R", "r_moving"), ("ALL", "
               f"(delta {(p['minade6'][m] - r['minade6'][m]).mean():+.3f})  "
               f"top-1 shift {shift[name][m].mean():.3f} m (median {np.median(shift[name][m]):.3f})  "
               f"mode-flip {flip[name][m].mean():.4f}")
+
+print("\nSwapped, by partner origin:")
+for label, sub in (("moving V", "v_moving"), ("moving R", "r_moving")):
+    for org in ("train", "tuning"):
+        m = masks[sub] & (origin == org)
+        if not m.any():
+            print(f"  [{label}] {org:6s} n=0")
+            continue
+        r, p = t["real"], t["swap"]
+        print(f"  [{label}] {org:6s} n={int(m.sum()):6d}  ADE1 delta {(p['ade1'][m] - r['ade1'][m]).mean():+.3f}  "
+              f"minADE6 delta {(p['minade6'][m] - r['minade6'][m]).mean():+.3f}  "
+              f"top-1 shift {shift['swap'][m].mean():.3f} m  mode-flip {flip['swap'][m].mean():.4f}")
