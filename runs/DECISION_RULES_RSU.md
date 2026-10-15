@@ -98,3 +98,11 @@ Commit hash of this file is recorded in git history.
   gap -0.091. VERDICT H3: no detectable effect.
 - Descriptive: top-1 on moving V worse with RSU (ADE1 7.480 +/- 0.088 vs 6.411 +/- 0.120;
   miss1 0.696 vs 0.645). Not a pre-registered hypothesis.
+
+### Final test verdicts (15 Oct 2026; analyze_rsu_final_test.log, run_rsu_final_test.sh, 3 guarded evaluations)
+- H1 coverage, test v2: V 80.04% -> V+R 84.24%, gain +4.20 pp. Adds coverage (consistent with tuning).
+- H2 RSU-only moving vs constant velocity (ADE1): 5.523 +/- 0.342 vs 7.898, wins 8/8 eligible scenes
+  (7 needed), pooled gap +2.375 > 0.684. VERDICT H2 (test): HELPS. Tuning: no detectable effect (6/7).
+- H3 E_V2XRSU vs E_V2X, moving V (minADE6): 3.022 +/- 0.079 vs 2.889 +/- 0.033, wins 3/8,
+  gap -0.133 (bar 0.157). VERDICT H3 (test): no detectable effect. Same direction as tuning (RSU slightly worse).
+- Descriptive: top-1 on moving V worse with RSU on both splits (test ADE1 6.581 vs 5.730; tuning 7.480 vs 6.411).
