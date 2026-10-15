@@ -98,3 +98,10 @@ tuning results. The test needs its own run script, prepared after the tuning ver
 
 ## Results
 (empty until the runs finish)
+
+### Tuning verdicts (15 Oct 2026; analyze_seeds_mapv2_ego.log, analyze_conditions_mapv2_ego.log)
+- Primary (ALL minADE6): C_Dmapv2 2.291 +/- 0.192 vs C_Dnomap 2.277 +/- 0.220, better in 5/8 scenes,
+  gap -0.014 (bar 0.439). VERDICT primary: no detectable map effect.
+- Secondary (turning, pooled, n=144): 10.475 +/- 0.463 vs 9.999 +/- 0.923, gap -0.476 (bar 1.845).
+  VERDICT secondary: no detectable effect.
+- Descriptive: ADE1 5.531 vs 5.218 (no-map); map v1 (C_D) for reference minADE6 2.531, ADE1 6.772.
