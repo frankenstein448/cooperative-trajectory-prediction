@@ -105,3 +105,11 @@ tuning results. The test needs its own run script, prepared after the tuning ver
 - Secondary (turning, pooled, n=144): 10.475 +/- 0.463 vs 9.999 +/- 0.923, gap -0.476 (bar 1.845).
   VERDICT secondary: no detectable effect.
 - Descriptive: ADE1 5.531 vs 5.218 (no-map); map v1 (C_D) for reference minADE6 2.531, ADE1 6.772.
+
+### Final test verdicts (17 Oct 2026; run_mapv2_ego_final_test.sh, 3 guarded evaluations)
+- Primary (ALL minADE6): C_Dmapv2 2.725 +/- 0.148 vs C_Dnomap 2.708 +/- 0.259, better in 4/8 scenes,
+  gap -0.017 (bar 0.518). VERDICT primary (test): no detectable map effect.
+- Secondary (turning, pooled, n=336): 7.155 +/- 1.284 vs 6.801 +/- 1.372, gap -0.355 (bar 2.744).
+  VERDICT secondary (test): no detectable effect.
+- Descriptive: ALL ADE1 5.668 +/- 0.495 vs 5.909 +/- 0.300 (better in 6/8); map v1 (C_D) test ADE1 6.749.
+  Moving minADE6 4.328 +/- 0.294 vs 4.249 +/- 0.492 (n=1116). Test Town04: 17 moving, 0 turning samples.
