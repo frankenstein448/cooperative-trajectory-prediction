@@ -1,0 +1,139 @@
+Writing this output to eval_C_Dmapv2_seed2_test_final.log
+--run-dir runs/C_Dmapv2_seed2: use_image_cache=True, require_prev_frame=True, use_speed=True, normalize_cam=True, drop_cam_xy=True, use_map=True (from config.json)
+use_cpm=True, use_coop=True (from config.json)
+map_version=v2 (from config.json)
+history_frames=0 (encoder=None), require_history_frames=0 (from config.json)
+loss=wta, predict_scale=False (from config.json)
+map_transform=mirror, split_version=v2 (from config.json)
+Trained with degrade=None; evaluating with degrade=None
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True, map_transform=mirror, map_version=v2
+Evaluating on the TEST split (2208 samples)
+Appended this test evaluation to runs/TEST_EVALS.log
+ckpt=runs/C_Dmapv2_seed2/checkpoint_epoch12.pt  use_map=True
+Using model output[2] as mode scores (shape (8, 6))
+Sanity: mean distance of first GT point from origin = 0.62 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+Sanity: mean CV error at step 1 = 0.063 m (should be well below 0.40 m)
+
+town    scene     n  minADE6  minFDE6     ADE1     FDE1  stayADE  stayFDE
+Town03      5   276   2.592m   6.011m   4.717m  10.795m  10.876m  20.437m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  4.302m cvFDE= 11.006m  | model[cv_ok] minADE6=  2.592m ADE1=  4.717m
+    stationary    : n=  112 minADE6=  0.365m ADE1=  0.414m cvADE=  0.179m stayADE=  0.179m
+    moving        : n=  164 minADE6=  4.113m ADE1=  7.656m cvADE=  7.117m stayADE= 18.182m
+Town04      6   276   0.419m   0.619m   1.716m   4.665m   0.036m   0.184m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  0.038m cvFDE=  0.188m  | model[cv_ok] minADE6=  0.419m ADE1=  1.716m
+    stationary    : n=  259 minADE6=  0.419m ADE1=  1.704m cvADE=  0.039m stayADE=  0.039m
+    moving        : n=   17 minADE6=  0.412m ADE1=  1.885m cvADE=  0.030m stayADE=  0.000m
+Town05     76   276   7.243m  17.785m  12.143m  26.105m  21.640m  39.248m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE= 13.244m cvFDE= 33.202m  | model[cv_ok] minADE6=  7.243m ADE1= 12.143m
+    stationary    : n=    6 minADE6=  3.705m ADE1= 10.639m cvADE= 10.835m stayADE= 10.835m
+    moving        : n=  270 minADE6=  7.322m ADE1= 12.176m cvADE= 13.298m stayADE= 21.880m
+Town05     78   276   4.704m   9.729m   7.833m  18.229m  10.525m  20.917m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE= 12.383m cvFDE= 30.400m  | model[cv_ok] minADE6=  4.704m ADE1=  7.833m
+    stationary    : n=  176 minADE6=  3.904m ADE1=  5.592m cvADE=  5.556m stayADE=  5.556m
+    moving        : n=  100 minADE6=  6.111m ADE1= 11.776m cvADE= 24.396m stayADE= 19.270m
+Town05     89   276   1.232m   3.077m   2.638m   6.647m   3.674m   8.088m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  1.770m cvFDE=  4.528m  | model[cv_ok] minADE6=  1.232m ADE1=  2.638m
+    stationary    : n=  205 minADE6=  0.208m ADE1=  0.261m cvADE=  0.135m stayADE=  0.135m
+    moving        : n=   71 minADE6=  4.188m ADE1=  9.500m cvADE=  6.491m stayADE= 13.891m
+Town05     91   276   2.291m   4.971m   4.224m   9.595m   8.761m  16.634m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  5.715m cvFDE= 14.745m  | model[cv_ok] minADE6=  2.291m ADE1=  4.224m
+    stationary    : n=  140 minADE6=  0.580m ADE1=  1.081m cvADE=  0.955m stayADE=  0.955m
+    moving        : n=  136 minADE6=  4.053m ADE1=  7.459m cvADE= 10.614m stayADE= 16.797m
+Town05     95   276   1.717m   2.787m   3.729m   8.148m   6.874m  12.598m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  5.409m cvFDE= 13.261m  | model[cv_ok] minADE6=  1.717m ADE1=  3.729m
+    stationary    : n=  116 minADE6=  0.836m ADE1=  1.877m cvADE=  1.595m stayADE=  1.595m
+    moving        : n=  160 minADE6=  2.355m ADE1=  5.072m cvADE=  8.175m stayADE= 10.701m
+Town05    100   276   2.772m   5.683m   6.156m  12.339m  12.778m  24.903m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  7.487m cvFDE= 19.644m  | model[cv_ok] minADE6=  2.772m ADE1=  6.156m
+    stationary    : n=   78 minADE6=  0.867m ADE1=  3.607m cvADE=  0.875m stayADE=  0.875m
+    moving        : n=  198 minADE6=  3.523m ADE1=  7.160m cvADE= 10.092m stayADE= 17.467m
+ALL            2208   2.871m   6.333m   5.394m  12.065m   9.396m  17.876m
+CV             2208 cvADE=  6.293m cvFDE= 15.872m  | model[cv_ok] minADE6=  2.871m ADE1=  5.394m  (excluded 0 of 2208 samples, no frame-1)
+    stationary (ALL): n= 1092 minADE6=  1.051m ADE1=  2.051m cvADE=  1.362m stayADE=  1.362m
+    moving (ALL)  : n= 1116 minADE6=  4.653m ADE1=  8.666m cvADE= 11.119m stayADE= 17.256m
+
+Median of per-scene minADE6: 2.442 m   ADE1: 4.471 m
+Scenes where top-1 ADE beats stay-put: 7/8
+
+SAFETY  miss: FDE > 2.0 m (top-1 / best-of-6); off-road: fraction of valid-step points > 2.5 m from the nearest lane-centre waypoint (top-1 / all 6 modes / ground truth)
+SAFE control: ground-truth off-road rate per town (off-road numbers flagged UNRELIABLE above 5%):
+SAFE   Town03: GT off-road 0.0000
+SAFE   Town04: GT off-road 0.0000
+SAFE   Town05: GT off-road 0.0000
+SAFE group                        n   miss1   miss6   offr1   offr6  offrGT
+SAFE Town03 5                   276  0.4529  0.4239  0.0653  0.0930  0.0000
+SAFE   stationary               112  0.0536  0.0446  0.0000  0.0549  0.0000
+SAFE   moving                   164  0.7256  0.6829  0.1100  0.1190  0.0000
+SAFE Town04 6                   276  0.5290  0.0000  0.0012  0.0697  0.0000
+SAFE   stationary               259  0.5135  0.0000  0.0013  0.0697  0.0000
+SAFE   moving                    17  0.7647  0.0000  0.0000  0.0699  0.0000
+SAFE Town05 76                  276  0.9275  0.8732  0.1325  0.1386  0.0000
+SAFE   stationary                 6  1.0000  1.0000  0.0000  0.0574  0.0000
+SAFE   moving                   270  0.9259  0.8704  0.1354  0.1404  0.0000
+SAFE Town05 78                  276  0.4819  0.4203  0.0296  0.0743  0.0000
+SAFE   stationary               176  0.3864  0.3580  0.0000  0.0739  0.0000
+SAFE   moving                   100  0.6500  0.5300  0.0817  0.0748  0.0000
+SAFE Town05 89                  276  0.2500  0.1812  0.0209  0.0446  0.0000
+SAFE   stationary               205  0.0780  0.0683  0.0000  0.0376  0.0000
+SAFE   moving                    71  0.7465  0.5070  0.0812  0.0646  0.0000
+SAFE Town05 91                  276  0.5362  0.4167  0.0129  0.0800  0.0000
+SAFE   stationary               140  0.3000  0.1571  0.0000  0.0631  0.0000
+SAFE   moving                   136  0.7794  0.6838  0.0262  0.0973  0.0000
+SAFE Town05 95                  276  0.6449  0.4710  0.0245  0.0856  0.0000
+SAFE   stationary               116  0.3793  0.3362  0.0000  0.0864  0.0000
+SAFE   moving                   160  0.8375  0.5688  0.0423  0.0851  0.0000
+SAFE Town05 100                 276  0.7355  0.6196  0.0639  0.0993  0.0000
+SAFE   stationary                78  0.4103  0.2308  0.0308  0.0881  0.0000
+SAFE   moving                   198  0.8636  0.7727  0.0769  0.1037  0.0000
+SAFE Town03 (town)              276  0.4529  0.4239  0.0653  0.0930  0.0000
+SAFE   stationary               112  0.0536  0.0446  0.0000  0.0549  0.0000
+SAFE   moving                   164  0.7256  0.6829  0.1100  0.1190  0.0000
+SAFE Town04 (town)              276  0.5290  0.0000  0.0012  0.0697  0.0000
+SAFE   stationary               259  0.5135  0.0000  0.0013  0.0697  0.0000
+SAFE   moving                    17  0.7647  0.0000  0.0000  0.0699  0.0000
+SAFE Town05 (town)             1656  0.5960  0.4970  0.0474  0.0871  0.0000
+SAFE   stationary               721  0.2885  0.2247  0.0033  0.0649  0.0000
+SAFE   moving                   935  0.8332  0.7070  0.0814  0.1041  0.0000
+SAFE ALL                       2208  0.5697  0.4257  0.0439  0.0856  0.0000
+SAFE   stationary              1092  0.3178  0.1529  0.0025  0.0650  0.0000
+SAFE   moving                  1116  0.8163  0.6927  0.0843  0.1058  0.0000
+
+RANKING  brierFDE = minFDE6 + (1 - p)^2, p = softmax score of the min-FDE mode; div = mean pairwise distance between the 6 modes at the final horizon step
+RANK group                        n  minFDE6 brierFDE      div
+RANK Town03 5                   276    6.011    6.301   20.254
+RANK Town04 6                   276    0.619    1.063   10.259
+RANK Town05 76                  276   17.785   18.396   21.163
+RANK Town05 78                  276    9.729   10.143   18.742
+RANK Town05 89                  276    3.077    3.294   14.855
+RANK Town05 91                  276    4.971    5.342   18.333
+RANK Town05 95                  276    2.787    3.242   16.107
+RANK Town05 100                 276    5.683    6.119   21.767
+RANK ALL                       2208    6.333    6.737   17.685
+
+CONDITIONS  from ground truth: stationary / moving = frame-1 -> frame displacement = 0 / > 0; turning = moving and |heading change over the GT| > 30 deg (path direction, first vs last step >= 0.5 m); straight = moving and not turning; near_junction = current position within 20 m of an in-junction lane-centre waypoint (CARLA OpenDRIVE, junction_waypoints_*.npy)
+COND note: 180 of 1116 moving samples have < 2 GT steps >= 0.5 m (heading change 0 -> straight)
+COND town    condition              n  minADE6     ADE1  minFDE6
+COND ALL     stationary          1092    1.051    2.051    2.585
+COND ALL     moving              1116    4.653    8.666   10.000
+COND ALL     turning              336    8.549   12.876   19.851
+COND ALL     straight             780    2.975    6.852    5.756
+COND ALL     near_junction       1993    2.806    5.215    6.315
+COND ALL     not_near_junction    215    3.476    7.059    6.495
+COND Town03  stationary           112    0.365    0.414    0.813
+COND Town03  moving               164    4.113    7.656    9.561
+COND Town03  turning               50    7.079   12.050   15.633
+COND Town03  straight             114    2.813    5.729    6.899
+COND Town03  near_junction        234    2.258    3.827    4.797
+COND Town03  not_near_junction     42    4.454    9.680   12.777
+COND Town04  stationary           259    0.419    1.704    0.631
+COND Town04  moving                17    0.412    1.885    0.432
+COND Town04  turning                0
+COND Town04  straight              17    0.412    1.885    0.432
+COND Town04  near_junction        276    0.419    1.716    0.619
+COND Town04  not_near_junction      0
+COND Town05  stationary           721    1.384    2.430    3.562
+COND Town05  moving               935    4.825    8.966   10.251
+COND Town05  turning              286    8.806   13.020   20.589
+COND Town05  straight             649    3.070    7.180    5.695
+COND Town05  near_junction       1483    3.337    6.085    7.615
+COND Town05  not_near_junction    173    3.238    6.423    4.970
