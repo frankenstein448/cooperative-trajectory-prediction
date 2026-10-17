@@ -34,3 +34,9 @@
 2026-10-14T20:01:39	run_dir=runs/E_V2Xnomap_seed0	git_commit=f322abb28eff471de0ff0038f2a2055d4b551481	ckpt=runs/E_V2Xnomap_seed0/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
 2026-10-14T20:03:23	run_dir=runs/E_V2Xnomap_seed1	git_commit=f322abb28eff471de0ff0038f2a2055d4b551481	ckpt=runs/E_V2Xnomap_seed1/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
 2026-10-14T20:05:07	run_dir=runs/E_V2Xnomap_seed2	git_commit=f322abb28eff471de0ff0038f2a2055d4b551481	ckpt=runs/E_V2Xnomap_seed2/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-15T09:08:12	run_dir=runs/E_V2XRSU_seed0	git_commit=22fd274f563d172b611140eb4c51dead730055c9	ckpt=runs/E_V2XRSU_seed0/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-15T09:10:09	run_dir=runs/E_V2XRSU_seed1	git_commit=22fd274f563d172b611140eb4c51dead730055c9	ckpt=runs/E_V2XRSU_seed1/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-15T09:12:05	run_dir=runs/E_V2XRSU_seed2	git_commit=22fd274f563d172b611140eb4c51dead730055c9	ckpt=runs/E_V2XRSU_seed2/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-17T21:40:45	run_dir=runs/C_Dmapv2_seed0	git_commit=761cea749e78e3ade0f9a544e659d2368e67c920	ckpt=runs/C_Dmapv2_seed0/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-17T21:42:51	run_dir=runs/C_Dmapv2_seed1	git_commit=761cea749e78e3ade0f9a544e659d2368e67c920	ckpt=runs/C_Dmapv2_seed1/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
+2026-10-17T21:44:57	run_dir=runs/C_Dmapv2_seed2	git_commit=761cea749e78e3ade0f9a544e659d2368e67c920	ckpt=runs/C_Dmapv2_seed2/checkpoint_epoch12.pt	purpose=final test evaluation (split v2)	split_version=v2
