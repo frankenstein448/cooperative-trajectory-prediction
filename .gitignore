@@ -6,3 +6,6 @@ pilot_model.pt
 *.pt
 *.xodr
 checkpoints/
+
+# rendered videos / frames / stills (render_env_bev.py); regenerate, do not commit
+viz_env/
