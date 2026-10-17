@@ -11,7 +11,8 @@ read. Seed 0, checkpoint_epoch12.pt for every model.
                       the gain scene or scene 30);
              failure  Town04 #30 (named by the user).
            Ego per scene: the CAV with the most moving (b) targets over its env samples in that scene (ties: lower id).
-  render   PNG frames, an mp4 at 2.5 fps (half of V2X-Sim's 5 Hz; ffmpeg) and optional 300 dpi thesis stills, for one
+  render   (--print: vector PDFs of the --stills / --all-modes-stills frames for the thesis, see render_frame;
+           --no-pred: one panel without predictions, e.g. for the introduction) PNG frames, an mp4 at 2.5 fps (half of V2X-Sim's 5 Hz; ffmpeg) and optional 300 dpi thesis stills, for one
            scene / ego and one model (--runs A) or two side by side (--runs A,B). Predictions are computed once per
            (run, scene, ego) and cached in <out>/pred/; their minADE6 / ADE1 must equal the run's
            eval_env_tuning_checkpoint_epoch12.npz values for the same targets (max |diff| <= 1e-3 m).
@@ -57,7 +58,7 @@ LANE_RANGE_M = 110.0
 LANE_JOIN_M, LANE_JOIN_DEG = 3.0, 30.0    # drawing only: join a lane's end to a lane start this close / aligned
 FADE = 0.3                                # alpha of targets that are not an input of the panel's model
 GT_LW = 2.2                               # ground-truth line width (drawn above the predictions)
-LABEL_CHAR_M, LABEL_H_M, LABEL_GAP_M = 1.15, 2.8, 2.5   # CAV / RSU label: approx. text box (m) and marker gap
+LABEL_CHAR_EM, LABEL_H_EM, LABEL_GAP_PT = 0.66, 1.6, 11.5   # CAV / RSU label: approx. text box (em), marker gap
 LABEL_OFFSETS = ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (0, -1), (1, 0), (-1, 0))   # tried in this order
 CLASS_NAMES = ("seen by the ego", "coop CAV only", "RSU only", "nobody")
 CLASS_COLORS = ("#0072B2", "#E69F00", "#009E73", "#8C8C8C")   # Okabe-Ito
@@ -296,74 +297,99 @@ def in_view(p):
 
 
 # ---------------------------------------------------------------- drawing
-def draw_panel(ax, fr, run, known, preds, all_modes):
+# k scales line widths / marker sizes; fs is the text size (pt) of labels, scale bar and legend. VIDEO: 7 in panels
+# at 110 dpi; PRINT: vector PDF at its final size (16 cm wide side by side, 8 cm single), every text >= 8 pt.
+VIDEO = {"k": 1.0, "fs": 8.0, "fs_scale": 9.0, "fs_legend": 8.5, "print": False}
+PRINT = {"k": 0.5, "fs": 8.0, "fs_scale": 8.0, "fs_legend": 8.0, "print": True}
+PRINT_W_CM = {1: 8.0, 2: 16.0}
+PRINT_MARGIN_IN, PRINT_GAP_IN, PRINT_TITLE_IN, PRINT_ROW_IN = 0.06, 0.08, 0.2, 0.165
+PANEL_LABELS = {"E_V2X": "E_V2X", "E_EgoOnly": "E_EgoOnly", "E_V2XRSU": "E_V2X+RSU", "E_V2Xnomap": "E_V2X without map"}
+
+
+def draw_panel(ax, fr, run, known, preds, all_modes, st):
     from matplotlib.collections import LineCollection
     from matplotlib.patches import Polygon
+    k = st["k"]
     ax.set_xlim(-VIEW_LAT, VIEW_LAT)
     ax.set_ylim(-VIEW_BACK, VIEW_FWD)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_facecolor("white")
+    for sp in ax.spines.values():
+        sp.set_linewidth(0.8 * k)
     seg, park = fr["lanes"], fr["lanes_park"]
-    ax.add_collection(LineCollection(seg[~park], colors=LANE_COLOR, linewidths=0.9, zorder=1))
+    ax.add_collection(LineCollection(seg[~park], colors=LANE_COLOR, linewidths=0.9 * k, zorder=1))
     if park.any():
-        ax.add_collection(LineCollection(seg[park], colors=LANE_COLOR, linewidths=0.9, linestyles=":", zorder=1))
+        ax.add_collection(LineCollection(seg[park], colors=LANE_COLOR, linewidths=0.9 * k, linestyles=":", zorder=1))
     for j, t in enumerate(fr["tid"]):
         cls, cur, yaw = fr["cls"][j], fr["cur"][j], fr["yaw"][j]
         col = CLASS_COLORS[cls]
         is_known = known[j]
         faded = not is_known and cls != 3      # seen by a CAV / the RSU, but not an input of this model
         gt = scr(np.vstack([cur, fr["fut_ego"][j]]))
-        ax.plot(gt[:, 0], gt[:, 1], color=GT_COLOR, lw=GT_LW, ls=(0, (3, 2)), alpha=FADE if faded else 0.8, zorder=4.8)
+        ax.plot(gt[:, 0], gt[:, 1], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), alpha=FADE if faded else 0.8,
+                zorder=4.8)
         if cls == 3:
             ax.add_patch(Polygon(box(cur, yaw, *fr["wl"][j]), closed=True, zorder=5, facecolor="white", edgecolor=col,
-                                 lw=1.4))
+                                 lw=1.4 * k))
         else:
             ax.add_patch(Polygon(box(cur, yaw, *fr["wl"][j]), closed=True, zorder=5, facecolor=col, edgecolor="black",
-                                 lw=0.4, alpha=FADE if faded else 0.95))
+                                 lw=0.4 * k, alpha=FADE if faded else 0.95))
         if is_known and int(t) in preds:
             trajs, logits = preds[int(t)]
             top = int(np.argmax(logits))
-            for k in range(trajs.shape[0]):
-                p = scr(np.vstack([cur, own_to_ego(trajs[k], cur, yaw)]))
-                if k == top:
-                    ax.plot(p[:, 0], p[:, 1], color=col, lw=2.4, zorder=4.5, solid_capstyle="round")
-                    ax.plot(p[-1, 0], p[-1, 1], "o", ms=4.5, color=col, mec="black", mew=0.5, zorder=4.6)
+            for m in range(trajs.shape[0]):
+                p = scr(np.vstack([cur, own_to_ego(trajs[m], cur, yaw)]))
+                if m == top:
+                    ax.plot(p[:, 0], p[:, 1], color=col, lw=2.4 * k, zorder=4.5, solid_capstyle="round")
+                    ax.plot(p[-1, 0], p[-1, 1], "o", ms=4.5 * k, color=col, mec="black", mew=0.5 * k, zorder=4.6)
                 elif all_modes or fr["moving"][j]:
-                    ax.plot(p[:, 0], p[:, 1], color=col, lw=0.9, alpha=0.55, zorder=4)
+                    ax.plot(p[:, 0], p[:, 1], color=col, lw=0.9 * k, alpha=0.55, zorder=4)
     obstacles = [np.r_[b.min(axis=0), b.max(axis=0)] for b in
                  (box(fr["cur"][j], fr["yaw"][j], *fr["wl"][j]) for j in range(len(fr["tid"])))]
     obstacles.append(np.r_[-EGO_SIZE[0] / 2, -EGO_SIZE[1] / 2, EGO_SIZE[0] / 2, EGO_SIZE[1] / 2])
+    pos = ax.get_position()
+    m_per_pt = max(2 * VIEW_LAT / (pos.width * ax.figure.get_figwidth() * 72),
+                   (VIEW_BACK + VIEW_FWD) / (pos.height * ax.figure.get_figheight() * 72))
     for a, (xy, yaw) in fr["cavs"].items():
         p = scr(xy)
         if in_view(p):
-            ax.plot(*p, marker="D", ms=10, mfc="none", mec=CAV_COLOR, mew=2.2, zorder=6)
-            place_label(ax, p, f"CAV {a}", CAV_COLOR, obstacles)
+            ax.plot(*p, marker="D", ms=10 * k, mfc="none", mec=CAV_COLOR, mew=2.2 * k, zorder=6)
+            place_label(ax, p, f"CAV {a}", CAV_COLOR, obstacles, st, m_per_pt)
     if fr["rsu"] is not None:
         p = scr(fr["rsu"])
         inside = bool(in_view(p))
         q = p if inside else np.array([np.clip(p[0], -VIEW_LAT + 2.5, VIEW_LAT - 2.5),
                                        np.clip(p[1], -VIEW_BACK + 2.5, VIEW_FWD - 2.5)])
-        ax.plot(*q, marker="^", ms=12, mfc=RSU_COLOR if inside else "none", mec=RSU_COLOR, mew=2, zorder=6)
-        place_label(ax, q, "RSU" if inside else f"RSU ({math.hypot(*p):.0f} m)", RSU_COLOR, obstacles)
+        ax.plot(*q, marker="^", ms=12 * k, mfc=RSU_COLOR if inside else "none", mec=RSU_COLOR, mew=2 * k, zorder=6)
+        place_label(ax, q, "RSU" if inside else f"RSU ({math.hypot(*p):.0f} m)", RSU_COLOR, obstacles, st, m_per_pt)
     ax.add_patch(Polygon(box(np.zeros(2), 0.0, EGO_SIZE[0], EGO_SIZE[1]), closed=True, facecolor=EGO_COLOR,
                          edgecolor=EGO_COLOR, zorder=6))
     x0, y0 = VIEW_LAT - 4 - SCALE_BAR_M, -VIEW_BACK + 4
-    ax.plot([x0, x0 + SCALE_BAR_M], [y0, y0], color="black", lw=3, solid_capstyle="butt", zorder=7)
-    ax.text(x0 + SCALE_BAR_M / 2, y0 + 1.5, f"{SCALE_BAR_M:g} m", ha="center", va="bottom", fontsize=9, zorder=7)
-    ax.set_title(f"{fr['town']} #{fr['scene']}, ego CAV {fr['agent']}  |  t = {fr['frame'] / FRAME_RATE_HZ:.1f} s "
-                 f"(frame {fr['frame']})  |  tuning split\n{label(run)}", fontsize=9.5, loc="left", pad=5)
+    ax.plot([x0, x0 + SCALE_BAR_M], [y0, y0], color="black", lw=3 * k, solid_capstyle="butt", zorder=7)
+    ax.text(x0 + SCALE_BAR_M / 2, y0 + 1.5, f"{SCALE_BAR_M:g} m", ha="center", va="bottom", fontsize=st["fs_scale"],
+            zorder=7)
+    if st["print"]:   # model name only; scene, time and split go in the LaTeX caption
+        if run is not None:
+            ax.set_title(PANEL_LABELS.get(run.rsplit("_seed", 1)[0], run), fontsize=9, fontweight="bold", loc="left",
+                         pad=3)
+    else:
+        ax.set_title(f"{fr['town']} #{fr['scene']}, ego CAV {fr['agent']}  |  t = {fr['frame'] / FRAME_RATE_HZ:.1f} s "
+                     f"(frame {fr['frame']})  |  tuning split\n{label(run) if run else 'no predictions'}",
+                     fontsize=9.5, loc="left", pad=5)
 
 
-def place_label(ax, p, text, color, obstacles):
+def place_label(ax, p, text, color, obstacles, st, m_per_pt):
     """Text on a white background beside marker p (screen m): the candidate offset whose approximate text box overlaps
     the least target-box area (bounding boxes) and stays in the view; obstacles gets the chosen text box."""
-    w, h = LABEL_CHAR_M * len(text) + 1.0, LABEL_H_M
+    fs = st["fs"]
+    w, h = (LABEL_CHAR_EM * len(text) + 0.6) * fs * m_per_pt, LABEL_H_EM * fs * m_per_pt
+    gap = LABEL_GAP_PT * st["k"] * m_per_pt
     best = None
     for dx, dy in LABEL_OFFSETS:
-        x = p[0] + dx * LABEL_GAP_M
-        y = p[1] + dy * LABEL_GAP_M
+        x = p[0] + dx * gap
+        y = p[1] + dy * gap
         x0 = x - (w if dx < 0 else w / 2 if dx == 0 else 0)
         y0 = y - (h if dy < 0 else h / 2 if dy == 0 else 0)
         r = np.r_[x0, y0, x0 + w, y0 + h]
@@ -375,37 +401,79 @@ def place_label(ax, p, text, color, obstacles):
     _, x, y, dx, dy, r = best
     obstacles.append(r)
     ax.text(x, y, text, ha="right" if dx < 0 else "center" if dx == 0 else "left",
-            va="top" if dy < 0 else "center" if dy == 0 else "bottom", fontsize=8, color=color, fontweight="bold",
+            va="top" if dy < 0 else "center" if dy == 0 else "bottom", fontsize=fs, color=color, fontweight="bold",
             zorder=7, clip_on=True, bbox=dict(boxstyle="round,pad=0.2", facecolor="white", edgecolor="none", alpha=0.95))
 
 
-def legend_handles(all_modes):
+def legend_handles(all_modes, st, no_pred):
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
-    h = [Patch(facecolor=c, edgecolor="black", lw=0.4, label=f"target, {n}") for c, n in
-         zip(CLASS_COLORS[:3], CLASS_NAMES[:3])]
-    h += [Patch(facecolor="white", edgecolor=CLASS_COLORS[3], lw=1.4, label=f"target, {CLASS_NAMES[3]}"),
-          Patch(facecolor=CLASS_COLORS[1], edgecolor="black", lw=0.4, alpha=FADE,
-                label="faded: not an input of this model (no prediction)"),
-          Line2D([], [], color=GT_COLOR, lw=GT_LW, ls=(0, (3, 2)), label="ground truth, 6 s"),
-          Line2D([], [], color="#555555", lw=2.4, marker="o", ms=4.5, markevery=[1], label="prediction, top-1 mode"),
-          Line2D([], [], color="#555555", lw=0.9, alpha=0.55, label="prediction, other 5 modes" + ("" if all_modes else " (moving targets)")),
-          Line2D([], [], color=LANE_COLOR, lw=1.2, label="lane centre line (map v2)"),
-          Patch(facecolor=EGO_COLOR, label="ego vehicle (heading up)"),
-          Line2D([], [], ls="", marker="D", ms=8, mfc="none", mec=CAV_COLOR, mew=2, label="other CAV"),
-          Line2D([], [], ls="", marker="^", ms=9, mfc=RSU_COLOR, mec=RSU_COLOR, label="RSU (hollow: outside view)")]
+    k, short = st["k"], st["print"]
+    names = ("seen by the ego", "coop CAV only", "RSU only", "seen by nobody") if short else \
+        tuple(f"target, {n}" for n in CLASS_NAMES)          # print: the caption says boxes are targets
+    h = [Patch(facecolor=c, edgecolor="black", lw=0.4 * k, label=n) for c, n in zip(CLASS_COLORS[:3], names[:3])]
+    h.append(Patch(facecolor="white", edgecolor=CLASS_COLORS[3], lw=1.4 * k, label=names[3]))
+    if not no_pred:
+        h.append(Patch(facecolor=CLASS_COLORS[1], edgecolor="black", lw=0.4 * k, alpha=FADE,
+                       label="faded: not a model input" if short else
+                       "faded: not an input of this model (no prediction)"))
+    h.append(Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s"))
+    if not no_pred:
+        h += [Line2D([], [], color="#555555", lw=2.4 * k, marker="o", ms=4.5 * k, markevery=[1],
+                     label="prediction, top-1 mode"),
+              Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55,
+                     label=("other 5 modes" if short else "prediction, other 5 modes")
+                     + ("" if all_modes else " (moving)" if short else " (moving targets)"))]
+    h += [Line2D([], [], color=LANE_COLOR, lw=1.2 * k, label="lane centre line" + ("" if short else " (map v2)")),
+          Patch(facecolor=EGO_COLOR, label="ego (heading up)" if short else "ego vehicle (heading up)"),
+          Line2D([], [], ls="", marker="D", ms=8 * k, mfc="none", mec=CAV_COLOR, mew=2 * k, label="other CAV"),
+          Line2D([], [], ls="", marker="^", ms=9 * k, mfc=RSU_COLOR, mec=RSU_COLOR,
+                 label="RSU (hollow: off view)" if short else "RSU (hollow: outside view)")]
     return h
 
 
-def render_frame(fr, runs, known, preds, path, dpi, all_modes):
+def render_frame(fr, runs, known, preds, path, dpi, all_modes, st=VIDEO):
+    """runs: one or two run names, or [None] (--no-pred: one panel, every target as an input, no predictions)."""
     import matplotlib.pyplot as plt
     n = len(runs)
-    fig, axes = plt.subplots(1, n, figsize=(7.0 * n, 8.2 if n == 1 else 7.7), squeeze=False)
-    for ax, run in zip(axes[0], runs):
-        draw_panel(ax, fr, run, known[run], preds[run], all_modes)
-    fig.legend(handles=legend_handles(all_modes), loc="lower center", ncol=4 if n == 1 else 6, fontsize=8.5, frameon=False)
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.93 if n == 1 else 0.925, bottom=0.15 if n == 1 else 0.10, wspace=0.03)
-    fig.savefig(path, dpi=dpi, facecolor="white")
+    no_pred = runs == [None]
+    handles = legend_handles(all_modes, st, no_pred)
+    if st["print"]:
+        ncol = 3 if n == 2 else 2
+        rows = -(-len(handles) // ncol)
+        W = PRINT_W_CM[n] / 2.54
+        panel = (W - 2 * PRINT_MARGIN_IN - (n - 1) * PRINT_GAP_IN) / n
+        panel_h = panel * (VIEW_BACK + VIEW_FWD) / (2 * VIEW_LAT)
+        top = PRINT_TITLE_IN if not no_pred else PRINT_MARGIN_IN
+        leg = rows * PRINT_ROW_IN + 0.08
+        H = top + panel_h + leg
+        fig = plt.figure(figsize=(W, H))
+        axes = [fig.add_axes([(PRINT_MARGIN_IN + i * (panel + PRINT_GAP_IN)) / W, leg / H, panel / W, panel_h / H])
+                for i in range(n)]
+        lg = fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=ncol,
+                        fontsize=st["fs_legend"], frameon=False, handlelength=1.5, columnspacing=0.8,
+                        handletextpad=0.5, borderaxespad=0.2, labelspacing=0.3)
+    else:
+        fig, axes = plt.subplots(1, n, figsize=(7.0 * n, 8.2 if n == 1 else 7.7), squeeze=False)
+        axes = axes[0]
+        fig.legend(handles=handles, loc="lower center", ncol=4 if n == 1 else 6, fontsize=st["fs_legend"],
+                   frameon=False)
+        fig.subplots_adjust(left=0.02, right=0.98, top=0.93 if n == 1 else 0.925, bottom=0.15 if n == 1 else 0.10,
+                            wspace=0.03)
+    for ax, run in zip(axes, runs):
+        draw_panel(ax, fr, run, known[run], preds[run], all_modes, st)
+    if st["print"]:
+        fig.canvas.draw()
+        bb = lg.get_window_extent().transformed(fig.transFigure.inverted())
+        assert bb.x0 >= 0 and bb.x1 <= 1 and bb.y0 >= 0 and bb.y1 <= axes[0].get_position().y0 + 1e-3, \
+            f"legend does not fit below the panels: {bb}"
+        from matplotlib.text import Text
+        small = {t.get_text(): t.get_fontsize() for t in fig.findobj(Text)
+                 if t.get_visible() and t.get_text() and t.get_fontsize() < 8}
+        assert not small, f"text below 8 pt: {small}"
+        fig.savefig(path, facecolor="white")
+    else:
+        fig.savefig(path, dpi=dpi, facecolor="white")
     plt.close(fig)
 
 
@@ -420,8 +488,16 @@ def cmd_render(args):
     if s not in TUNING:
         sys.exit(f"scene {s} is not a tuning scene of split v2 {sorted(TUNING)}; refusing")
     town = TUNING[s]
-    runs = args.runs.split(",")
-    assert 1 <= len(runs) <= 2, "--runs: one run or two (side by side)"
+    if args.no_pred:
+        assert not args.runs, "--no-pred draws no model: leave out --runs"
+        runs = []
+    else:
+        assert args.runs, "--runs is required (or --no-pred)"
+        runs = args.runs.split(",")
+        assert 1 <= len(runs) <= 2, "--runs: one run or two (side by side)"
+    panels = runs or [None]
+    st = PRINT if args.print else VIDEO
+    matplotlib.rcParams["pdf.fonttype"] = 42     # TrueType text in the PDFs
     cfgs = {r: run_cfg(r) for r in runs}
     cache = load_env_cache()
     fut_ego_ref = np.load(os.path.join(ENV_CACHE_DIR, "env_targets.npz"))["fut_ego"]
@@ -437,6 +513,7 @@ def cmd_render(args):
     print(f"{town} scene {s}, ego CAV {agent}: {len(rows)} frames "
           f"({cache['sample_frame'][rows[0]]}..{cache['sample_frame'][rows[-1]]}), runs {runs}")
     preds = {r: load_preds(r, s, agent, args.out, cache) for r in runs}
+    preds[None] = {}
 
     L = V2XMetadataLoader()
     lanes = LanePolylines(town, "mirror")
@@ -447,9 +524,9 @@ def cmd_render(args):
         p = L.ego_pose[L.find_sample_data(a, s, f)["ego_pose_token"]]
         return np.array(p["translation"][:2], dtype=np.float64), quaternion_to_yaw(p["rotation"])
 
-    name = f"scene{s}_{town}_ego{agent}_" + "_vs_".join(runs)
-    out_dir = os.path.join(args.out, name)
-    os.makedirs(os.path.join(out_dir, "frames"), exist_ok=True)
+    name = f"scene{s}_{town}_ego{agent}_" + ("_vs_".join(runs) if runs else "nopred")
+    out_dir = os.path.join(args.out, "thesis_figures" if args.print else name)
+    os.makedirs(os.path.join(out_dir, "" if args.print else "frames"), exist_ok=True)
     if args.stills == "auto":  # the frame with the most moving (b) targets (ties: earliest)
         nb = [int(((cache["vis"][cache["sample_ptr"][r]:cache["sample_ptr"][r + 1]] == 1)
                    & (cache["speed"][cache["sample_ptr"][r]:cache["sample_ptr"][r + 1]] > 0)).sum()) for r in rows]
@@ -458,6 +535,10 @@ def cmd_render(args):
     else:
         stills = {int(f) for f in args.stills.split(",")} if args.stills else set()
     am_stills = {int(f) for f in args.all_modes_stills.split(",")} if args.all_modes_stills else set()
+    if args.print:   # only the requested frames, as PDFs
+        rows = rows[np.isin(cache["sample_frame"][rows], sorted(stills | am_stills))]
+        missing = (stills | am_stills) - set(cache["sample_frame"][rows].tolist())
+        assert not missing and len(rows), f"--print: frames {sorted(missing)} have no env sample for ego {agent}"
     max_geo, lane_d = 0.0, []
     for n, r in enumerate(rows):
         f = int(cache["sample_frame"][r])
@@ -493,22 +574,34 @@ def cmd_render(args):
               "cls": vis_class(cache["vis"][tid], cache["rsu_vis"][tid]), "cavs": cavs, "rsu": rsu, "moving": mov}
         known = {run: known_mask(cache["vis"][tid], cfgs[run]["v2x"],
                                  cache["rsu_vis"][tid] if cfgs[run].get("use_rsu", False) else None) for run in runs}
+        known[None] = np.ones(len(tid), bool)
         for run in runs:
             miss = [t for t in tid[known[run]] if int(t) not in preds[run]]
             assert not miss, f"{run}: known targets without a prediction in frame {f}: {miss[:5]}"
-        render_frame(fr, runs, known, preds, os.path.join(out_dir, "frames", f"frame_{n:04d}.png"), args.dpi,
+        if args.print:
+            jobs = {args.all_modes} if f in stills else set()
+            if f in am_stills:
+                jobs.add(True)
+            for am in sorted(jobs):
+                path = os.path.join(out_dir, f"bev_{name}_frame{f:03d}{'_allmodes' if am else ''}.pdf")
+                render_frame(fr, panels, known, preds, path, None, am, st)
+                print(f"  wrote {path}")
+            continue
+        render_frame(fr, panels, known, preds, os.path.join(out_dir, "frames", f"frame_{n:04d}.png"), args.dpi,
                      args.all_modes)
         if f in stills | am_stills:
             os.makedirs(os.path.join(out_dir, "stills"), exist_ok=True)
         if f in stills:
-            render_frame(fr, runs, known, preds, os.path.join(out_dir, "stills", f"{name}_frame{f:03d}.png"), 300,
+            render_frame(fr, panels, known, preds, os.path.join(out_dir, "stills", f"{name}_frame{f:03d}.png"), 300,
                          args.all_modes)
         if f in am_stills:
-            render_frame(fr, runs, known, preds, os.path.join(out_dir, "stills", f"{name}_frame{f:03d}_allmodes.png"),
+            render_frame(fr, panels, known, preds, os.path.join(out_dir, "stills", f"{name}_frame{f:03d}_allmodes.png"),
                          300, True)
     print(f"checks: max |own->ego future - cache fut_ego| = {max_geo:.2e} m; moving targets' nearest lane point "
           f"median {np.median(lane_d):.2f} m, p95 {np.percentile(lane_d, 95):.2f} m (n={len(lane_d)})")
     assert max_geo <= 1e-3, "own -> ego frame conversion disagrees with the cache's fut_ego"
+    if args.print:
+        return
     print(f"wrote {len(rows)} frames to {out_dir}/frames" + (f", stills {sorted(stills)}" if stills else "")
           + (f", all-modes stills {sorted(am_stills)}" if am_stills else ""))
     if not args.no_video:
@@ -528,7 +621,12 @@ def main():
     p = sub.add_parser("render")
     p.add_argument("--scene", type=int, required=True)
     p.add_argument("--agent", type=int, default=None, help="ego CAV (default: the select ego rule)")
-    p.add_argument("--runs", required=True, help="RUN or RUN_A,RUN_B (side by side), e.g. E_V2X_seed0,E_EgoOnly_seed0")
+    p.add_argument("--runs", default="", help="RUN or RUN_A,RUN_B (side by side), e.g. E_V2X_seed0,E_EgoOnly_seed0")
+    p.add_argument("--no-pred", action="store_true", help="one panel without a model: vehicles, visibility colours, "
+                                                          "ground truth, lanes, CAVs and RSU; no predictions")
+    p.add_argument("--print", action="store_true", help="thesis figures: only the --stills / --all-modes-stills frames, "
+                                                        "as vector PDFs in <out>/thesis_figures/, 16 cm wide side by "
+                                                        "side (8 cm single), text >= 8 pt, model name as panel label")
     p.add_argument("--frames", type=int, default=0, help="first N frames only (0 = all)")
     p.add_argument("--start-frame", type=int, default=None)
     p.add_argument("--stills", default="", help="comma-separated scene frame indices to save at 300 dpi, or 'auto' (most moving (b) targets)")
