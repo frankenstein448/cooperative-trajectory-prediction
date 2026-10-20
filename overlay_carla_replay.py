@@ -5,8 +5,9 @@ into carla_replay.py's rendered image with its saved camera matrices (camera_fra
 over the same render (e.g. E_V2X | E_EgoOnly), model label on top, caption below. Tuning split, seed 0, epoch 12.
 
 Display rules as render_env_bev.py --print: per target its ground-truth 6 s future (dashed black, above the
-predictions), for the panel model's known targets the top-1 mode (thick, end dot) and, with --other-modes, for moving
-targets the other 5 modes (thin); targets some CAV / the RSU sees but the panel's model does not take as input are
+predictions), for the panel model's known targets the top-1 mode (thick, arrowhead at the predicted end; a stationary
+target whose top-1 path is shorter than STILL_M gets a dot on the car instead) and, with --other-modes, for moving
+targets the other 5 modes (thin); every line has a thin white outline for contrast on the road; targets some CAV / the RSU sees but the panel's model does not take as input are
 faded (no
 prediction, faded ground truth). CARLA paints the cars by visibility class; the overlay adds what the paint cannot
 show: two-wheelers get their projected footprint filled in the class colour (hollow grey: seen by nobody), faded targets
@@ -44,6 +45,9 @@ K_LW = 1.3                     # line-width scale vs render_env_bev's VIDEO styl
 PANEL_W_IN, GAP_IN, MARGIN_IN, TOP_IN, BOTTOM_IN = 8.0, 0.12, 0.08, 0.34, 0.62
 VEIL_ALPHA = 0.6               # white over a faded car: its paint shows at about FADE strength
 LABEL_UP_M = 2.6               # CAV / RSU labels this far above the ground point
+OUTLINE_PT = 1.6               # white outline under the lines: this much wider (points, x K_LW)
+ARROW_L_PT, ARROW_W_PT = 7.0, 6.0   # top-1 arrowhead length / base width (points, x K_LW)
+STILL_M = 1.0                  # stationary target with a top-1 path shorter than this: dot on the car, no arrow
 
 
 class Camera:
@@ -82,12 +86,47 @@ def hull(cam, corners):
     return uv[ConvexHull(uv).vertices]
 
 
+def outline(lw, alpha=1.0):
+    import matplotlib.patheffects as pe
+    return [pe.Stroke(linewidth=lw + OUTLINE_PT * K_LW, foreground="white", alpha=alpha), pe.Normal()]
+
+
 def line(ax, cam, xyz, **kw):
     uv, d = cam.project(xyz)
     uv = uv[d >= NEAR_M]
     if len(uv) >= 2:
-        ax.plot(uv[:, 0], uv[:, 1], **kw)
+        ax.plot(uv[:, 0], uv[:, 1], path_effects=outline(kw["lw"], kw.get("alpha", 1.0)), **kw)
     return uv
+
+
+def arrow_line(ax, cam, xyz, color, lw, px_per_pt, zorder):
+    """Top-1 line ending in an arrowhead at the predicted end, pointing along the last ARROW_L_PT of the projected
+    path; the line stops at the arrowhead's base so its round cap does not poke through the tip."""
+    from matplotlib.patches import Polygon
+    uv, d = cam.project(xyz)
+    uv = uv[d >= NEAR_M]
+    if len(uv) < 2:
+        return
+    L, W = ARROW_L_PT * K_LW * px_per_pt, ARROW_W_PT * K_LW * px_per_pt
+    seg = np.hypot(*np.diff(uv, axis=0).T)
+    back = np.concatenate([np.cumsum(seg[::-1])[::-1], [0.0]])     # pixel path length from each point to the end
+    tip = uv[-1]
+    if back[0] <= L:                       # shorter on screen than the arrowhead: arrow along the whole path
+        if back[0] < 1e-6:
+            return
+        base, body = uv[0], uv[:1]
+    else:
+        i = int(np.nonzero(back > L)[0][-1])                        # back[i] > L >= back[i + 1]
+        base = uv[i + 1] + (uv[i] - uv[i + 1]) * (L - back[i + 1]) / seg[i]
+        body = np.vstack([uv[:i + 1], base])
+    if len(body) >= 2:
+        ax.plot(body[:, 0], body[:, 1], color=color, lw=lw, zorder=zorder, solid_capstyle="round",
+                path_effects=outline(lw))
+    u = (tip - base) / np.hypot(*(tip - base))
+    n = np.array([-u[1], u[0]]) * W / 2
+    head = np.array([tip, tip - u * L + n, tip - u * L - n])
+    ax.add_patch(Polygon(head, closed=True, facecolor=color, edgecolor="white", lw=OUTLINE_PT * K_LW / 2,
+                         joinstyle="miter", zorder=zorder + 0.1))
 
 
 def draw_panel(ax, img, cam, fr, gz, model, k, other_modes):
@@ -98,6 +137,7 @@ def draw_panel(ax, img, cam, fr, gz, model, k, other_modes):
     ax.set_xticks([])
     ax.set_yticks([])
     known, modes, top1 = fr[f"{model}_known"], fr[f"{model}_modes_world"], fr[f"{model}_top1"]
+    px_per_pt = cam.W / (PANEL_W_IN * 72)      # image pixels per point at the panel's size
     for j, t in enumerate(fr["tid"]):
         cls, xy, yaw = int(fr["cls"][j]), fr["xy_world"][j], float(fr["yaw_world"][j])
         z, col = gz[int(t)], CLASS_COLORS[int(fr["cls"][j])]
@@ -108,9 +148,12 @@ def draw_panel(ax, img, cam, fr, gz, model, k, other_modes):
             for m in range(modes.shape[1]):
                 pts = carla_xyz(np.vstack([xy, modes[j, m]]), z)
                 if m == top1[j]:
-                    uv = line(ax, cam, pts, color=col, lw=2.4 * k, zorder=4.5, solid_capstyle="round")
-                    if len(uv):
-                        ax.plot(uv[-1, 0], uv[-1, 1], "o", ms=4.5 * k, color=col, mec="black", mew=0.5 * k, zorder=4.6)
+                    if not fr["moving"][j] and np.hypot(*np.diff(pts[:, :2], axis=0).T).sum() < STILL_M:
+                        uv, d = cam.project(pts[0])
+                        if d >= NEAR_M:
+                            ax.plot(*uv, "o", ms=4.0 * k, color=col, mec="white", mew=1.0 * k, zorder=4.6)
+                    else:
+                        arrow_line(ax, cam, pts, col, 2.4 * k, px_per_pt, 4.5)
                 elif other_modes and fr["moving"][j]:
                     line(ax, cam, pts, color=col, lw=0.9 * k, alpha=0.55, zorder=4)
         w, l, h = fr["size"][j]
@@ -157,14 +200,41 @@ def legend_handles(k, other_modes):
     names = ("seen by the ego", "coop CAV only", "RSU only", "seen by nobody")
     h = [Patch(facecolor=c, edgecolor="black", lw=0.4 * k, label=n) for c, n in zip(CLASS_COLORS, names)]
     h += [Patch(facecolor=CLASS_COLORS[1], edgecolor="black", lw=0.4 * k, alpha=FADE, label="faded: not a model input"),
-          Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s"),
-          Line2D([], [], color="#555555", lw=2.4 * k, marker="o", ms=4.5 * k, markevery=[1],
-                 label="prediction, top-1 mode"),
+          Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s",
+                 path_effects=outline(GT_LW * k)),
+          ArrowHandle(label="prediction, top-1 (6 s, arrow = predicted end)"),
           Patch(facecolor=EGO_COLOR, label="ego vehicle"),
           Line2D([], [], ls="", marker="^", ms=9 * k, mfc=RSU_COLOR, mec=RSU_COLOR, label="RSU")]
     if other_modes:
-        h.insert(8, Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55, label="other 5 modes (moving)"))
+        h.insert(8, Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55, label="other 5 modes (moving)",
+                           path_effects=outline(0.9 * k, 0.55)))
     return h
+
+
+class ArrowHandle:
+    """Legend entry for the top-1 line: drawn by ArrowHandler as a grey line with an arrowhead at its right end."""
+    def __init__(self, label):
+        self.label = label
+
+    def get_label(self):
+        return self.label
+
+
+def arrow_handler():
+    from matplotlib.legend_handler import HandlerBase
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Polygon
+
+    class ArrowHandler(HandlerBase):
+        def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+            y, x0, x1 = height / 2 - ydescent, -xdescent, width - xdescent
+            L, W = ARROW_L_PT * K_LW, ARROW_W_PT * K_LW
+            ln = Line2D([x0, x1 - L], [y, y], color="#555555", lw=2.4 * K_LW, solid_capstyle="round",
+                        path_effects=outline(2.4 * K_LW), transform=trans)
+            head = Polygon([[x1, y], [x1 - L, y + W / 2], [x1 - L, y - W / 2]], closed=True, facecolor="#555555",
+                           edgecolor="white", lw=OUTLINE_PT * K_LW / 2, joinstyle="miter", transform=trans)
+            return [ln, head]
+    return ArrowHandler()
 
 
 def render(fr, meta, img, cam_json, models, path, dpi, other_modes):
@@ -186,7 +256,7 @@ def render(fr, meta, img, cam_json, models, path, dpi, other_modes):
                          f"{meta['frame'] / FRAME_RATE_HZ:.1f} s (frame {meta['frame']})", fontsize=10, loc="right",
                          pad=4)
     fig.legend(handles=legend_handles(k, other_modes), loc="lower center", bbox_to_anchor=(0.5, 0.22 / H), ncol=10,
-               fontsize=9,
+               fontsize=9, handler_map={ArrowHandle: arrow_handler()},
                frameon=False, handlelength=1.6, columnspacing=1.0, handletextpad=0.5)
     fig.text(MARGIN_IN / W, 0.06 / H, CAPTION + ("" if other_modes else CAPTION_TOP1), fontsize=8.5, ha="left",
              va="bottom", color="#333333")
