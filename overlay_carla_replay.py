@@ -5,11 +5,11 @@ into carla_replay.py's rendered image with its saved camera matrices (camera_fra
 over the same render (e.g. E_V2X | E_EgoOnly), model label on top, caption below. Tuning split, seed 0, epoch 12.
 
 Display rules as render_env_bev.py --print: per target its ground-truth 6 s future (dashed black, above the
-predictions), for the panel model's known targets the top-1 mode (thick, arrowhead at the predicted end; a stationary
-target whose top-1 path is shorter than STILL_M gets a dot on the car instead) and, with --other-modes, for moving
-targets the other 5 modes (thin); every line has a thin white outline for contrast on the road; targets some CAV / the RSU sees but the panel's model does not take as input are
-faded (no
-prediction, faded ground truth). CARLA paints the cars by visibility class; the overlay adds what the paint cannot
+predictions), for the panel model's known targets the top-1 mode (thick, arrowhead at the predicted end; a target whose
+top-1 path is shorter than STILL_M, moving or not, gets a dot on the car instead) and, with --other-modes, for moving
+targets the other 5 modes (thin); every line has a thin white outline for contrast on the road; targets some CAV / the
+RSU sees but the panel's model does not take as input are faded (no prediction, faded ground truth). CARLA paints the
+cars by visibility class; the overlay adds what the paint cannot
 show: two-wheelers get their projected footprint filled in the class colour (hollow grey: seen by nobody), faded targets
 a white veil over their projected box, the other CAVs and the RSU a label.
 
@@ -47,7 +47,7 @@ VEIL_ALPHA = 0.6               # white over a faded car: its paint shows at abou
 LABEL_UP_M = 2.6               # CAV / RSU labels this far above the ground point
 OUTLINE_PT = 1.6               # white outline under the lines: this much wider (points, x K_LW)
 ARROW_L_PT, ARROW_W_PT = 7.0, 6.0   # top-1 arrowhead length / base width (points, x K_LW)
-STILL_M = 1.0                  # stationary target with a top-1 path shorter than this: dot on the car, no arrow
+STILL_M = 1.0                  # top-1 path shorter than this (any target): dot on the car, no arrow
 
 
 class Camera:
@@ -148,7 +148,7 @@ def draw_panel(ax, img, cam, fr, gz, model, k, other_modes):
             for m in range(modes.shape[1]):
                 pts = carla_xyz(np.vstack([xy, modes[j, m]]), z)
                 if m == top1[j]:
-                    if not fr["moving"][j] and np.hypot(*np.diff(pts[:, :2], axis=0).T).sum() < STILL_M:
+                    if np.hypot(*np.diff(pts[:, :2], axis=0).T).sum() < STILL_M:
                         uv, d = cam.project(pts[0])
                         if d >= NEAR_M:
                             ax.plot(*uv, "o", ms=4.0 * k, color=col, mec="white", mew=1.0 * k, zorder=4.6)
@@ -203,10 +203,12 @@ def legend_handles(k, other_modes):
           Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s",
                  path_effects=outline(GT_LW * k)),
           ArrowHandle(label="prediction, top-1 (6 s, arrow = predicted end)"),
+          Line2D([], [], ls="", marker="o", ms=4.0 * k, color="#555555", mec="white", mew=1.0 * k,
+                 label="dot: predicted to stay (< 1 m in 6 s)"),
           Patch(facecolor=EGO_COLOR, label="ego vehicle"),
           Line2D([], [], ls="", marker="^", ms=9 * k, mfc=RSU_COLOR, mec=RSU_COLOR, label="RSU")]
     if other_modes:
-        h.insert(8, Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55, label="other 5 modes (moving)",
+        h.insert(9, Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55, label="other 5 modes (moving)",
                            path_effects=outline(0.9 * k, 0.55)))
     return h
 
