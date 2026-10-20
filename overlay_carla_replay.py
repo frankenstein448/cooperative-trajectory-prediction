@@ -5,7 +5,7 @@ into carla_replay.py's rendered image with its saved camera matrices (camera_fra
 over the same render (e.g. E_V2X | E_EgoOnly), model label on top, caption below. Tuning split, seed 0, epoch 12.
 
 Display rules as render_env_bev.py --print: per target its ground-truth 6 s future (dashed black, above the
-predictions), for the panel model's known targets the top-1 mode (thick, arrowhead at the predicted end; a target whose
+predictions; not drawn when shorter than STILL_M), for the panel model's known targets the top-1 mode (thick, arrowhead at the predicted end; a target whose
 top-1 path is shorter than STILL_M, moving or not, gets a dot on the car instead) and, with --other-modes, for moving
 targets the other 5 modes (thin); every line has a thin white outline for contrast on the road; targets some CAV / the
 RSU sees but the panel's model does not take as input are faded (no prediction, faded ground truth). CARLA paints the
@@ -47,7 +47,7 @@ VEIL_ALPHA = 0.6               # white over a faded car: its paint shows at abou
 LABEL_UP_M = 2.6               # CAV / RSU labels this far above the ground point
 OUTLINE_PT = 1.6               # white outline under the lines: this much wider (points, x K_LW)
 ARROW_L_PT, ARROW_W_PT = 7.0, 6.0   # top-1 arrowhead length / base width (points, x K_LW)
-STILL_M = 1.0                  # top-1 path shorter than this (any target): dot on the car, no arrow
+STILL_M = 1.0                  # top-1 path shorter than this: dot on the car, no arrow; ground truth: not drawn
 
 
 class Camera:
@@ -142,8 +142,10 @@ def draw_panel(ax, img, cam, fr, gz, model, k, other_modes):
         cls, xy, yaw = int(fr["cls"][j]), fr["xy_world"][j], float(fr["yaw_world"][j])
         z, col = gz[int(t)], CLASS_COLORS[int(fr["cls"][j])]
         faded = not known[j] and cls != 3
-        line(ax, cam, carla_xyz(np.vstack([xy, fr["gt_world"][j]]), z), color=GT_COLOR, lw=GT_LW * k,
-             ls=(0, (3, 2)), alpha=FADE if faded else 0.8, zorder=4.8)
+        gt = np.vstack([xy, fr["gt_world"][j]])
+        if np.hypot(*np.diff(gt, axis=0).T).sum() >= STILL_M:     # shorter ground truth: no line, no outline
+            line(ax, cam, carla_xyz(gt, z), color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)),
+                 alpha=FADE if faded else 0.8, zorder=4.8)
         if known[j]:
             for m in range(modes.shape[1]):
                 pts = carla_xyz(np.vstack([xy, modes[j, m]]), z)
