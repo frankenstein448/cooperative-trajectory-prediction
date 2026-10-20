@@ -49,6 +49,24 @@ Built on the [V2X-Sim 2.0](https://ai4ce.github.io/V2X-Sim/) dataset and CARLA-e
 - `pilot_dataset.py` — PyTorch Dataset over Town05 scenes
 - `train.py` — training loop with train/val split
 
+## CARLA replay video (visualisation only)
+
+Recorded V2X-Sim data of one tuning-split scene replayed in CARLA 0.9.15 (`~/carla_sim`), with the cached seed-0
+epoch-12 predictions of E_V2X and E_EgoOnly drawn over the render (no training, no test split). End to end, from the
+data checkout:
+
+```
+~/hd-maps-dev/make_carla_replay.sh [--scene 16] [--agent 4] [--still-frame 35]
+```
+
+- step 0: predictions cache `viz_env/pred/` via `render_env_bev.py` (only if missing), gpu-test-venv
+- step 1: `export_carla_replay.py` -> `viz_env/carla_replay/scene<S>_ego<A>/`, gpu-test-venv
+- step 2: `carla_replay.py render` -> `..._render/`, carla-venv; starts and stops CARLA itself
+- step 3: `overlay_carla_replay.py --all` -> `..._overlay/` (frames, mp4 at 2.5 fps, 300 dpi still), gpu-test-venv
+
+Each step refuses to start while a training / eval run, another CARLA server or a GPU compute process is running,
+prints its exact command and stops the script on error.
+
 ## Dataset
 
 Raw data (`V2X-Sim-2.0/`) and CARLA map assets (`*.xodr`, `carla_sim/`) are not included in this repo — see `.gitignore`. Topology `.pkl` files (small, derived from `.xodr`) are included.
