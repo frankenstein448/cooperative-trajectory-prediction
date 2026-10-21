@@ -62,6 +62,8 @@ defense, from the data checkout (writes `viz_env/`, overwriting earlier outputs)
   E_EgoOnly, and Town04 #30 ego 3 E_V2X+RSU vs E_V2X
 - eight thesis PDFs (`--print`) in `viz_env/thesis_figures/`: #16 frame 35 without predictions (`--no-pred`,
   introduction), #16 frame 35, #30 frame 40 (both pairs) with and without all modes, #22 frame 39 all modes (appendix)
+- `viz_env/thesis_figures/lidar_blindspot.pdf` (`diag_lidar_behind.py --print`): Town04 #30 ego 3 frame 19, the
+  ego's LIDAR_TOP points top-down (+-25 m) with the ego and CAV 2 boxes; the rear shadow of the ego's body
 
 Prediction drawing as in the CARLA video: top-1 ends in an arrowhead (a dot with a white rim when the top-1 path is
 under 1 m), the other 5 modes of moving targets are thin lines, every line has a thin white outline. The script refuses

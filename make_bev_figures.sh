@@ -15,6 +15,8 @@
 #     #16 ego 4 frame 35 --no-pred (introduction); #16 ego 4 frame 35 E_V2X | E_EgoOnly (+ all modes);
 #     #30 ego 3 frame 40 E_V2X | E_EgoOnly (+ all modes); #30 ego 3 frame 40 E_V2X+RSU | E_V2X (+ all modes);
 #     #22 ego 1 frame 39 E_V2X | E_EgoOnly all modes only (appendix)
+#   LiDAR blind spot (diag_lidar_behind.py --print)          viz_env/thesis_figures/lidar_blindspot.pdf
+#     #30 ego 3 frame 19, LIDAR_TOP top-down (+-25 m), ego box, CAV 2 box: the rear shadow of the ego's body
 #
 # Predictions come from viz_env/pred/ (computed on the GPU by render_env_bev.py when missing). Refuses to start while
 # a run / train / eval process or a GPU compute process is up; prints each command before running it; gpu-test-venv;
@@ -27,7 +29,7 @@ GPU_VENV="$HOME/gpu-test-venv"
 V2X_EGO=E_V2X_seed0,E_EgoOnly_seed0
 RSU_V2X=E_V2XRSU_seed0,E_V2X_seed0
 
-usage() { sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 case "${1:-}" in
     "") ;;
     -h|--help) usage 0 ;;
@@ -89,6 +91,12 @@ bev --scene 16 --agent 4 --runs "$V2X_EGO" --print --stills 35 --all-modes-still
 bev --scene 30 --agent 3 --runs "$V2X_EGO" --print --stills 40 --all-modes-stills 40
 bev --scene 30 --agent 3 --runs "$RSU_V2X" --print --stills 40 --all-modes-stills 40
 bev --scene 22 --agent 1 --runs "$V2X_EGO" --print --all-modes-stills 39
+
+echo "=== LiDAR blind spot" | tee -a "$LOG"
+check_idle
+cmd=(nice -n 19 python "$CODE/diag_lidar_behind.py" --print --out viz_env/thesis_figures/lidar_blindspot.pdf)
+echo "+ ${cmd[*]}" | tee -a "$LOG"
+"${cmd[@]}" 2>&1 | tee -a "$LOG"
 
 echo "=== done:" | tee -a "$LOG"
 ls -1 viz_env/scene*_ego*_vs_*/*.mp4 viz_env/scene*_ego*_vs_*/stills/*.png viz_env/thesis_figures/*.pdf | tee -a "$LOG"
