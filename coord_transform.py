@@ -3,7 +3,7 @@ coord_transform.py
 V2X-Sim world coordinates -> CARLA world frame, two versions (map_transform below):
   mirror (default for new runs): CARLA = (x, -y), yaw_carla = -yaw_v2x.
   legacy (Part 1, Appendix G): per-town rotation + translation from the transform search, TOWN_TRANSFORMS
-  (Town04 = coarse-search candidate A of refine_town04_theta.py; Town05 = the "refit" of score_transforms.py):
+  (Town04 = coarse-search candidate A of refine_town04_theta.py; Town05 = refit_transform.py's refit, refit.log):
 
   Town03: theta=194.75, tx=-34.25, ty=6.00
   Town04: theta=260.50, tx=37.75,  ty=-41.25
