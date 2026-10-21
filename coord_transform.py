@@ -1,18 +1,16 @@
 """
 coord_transform.py
-Rigid transform: V2X-Sim world coordinates -> CARLA world frame.
-Per-town constants, each validated via grid-search + KD-tree residual check.
+V2X-Sim world coordinates -> CARLA world frame, two versions (map_transform below):
+  mirror (default for new runs): CARLA = (x, -y), yaw_carla = -yaw_v2x.
+  legacy (Part 1, Appendix G): per-town rotation + translation from the transform search, TOWN_TRANSFORMS
+  (Town04 = coarse-search candidate A of refine_town04_theta.py; Town05 = the "refit" of score_transforms.py):
 
-  Town03: theta=194.75, tx=-34.25, ty=6.00   (median residual 1.023m)
-  Town04: theta=296.50, tx=-43.00, ty=73.00  (median residual 1.029m)
-  Town05: theta=70.5,   tx=-39.00, ty=4.75   (median residual 0.08m)
+  Town03: theta=194.75, tx=-34.25, ty=6.00
+  Town04: theta=260.50, tx=37.75,  ty=-41.25
+  Town05: theta=85.60,  tx=-52.50, ty=-30.71
 
-Town03/04 residuals are ~1m due to genuinely off-lane agents (parked
-vehicles, pedestrians, mid-maneuver) inflating the tail, not alignment
-error -- confirmed via residual distribution checks (tight core cluster,
-long tail). Town05's much tighter fit is likely because its calibration
-scene(s) had cleaner, more on-lane agent behavior, not a fundamentally
-better transform.
+Earlier versions of this docstring listed intermediate candidates (Town04 theta=296.50, Town05 theta=70.5) with
+their residuals; those values are not the legacy transform.
 """
 import numpy as np
 
