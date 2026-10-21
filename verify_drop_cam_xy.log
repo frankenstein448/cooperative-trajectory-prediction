@@ -1,0 +1,2 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=False
+OK: 50/50 samples identical between C and D pipelines in every returned field (agent_id, scene, frame, town, points, images, cpm_objects, coop_points, coop_images, nearby_idx, gt_traj, gt_mask) and cam[2:]; cam[0:2] differs in all 50 and is exactly 0 under D.

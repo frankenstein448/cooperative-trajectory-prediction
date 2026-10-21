@@ -1,0 +1,52 @@
+Writing this output to eval_Dnomap_seed0_tuning_sensors_off.log
+--degrade sensors_off: {'mode': 'sensors_off', 'lidar_range_m': 20.0, 'fog_contrast': 0.4, 'fog_offset': 0.3, 'fog_noise_std': 0.05, 'seed': "zlib.crc32(f'{agent_id}_{scene}_{frame}') of the sensor's agent"}
+--run-dir runs/Dnomap_seed0: use_image_cache=True, require_prev_frame=True, use_speed=True, normalize_cam=True, drop_cam_xy=True, use_map=False (from config.json)
+Trained with degrade=None; evaluating with degrade=sensors_off
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=sensors_off
+Evaluating on the TUNING split (2208 samples)
+ckpt=runs/Dnomap_seed0/checkpoint_epoch12.pt  use_map=False
+Using model output[2] as mode scores (shape (8, 6))
+Empty-LiDAR fallback (sensors_off): 0/8832 sensors (ego + coop)
+Sanity: mean distance of first GT point from origin = 0.40 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+Sanity: mean CV error at step 1 = 0.071 m (should be well below 0.40 m)
+
+town    scene     n  minADE6  minFDE6     ADE1     FDE1  stayADE  stayFDE
+Town03      4   276   5.246m  12.030m   7.748m  16.936m   9.169m  19.055m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  4.600m cvFDE= 11.400m  | model[cv_ok] minADE6=  5.246m ADE1=  7.748m
+    stationary    : n=  109 minADE6=  1.961m ADE1=  2.305m cvADE=  1.533m stayADE=  1.533m
+    moving        : n=  167 minADE6=  7.390m ADE1= 11.301m cvADE=  6.602m stayADE= 14.153m
+Town04     96   276   1.769m   2.664m   3.131m   5.990m   3.088m   6.352m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  2.480m cvFDE=  6.141m  | model[cv_ok] minADE6=  1.769m ADE1=  3.131m
+    stationary    : n=  115 minADE6=  1.280m ADE1=  1.295m cvADE=  0.404m stayADE=  0.404m
+    moving        : n=  161 minADE6=  2.119m ADE1=  4.442m cvADE=  3.962m stayADE=  5.005m
+Town05     16   276   2.044m   3.385m   2.857m   4.796m   2.288m   4.106m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.097m cvFDE=  7.141m  | model[cv_ok] minADE6=  2.044m ADE1=  2.857m
+    stationary    : n=  156 minADE6=  1.588m ADE1=  1.690m cvADE=  0.627m stayADE=  0.627m
+    moving        : n=  120 minADE6=  2.636m ADE1=  4.374m cvADE=  6.308m stayADE=  4.448m
+Town05     41   276   2.819m   5.512m   4.985m  10.040m   5.362m  10.461m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  4.084m cvFDE=  9.815m  | model[cv_ok] minADE6=  2.819m ADE1=  4.985m
+    stationary    : n=  148 minADE6=  1.658m ADE1=  1.945m cvADE=  1.063m stayADE=  1.063m
+    moving        : n=  128 minADE6=  4.161m ADE1=  8.499m cvADE=  7.576m stayADE= 10.333m
+Town05     42   276   1.933m   3.078m   3.170m   5.745m   3.381m   6.155m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.292m cvFDE=  7.749m  | model[cv_ok] minADE6=  1.933m ADE1=  3.170m
+    stationary    : n=  104 minADE6=  1.529m ADE1=  1.737m cvADE=  0.840m stayADE=  0.840m
+    moving        : n=  172 minADE6=  2.178m ADE1=  4.036m cvADE=  4.775m stayADE=  4.918m
+Town05     51   276   4.449m   8.435m   6.404m  11.801m   8.107m  14.373m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  8.427m cvFDE= 18.575m  | model[cv_ok] minADE6=  4.449m ADE1=  6.404m
+    stationary    : n=  131 minADE6=  1.681m ADE1=  2.002m cvADE=  0.775m stayADE=  0.775m
+    moving        : n=  145 minADE6=  6.950m ADE1= 10.380m cvADE= 15.341m stayADE= 14.730m
+Town05     65   276   3.581m   7.572m   4.402m   9.827m   3.712m   8.998m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.832m cvFDE=  9.941m  | model[cv_ok] minADE6=  3.581m ADE1=  4.402m
+    stationary    : n=  240 minADE6=  2.391m ADE1=  2.698m cvADE=  1.735m stayADE=  1.735m
+    moving        : n=   36 minADE6= 11.513m ADE1= 15.761m cvADE= 17.817m stayADE= 16.894m
+Town05     73   276   8.870m  17.268m  12.613m  25.139m  13.228m  25.439m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE= 14.379m cvFDE= 32.686m  | model[cv_ok] minADE6=  8.870m ADE1= 12.613m
+    stationary    : n=  135 minADE6=  3.219m ADE1=  4.583m cvADE=  4.175m stayADE=  4.175m
+    moving        : n=  141 minADE6= 14.280m ADE1= 20.301m cvADE= 24.148m stayADE= 21.895m
+ALL            2208   3.839m   7.493m   5.664m  11.284m   6.042m  11.868m
+CV             2208 cvADE=  5.524m cvFDE= 12.931m  | model[cv_ok] minADE6=  3.839m ADE1=  5.664m  (excluded 0 of 2208 samples, no frame-1)
+    stationary (ALL): n= 1138 minADE6=  1.970m ADE1=  2.338m cvADE=  1.439m stayADE=  1.439m
+    moving (ALL)  : n= 1070 minADE6=  5.827m ADE1=  9.200m cvADE=  9.868m stayADE= 10.937m
+
+Median of per-scene minADE6: 3.200 m   ADE1: 4.693 m
+Scenes where top-1 ADE beats stay-put: 5/8

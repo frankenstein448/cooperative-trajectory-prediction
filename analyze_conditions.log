@@ -1,0 +1,133 @@
+Condition sample counts (identical in all 9 logs):
+  ALL     stationary=1138  moving=1070  turning=279  straight=791  near_junction=1751  not_near_junction=457
+  Town03  stationary=109  moving=167  turning=16  straight=151  near_junction=267  not_near_junction=9
+  Town04  stationary=115  moving=161  turning=29  straight=132  near_junction=84  not_near_junction=192
+  Town05  stationary=914  moving=742  turning=234  straight=508  near_junction=1400  not_near_junction=256
+
+Per run, pooled over the tuning split, minADE6 / ADE1 / minFDE6:
+  stationary (n=1138)
+    D_seed0          0.960    1.859    2.635
+    D_seed1          0.993    2.359    2.398
+    D_seed2          0.930    1.878    2.234
+    Dnomap_seed0     0.916    2.033    2.204
+    Dnomap_seed1     1.066    1.906    2.442
+    Dnomap_seed2     0.981    1.603    2.287
+    EgoOnly_seed0    0.875    2.201    2.142
+    EgoOnly_seed1    1.013    2.079    2.588
+    EgoOnly_seed2    0.890    2.156    2.127
+  moving (n=1070)
+    D_seed0          4.384    8.568    8.600
+    D_seed1          4.049    8.784    7.435
+    D_seed2          4.187    9.465    7.605
+    Dnomap_seed0     3.989    9.079    7.465
+    Dnomap_seed1     4.261    7.980    8.025
+    Dnomap_seed2     4.255    8.337    7.964
+    EgoOnly_seed0    3.813    8.620    6.997
+    EgoOnly_seed1    4.464    8.828    8.339
+    EgoOnly_seed2    3.966    9.777    7.372
+  turning (n=279)
+    D_seed0          8.420   13.338   15.236
+    D_seed1          7.940   13.725   14.501
+    D_seed2          8.170   14.693   14.065
+    Dnomap_seed0     8.386   13.753   15.100
+    Dnomap_seed1     8.867   12.828   16.014
+    Dnomap_seed2     8.543   13.751   15.702
+    EgoOnly_seed0    8.193   13.333   14.929
+    EgoOnly_seed1    8.661   13.977   16.027
+    EgoOnly_seed2    8.063   14.689   14.742
+  straight (n=791)
+    D_seed0          2.960    6.886    6.259
+    D_seed1          2.677    7.041    4.943
+    D_seed2          2.782    7.621    5.326
+    Dnomap_seed0     2.438    7.430    4.773
+    Dnomap_seed1     2.637    6.270    5.207
+    Dnomap_seed2     2.743    6.428    5.235
+    EgoOnly_seed0    2.268    6.958    4.199
+    EgoOnly_seed1    2.984    7.011    5.627
+    EgoOnly_seed2    2.520    8.045    4.773
+  near_junction (n=1751)
+    D_seed0          2.380    4.604    4.975
+    D_seed1          2.213    5.231    4.288
+    D_seed2          2.210    5.053    4.095
+    Dnomap_seed0     2.134    5.177    4.178
+    Dnomap_seed1     2.394    4.527    4.672
+    Dnomap_seed2     2.330    4.472    4.513
+    EgoOnly_seed0    2.080    4.550    3.984
+    EgoOnly_seed1    2.314    4.577    4.574
+    EgoOnly_seed2    2.146    5.188    4.075
+  not_near_junction (n=457)
+    D_seed0          3.534    7.050    7.634
+    D_seed1          3.476    6.397    6.949
+    D_seed2          3.653    7.479    7.677
+    Dnomap_seed0     3.446    6.483    6.957
+    Dnomap_seed1     3.460    6.083    6.967
+    Dnomap_seed2     3.479    6.376    7.049
+    EgoOnly_seed0    3.136    8.232    6.451
+    EgoOnly_seed1    4.107    8.310    8.443
+    EgoOnly_seed2    3.279    8.383    6.944
+
+Seed mean +/- std (pooled tuning split; descriptive except minADE6 of the rule's conditions):
+  condition          group              minADE6              ADE1           minFDE6
+  stationary         D           0.961 +/- 0.032    2.032 +/- 0.283    2.422 +/- 0.202
+  stationary         Dnomap      0.988 +/- 0.075    1.847 +/- 0.221    2.311 +/- 0.121
+  stationary         EgoOnly     0.926 +/- 0.076    2.145 +/- 0.062    2.286 +/- 0.262
+  moving             D           4.207 +/- 0.168    8.939 +/- 0.468    7.880 +/- 0.629
+  moving             Dnomap      4.168 +/- 0.155    8.465 +/- 0.561    7.818 +/- 0.307
+  moving             EgoOnly     4.081 +/- 0.340    9.075 +/- 0.617    7.569 +/- 0.692
+  turning            D           8.177 +/- 0.240   13.919 +/- 0.698   14.601 +/- 0.592
+  turning            Dnomap      8.599 +/- 0.245   13.444 +/- 0.533   15.605 +/- 0.465
+  turning            EgoOnly     8.306 +/- 0.315   14.000 +/- 0.678   15.233 +/- 0.694
+  straight           D           2.806 +/- 0.143    7.183 +/- 0.387    5.509 +/- 0.677
+  straight           Dnomap      2.606 +/- 0.155    6.709 +/- 0.629    5.072 +/- 0.259
+  straight           EgoOnly     2.591 +/- 0.363    7.338 +/- 0.613    4.866 +/- 0.719
+  near_junction      D           2.268 +/- 0.097    4.963 +/- 0.323    4.453 +/- 0.463
+  near_junction      Dnomap      2.286 +/- 0.135    4.725 +/- 0.392    4.454 +/- 0.252
+  near_junction      EgoOnly     2.180 +/- 0.121    4.772 +/- 0.361    4.211 +/- 0.318
+  not_near_junction  D           3.554 +/- 0.090    6.975 +/- 0.545    7.420 +/- 0.408
+  not_near_junction  Dnomap      3.462 +/- 0.017    6.314 +/- 0.207    6.991 +/- 0.050
+  not_near_junction  EgoOnly     3.507 +/- 0.524    8.308 +/- 0.076    7.279 +/- 1.037
+
+Per town, seed-mean minADE6 (descriptive only):
+  town    condition              n        D   Dnomap  EgoOnly
+  Town03  stationary           109    1.062    0.970    0.844
+  Town03  moving               167    5.201    4.827    4.087
+  Town03  turning               16    4.858    7.400    5.191
+  Town03  straight             151    5.238    4.555    3.970
+  Town03  near_junction        267    3.192    3.025    2.538
+  Town03  not_near_junction      9   14.680   11.581   10.756
+  Town04  stationary           115    0.612    0.522    0.584
+  Town04  moving               161    1.867    1.783    2.376
+  Town04  turning               29    4.398    5.484    4.732
+  Town04  straight             132    1.312    0.970    1.860
+  Town04  near_junction         84    2.298    2.695    2.863
+  Town04  not_near_junction    192    0.928    0.629    1.090
+  Town05  stationary           914    0.993    1.049    0.979
+  Town05  moving               742    4.491    4.538    4.449
+  Town05  turning              234    8.872    9.067    8.962
+  Town05  straight             508    2.472    2.452    2.371
+  Town05  near_junction       1400    2.090    2.120    2.071
+  Town05  not_near_junction    256    5.133    5.301    5.065
+
+RULE (runs/DECISION_RULES_CONDITIONS.md): helps on a condition only if seed-mean minADE6 with < without AND (without - with) > 2 x max(seed std with, seed std without); pooled tuning split
+
+map: D (with) vs Dnomap (without)
+  turning        n=  279  D 8.177 +/- 0.240  Dnomap 8.599 +/- 0.245  lower? True  gap +0.422 > 0.491? False  -> no detectable effect
+  straight       n=  791  D 2.806 +/- 0.143  Dnomap 2.606 +/- 0.155  lower? False  gap -0.200 > 0.310? False  -> no detectable effect
+  stationary     n= 1138  D 0.961 +/- 0.032  Dnomap 0.988 +/- 0.075  lower? True  gap +0.027 > 0.150? False  -> no detectable effect
+  near_junction  n= 1751  D 2.268 +/- 0.097  Dnomap 2.286 +/- 0.135  lower? True  gap +0.018 > 0.271? False  -> no detectable effect
+
+V2X: D (with) vs EgoOnly (without)
+  turning        n=  279  D 8.177 +/- 0.240  EgoOnly 8.306 +/- 0.315  lower? True  gap +0.129 > 0.629? False  -> no detectable effect
+  straight       n=  791  D 2.806 +/- 0.143  EgoOnly 2.591 +/- 0.363  lower? False  gap -0.216 > 0.726? False  -> no detectable effect
+  stationary     n= 1138  D 0.961 +/- 0.032  EgoOnly 0.926 +/- 0.076  lower? False  gap -0.035 > 0.151? False  -> no detectable effect
+  near_junction  n= 1751  D 2.268 +/- 0.097  EgoOnly 2.180 +/- 0.121  lower? False  gap -0.088 > 0.241? False  -> no detectable effect
+
+VERDICTS (4 conditions x 2 comparisons, no multiple-comparison correction):
+  map  turning        no detectable effect
+  map  straight       no detectable effect
+  map  stationary     no detectable effect
+  map  near_junction  no detectable effect
+  V2X  turning        no detectable effect
+  V2X  straight       no detectable effect
+  V2X  stationary     no detectable effect
+  V2X  near_junction  no detectable effect

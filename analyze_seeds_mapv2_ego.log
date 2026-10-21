@@ -1,0 +1,36 @@
+Split: TUNING (logs eval_<run>_e12.log)
+Per run, ALL (minADE6, ADE1):
+  C_Dmapv2_seed0 2.506  5.971
+  C_Dmapv2_seed1 2.136  5.012
+  C_Dmapv2_seed2 2.232  5.609
+  C_Dnomap_seed0 2.432  4.703
+  C_Dnomap_seed1 2.026  5.677
+  C_Dnomap_seed2 2.374  5.274
+
+ALL minADE6: full 2.291 +/- 0.192   no-map 2.277 +/- 0.220   gap (no-map - full) -0.014
+
+ALL ADE1: full 5.531 +/- 0.484   no-map 5.218 +/- 0.489   gap (no-map - full) -0.313
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #85      5.875     5.493  -0.382 |   11.298    10.165  -1.133
+Town04 #30      2.132     2.287  +0.155 |    5.784     6.243  +0.459
+Town05 #3       1.733     1.560  -0.172 |    3.356     3.485  +0.129
+Town05 #14      1.648     1.700  +0.052 |    4.818     5.337  +0.519
+Town05 #15      1.931     2.050  +0.119 |    4.826     4.646  -0.180
+Town05 #16      1.251     1.296  +0.045 |    4.507     3.559  -0.948
+Town05 #21      1.022     0.946  -0.075 |    4.772     2.911  -1.862
+Town05 #22      2.742     2.888  +0.146 |    4.883     5.397  +0.514
+Full better in 5/8 scenes (minADE6), 4/8 scenes (ADE1)
+
+RULE (minADE6): scenes 5/8 >= 7? False   gap -0.014 > 2 x max std 0.439? False
+VERDICT: no detectable map effect under the scene-held-out protocol
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.5876  0.4298  0.0245  0.0845  0.0263
+  full      stationary   0.4053  0.2574  0.0027  0.0583  0.0022
+  full      moving       0.8258  0.6552  0.0531  0.1188  0.0580
+  no-map    ALL          0.5605  0.4082  0.0238  0.0933  0.0263
+  no-map    stationary   0.3744  0.2372  0.0018  0.0651  0.0022
+  no-map    moving       0.8039  0.6319  0.0525  0.1302  0.0580

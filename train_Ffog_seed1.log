@@ -1,0 +1,24 @@
+Using device: cuda
+Wrote config: {'seed': 1, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'no_map': False, 'degrade': {'mode': 'fog', 'lidar_range_m': 20.0, 'fog_contrast': 0.4, 'fog_offset': 0.3, 'fog_noise_std': 0.05, 'seed': "zlib.crc32(f'{agent_id}_{scene}_{frame}') of the sensor's agent"}, 'epochs': 12, 'out_dir': 'runs/Ffog_seed1', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': '1fcf6461f0a058382a67516748c77901b2ff81fa'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=fog
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Model use_map=True, loss=WinnerTakesAllLoss
+Trainable parameters: 740,942
+Epoch 1/12 (251.0s) | train_loss=2.7703 (reg=2.0959, cls=0.6744) | val_loss=2.2918 (reg=1.4465, cls=0.8452)
+  -> New best val_loss (2.2918), saved best_model.pt
+Epoch 2/12 (249.2s) | train_loss=2.1199 (reg=1.3700, cls=0.7499) | val_loss=2.5988 (reg=1.2740, cls=1.3248)
+Epoch 3/12 (249.3s) | train_loss=1.9497 (reg=1.2309, cls=0.7188) | val_loss=2.5592 (reg=1.2246, cls=1.3347)
+Epoch 4/12 (249.7s) | train_loss=1.8757 (reg=1.1770, cls=0.6987) | val_loss=2.8561 (reg=1.3570, cls=1.4991)
+Epoch 5/12 (249.6s) | train_loss=1.8060 (reg=1.1328, cls=0.6732) | val_loss=2.8222 (reg=1.2735, cls=1.5487)
+Epoch 6/12 (249.4s) | train_loss=1.6957 (reg=1.0838, cls=0.6119) | val_loss=2.8721 (reg=1.2564, cls=1.6157)
+Epoch 7/12 (249.7s) | train_loss=1.6120 (reg=0.9931, cls=0.6189) | val_loss=2.8895 (reg=1.2456, cls=1.6439)
+Epoch 8/12 (250.8s) | train_loss=1.6109 (reg=0.8991, cls=0.7118) | val_loss=2.8840 (reg=1.1923, cls=1.6917)
+Epoch 9/12 (248.4s) | train_loss=1.3917 (reg=0.8215, cls=0.5701) | val_loss=2.8694 (reg=1.1804, cls=1.6890)
+Epoch 10/12 (249.8s) | train_loss=1.2921 (reg=0.7708, cls=0.5213) | val_loss=2.9235 (reg=1.1816, cls=1.7419)
+Epoch 11/12 (250.3s) | train_loss=1.2250 (reg=0.7321, cls=0.4929) | val_loss=3.0810 (reg=1.1776, cls=1.9034)
+Epoch 12/12 (248.9s) | train_loss=1.1666 (reg=0.7016, cls=0.4650) | val_loss=3.0104 (reg=1.1543, cls=1.8561)
+
+Training complete.
+Saved final model to runs/Ffog_seed1/final_model.pt

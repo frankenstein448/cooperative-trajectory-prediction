@@ -1,0 +1,89 @@
+runs: E_EgoOnly_seed0, E_EgoOnly_seed1, E_EgoOnly_seed2, E_V2X_seed0, E_V2X_seed1, E_V2X_seed2, E_V2Xnomap_seed0, E_V2Xnomap_seed1, E_V2Xnomap_seed2; tuning scenes [85, 30, 3, 14, 15, 16, 21, 22]
+
+Target counts (V2X-env's known targets = (a) + (b); EgoOnly-env predicts (a) only):
+  all                 ALL  56825  per scene [4927, 5038, 5123, 8100, 8989, 8954, 9911, 5783]
+  moving              ALL  19879  per scene [3247, 1737, 1415, 4261, 3121, 2248, 1741, 2109]
+  stationary          ALL  36946  per scene [1680, 3301, 3708, 3839, 5868, 6706, 8170, 3674]
+  turning             ALL   4464  per scene [926, 403, 254, 1444, 295, 396, 325, 421]
+  straight            ALL  15415  per scene [2321, 1334, 1161, 2817, 2826, 1852, 1416, 1688]
+  a                   ALL  40055  per scene [2786, 3665, 3993, 5703, 6461, 5939, 7439, 4069]
+  b                   ALL  16770  per scene [2141, 1373, 1130, 2397, 2528, 3015, 2472, 1714]
+  a_moving            ALL  13261  per scene [1763, 1159, 1053, 2915, 2217, 1512, 1349, 1293]
+  b_moving            ALL   6618  per scene [1484, 578, 362, 1346, 904, 736, 392, 816]
+  car                 ALL  47350  per scene [3851, 3835, 4319, 6799, 8268, 8031, 7346, 4901]
+  two_wheeler         ALL   9475  per scene [1076, 1203, 804, 1301, 721, 923, 2565, 882]
+  car_moving          ALL  17112  per scene [2717, 1346, 1218, 3655, 2835, 1916, 1518, 1907]
+  two_wheeler_moving  ALL   2767  per scene [530, 391, 197, 606, 286, 332, 223, 202]
+
+Seed mean +/- std, ALL, per subset (descriptive):
+  EgoOnly   all                 minade6=  1.542+/-0.010 ade1=  3.784+/-0.217 minfde6=  2.971+/-0.053 fde1=  8.641+/-0.579 miss1=  0.370+/-0.016 miss6=  0.296+/-0.019
+  EgoOnly   moving              minade6=  3.106+/-0.006 ade1=  7.016+/-0.237 minfde6=  5.423+/-0.066 fde1= 13.984+/-0.444 miss1=  0.632+/-0.010 miss6=  0.530+/-0.015
+  EgoOnly   stationary          minade6=  0.768+/-0.013 ade1=  2.185+/-0.236 minfde6=  1.758+/-0.050 fde1=  5.996+/-0.656 miss1=  0.240+/-0.021 miss6=  0.180+/-0.021
+  EgoOnly   turning             minade6=  7.349+/-0.075 ade1= 13.988+/-0.606 minfde6= 13.403+/-0.064 fde1= 28.387+/-1.105 miss1=  0.967+/-0.005 miss6=  0.930+/-0.000
+  EgoOnly   straight            minade6=  1.820+/-0.030 ade1=  4.903+/-0.127 minfde6=  3.005+/-0.084 fde1=  9.619+/-0.249 miss1=  0.531+/-0.012 miss6=  0.408+/-0.020
+  EgoOnly   a_moving            minade6=  3.106+/-0.006 ade1=  7.016+/-0.237 minfde6=  5.423+/-0.066 fde1= 13.984+/-0.444 miss1=  0.632+/-0.010 miss6=  0.530+/-0.015
+  EgoOnly   b_moving            minade6=            n/a ade1=            n/a minfde6=            n/a fde1=            n/a miss1=            n/a miss6=            n/a
+  EgoOnly   car_moving          minade6=  3.029+/-0.011 ade1=  6.934+/-0.203 minfde6=  5.303+/-0.053 fde1= 13.829+/-0.421 miss1=  0.611+/-0.007 miss6=  0.507+/-0.014
+  EgoOnly   two_wheeler_moving  minade6=  3.641+/-0.094 ade1=  7.585+/-0.515 minfde6=  6.260+/-0.168 fde1= 15.059+/-0.916 miss1=  0.779+/-0.028 miss6=  0.684+/-0.028
+  V2X       all                 minade6=  1.544+/-0.038 ade1=  3.801+/-0.102 minfde6=  2.978+/-0.042 fde1=  8.884+/-0.251 miss1=  0.405+/-0.011 miss6=  0.315+/-0.012
+  V2X       moving              minade6=  2.928+/-0.062 ade1=  6.411+/-0.120 minfde6=  5.074+/-0.053 fde1= 13.090+/-0.317 miss1=  0.645+/-0.004 miss6=  0.518+/-0.014
+  V2X       stationary          minade6=  0.800+/-0.028 ade1=  2.397+/-0.116 minfde6=  1.851+/-0.047 fde1=  6.621+/-0.315 miss1=  0.276+/-0.018 miss6=  0.206+/-0.012
+  V2X       turning             minade6=  7.068+/-0.190 ade1= 13.091+/-0.165 minfde6= 13.031+/-0.317 fde1= 27.482+/-0.389 miss1=  0.969+/-0.002 miss6=  0.927+/-0.010
+  V2X       straight            minade6=  1.729+/-0.026 ade1=  4.477+/-0.147 minfde6=  2.770+/-0.027 fde1=  8.922+/-0.341 miss1=  0.551+/-0.005 miss6=  0.400+/-0.015
+  V2X       a_moving            minade6=  3.117+/-0.083 ade1=  6.677+/-0.194 minfde6=  5.407+/-0.080 fde1= 13.532+/-0.470 miss1=  0.645+/-0.011 miss6=  0.532+/-0.018
+  V2X       b_moving            minade6=  2.548+/-0.023 ade1=  5.878+/-0.104 minfde6=  4.408+/-0.023 fde1= 12.204+/-0.208 miss1=  0.645+/-0.010 miss6=  0.492+/-0.007
+  V2X       car_moving          minade6=  2.834+/-0.066 ade1=  6.228+/-0.104 minfde6=  4.962+/-0.071 fde1= 12.713+/-0.246 miss1=  0.625+/-0.004 miss6=  0.495+/-0.015
+  V2X       two_wheeler_moving  minade6=  3.509+/-0.095 ade1=  7.544+/-0.350 minfde6=  5.769+/-0.118 fde1= 15.418+/-0.899 miss1=  0.768+/-0.011 miss6=  0.662+/-0.005
+  V2Xnomap  all                 minade6=  1.631+/-0.030 ade1=  4.188+/-0.062 minfde6=  3.145+/-0.049 fde1=  9.511+/-0.144 miss1=  0.383+/-0.009 miss6=  0.304+/-0.006
+  V2Xnomap  moving              minade6=  3.177+/-0.070 ade1=  7.804+/-0.185 minfde6=  5.550+/-0.079 fde1= 15.638+/-0.401 miss1=  0.642+/-0.016 miss6=  0.525+/-0.010
+  V2Xnomap  stationary          minade6=  0.799+/-0.020 ade1=  2.243+/-0.033 minfde6=  1.851+/-0.038 fde1=  6.214+/-0.146 miss1=  0.244+/-0.008 miss6=  0.185+/-0.007
+  V2Xnomap  turning             minade6=  7.893+/-0.212 ade1= 16.958+/-0.265 minfde6= 14.380+/-0.292 fde1= 34.674+/-0.838 miss1=  0.979+/-0.003 miss6=  0.941+/-0.008
+  V2Xnomap  straight            minade6=  1.811+/-0.029 ade1=  5.154+/-0.166 minfde6=  2.993+/-0.028 fde1= 10.126+/-0.325 miss1=  0.545+/-0.020 miss6=  0.405+/-0.010
+  V2Xnomap  a_moving            minade6=  3.391+/-0.086 ade1=  8.246+/-0.234 minfde6=  5.943+/-0.090 fde1= 16.394+/-0.518 miss1=  0.638+/-0.015 miss6=  0.534+/-0.010
+  V2Xnomap  b_moving            minade6=  2.746+/-0.037 ade1=  6.919+/-0.105 minfde6=  4.765+/-0.072 fde1= 14.124+/-0.265 miss1=  0.652+/-0.018 miss6=  0.508+/-0.013
+  V2Xnomap  car_moving          minade6=  3.041+/-0.071 ade1=  7.582+/-0.182 minfde6=  5.367+/-0.066 fde1= 15.166+/-0.370 miss1=  0.617+/-0.019 miss6=  0.496+/-0.013
+  V2Xnomap  two_wheeler_moving  minade6=  4.014+/-0.091 ade1=  9.178+/-0.220 minfde6=  6.684+/-0.281 fde1= 18.558+/-0.594 miss1=  0.799+/-0.006 miss6=  0.705+/-0.013
+  baselines moving              cv ade=10.639 fde=22.860 miss=0.728 | stay ade=11.189
+  baselines a_moving            cv ade=11.182 fde=23.913 miss=0.732 | stay ade=12.044
+  baselines b_moving            cv ade=9.553 fde=20.752 miss=0.718 | stay ade=9.476
+  baselines turning             cv ade=20.746 fde=43.933 miss=0.993 | stay ade=23.299
+
+RULES (runs/DECISION_RULES_ENV.md; moving targets; lower is better)
+
+(1) V2X on (a): V2X minADE6 vs EgoOnly minADE6, subset a_moving
+  per scene seed means (V2X minADE6 / EgoOnly minADE6): #85: 5.381/5.271  #30: 1.575/1.693  #3: 1.804/1.794  #14: 4.653/4.589  #15: 2.070/2.061  #16: 2.085/2.240  #21: 2.318/2.248  #22: 2.852/2.847
+  form=full (scenes with samples 8/8)  wins=2  ALL 3.117 (sd 0.083) vs 3.106 (sd 0.006)  gap -0.010 > 0.165?
+  -> no detectable effect
+
+(2) V2X on (b) vs constant velocity: V2X ADE1 vs V2X constant velocity ADE, subset b_moving
+  per scene seed means (V2X ADE1 / V2X constant velocity ADE): #85: 8.467/12.633  #30: 5.614/4.545  #3: 3.752/4.779  #14: 6.496/10.928  #15: 3.228/6.580  #16: 5.315/8.378  #21: 5.793/8.622  #22: 4.761/12.148
+  form=full (scenes with samples 8/8)  wins=7  ALL 5.878 (sd 0.104) vs 9.553 (sd 0.000)  gap +3.675 > 0.208?
+  -> HELPS / better
+
+(3) map, moving targets: V2X minADE6 vs V2Xnomap minADE6, subset moving
+  per scene seed means (V2X minADE6 / V2Xnomap minADE6): #85: 4.730/5.011  #30: 1.681/1.770  #3: 1.742/2.016  #14: 4.085/4.575  #15: 1.874/1.961  #16: 2.144/2.400  #21: 2.326/2.711  #22: 2.528/2.474
+  form=full (scenes with samples 8/8)  wins=7  ALL 2.928 (sd 0.062) vs 3.177 (sd 0.070)  gap +0.249 > 0.140?
+  -> HELPS / better
+
+(3b) map, turning targets (secondary): V2X minADE6 vs V2Xnomap minADE6, subset turning
+  per scene seed means (V2X minADE6 / V2Xnomap minADE6): #85: 9.672/10.131  #30: 3.227/3.603  #3: 3.093/4.332  #14: 7.860/8.956  #15: 6.547/7.105  #16: 6.943/8.369  #21: 5.206/7.008  #22: 6.617/6.366
+  form=full (scenes with samples 8/8)  wins=7  ALL 7.068 (sd 0.190) vs 7.893 (sd 0.212)  gap +0.825 > 0.425?
+  -> HELPS / better
+
+DESCRIPTIVE comparisons (same computation, NO verdict):
+
+(2-desc) V2X minADE6 on (b) vs constant velocity: V2X minADE6 vs V2X constant velocity ADE, subset b_moving
+  per scene seed means (V2X minADE6 / V2X constant velocity ADE): #85: 3.956/12.633  #30: 1.892/4.545  #3: 1.561/4.779  #14: 2.855/10.928  #15: 1.393/6.580  #16: 2.264/8.378  #21: 2.354/8.622  #22: 2.016/12.148
+  form=full (scenes with samples 8/8)  wins=8  ALL 2.548 (sd 0.023) vs 9.553 (sd 0.000)  gap +7.004 > 0.047?
+  -> descriptive only (the rule form would say: lower)
+
+VERDICTS:
+  (1) V2X on (a)                             no detectable effect
+  (2) V2X on (b) vs constant velocity        HELPS / better
+  (3) map, moving targets                    HELPS / better
+  (3b) map, turning targets (secondary)      HELPS / better
+
+Coverage per model (all D samples of the tuning scenes; predicted / kept a+b+c; incl. removed):
+  EgoOnly   predicted  40055 of  67387 (a 40055, b 16770, c 10562): coverage 0.5944; with the 7476 window-filtered vehicles in the denominator 0.5350
+  V2X       predicted  56825 of  67387 (a 40055, b 16770, c 10562): coverage 0.8433; with the 7476 window-filtered vehicles in the denominator 0.7591
+  V2Xnomap  predicted  56825 of  67387 (a 40055, b 16770, c 10562): coverage 0.8433; with the 7476 window-filtered vehicles in the denominator 0.7591

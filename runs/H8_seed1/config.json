@@ -1,0 +1,22 @@
+{
+  "seed": 1,
+  "use_speed": true,
+  "use_image_cache": true,
+  "normalize_cam": true,
+  "drop_cam_xy": true,
+  "loss": "wta",
+  "relaxed_wta_eps": null,
+  "no_map": false,
+  "degrade": null,
+  "history_frames": 8,
+  "history_encoder": "gru",
+  "require_history_frames": 0,
+  "epochs": 12,
+  "out_dir": "runs/H8_seed1",
+  "require_prev_frame": true,
+  "batch_size": 8,
+  "lr": 0.0001,
+  "num_workers": 2,
+  "scene_split_seed": 42,
+  "git_commit": "fd4fb153c59c7e2256a9852683ea29ee65c45845"
+}

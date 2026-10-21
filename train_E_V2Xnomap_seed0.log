@@ -1,0 +1,27 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'laplace_scale_floor': None, 'wta_soft_tau': None, 'no_map': True, 'map_transform': 'mirror', 'split_version': 'v2', 'degrade': None, 'history_frames': 0, 'history_encoder': None, 'require_history_frames': 0, 'no_cpm': True, 'no_coop': False, 'epochs': 12, 'out_dir': 'runs/E_V2Xnomap_seed0', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': '0602fccaf9781487d222561a8c87ae05854ec151', 'task': 'env', 'v2x': 'on', 'env_cam': 'speed only (x, y and world heading zeroed after normalization; env_dataset.env_cam)'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror
+EnvDataset: v2x=on, use_map=False, map_transform=mirror, 13384 samples, cache commit af265e9
+split_version=v2; Train: 9424 | Tuning: 1984 | Test: 1976 samples (never used here)
+Computed cam_norm from 9424 train samples: {'mean': [25.44208526611328, 38.18598937988281, 0.6245869994163513, 0.4126203656196594], 'std': [129.53204345703125, 129.03956604003906, 1.7902787923812866, 0.865959644317627]}
+Computed env_norm (target history, own frame) over the train split's known targets: {'mean': [-1.6951412893590927, 0.006483136738531785], 'std': [4.096287039601404, 1.2286229897986318]}
+EnvFusion v2x=on, use_map=False; trainable parameters: 903,246
+Epoch 1/12 (228.5s) | train_loss=3.3618 (reg=2.5870, cls=0.7747) | val_loss=2.3247 (reg=1.5592, cls=0.7656)
+  -> New best val_loss (2.3247), saved best_model.pt
+Epoch 2/12 (227.6s) | train_loss=2.5195 (reg=1.7303, cls=0.7892) | val_loss=2.0380 (reg=1.1847, cls=0.8533)
+  -> New best val_loss (2.0380), saved best_model.pt
+Epoch 3/12 (226.7s) | train_loss=2.1117 (reg=1.3580, cls=0.7537) | val_loss=1.7684 (reg=0.9782, cls=0.7902)
+  -> New best val_loss (1.7684), saved best_model.pt
+Epoch 4/12 (226.7s) | train_loss=1.8446 (reg=1.1289, cls=0.7157) | val_loss=1.8150 (reg=0.9182, cls=0.8968)
+Epoch 5/12 (227.7s) | train_loss=1.7386 (reg=1.0308, cls=0.7078) | val_loss=1.7283 (reg=0.8785, cls=0.8497)
+  -> New best val_loss (1.7283), saved best_model.pt
+Epoch 6/12 (227.3s) | train_loss=1.6722 (reg=0.9734, cls=0.6988) | val_loss=1.7762 (reg=0.8652, cls=0.9110)
+Epoch 7/12 (228.8s) | train_loss=1.6153 (reg=0.9285, cls=0.6868) | val_loss=1.8078 (reg=0.8803, cls=0.9276)
+Epoch 8/12 (227.0s) | train_loss=1.5669 (reg=0.8900, cls=0.6770) | val_loss=1.8046 (reg=0.8717, cls=0.9329)
+Epoch 9/12 (227.8s) | train_loss=1.5193 (reg=0.8539, cls=0.6654) | val_loss=1.8848 (reg=0.8709, cls=1.0139)
+Epoch 10/12 (228.0s) | train_loss=1.4780 (reg=0.8205, cls=0.6575) | val_loss=1.8547 (reg=0.8467, cls=1.0080)
+Epoch 11/12 (229.2s) | train_loss=1.4365 (reg=0.7931, cls=0.6434) | val_loss=1.9039 (reg=0.8498, cls=1.0541)
+Epoch 12/12 (229.1s) | train_loss=1.4037 (reg=0.7714, cls=0.6323) | val_loss=1.9455 (reg=0.8587, cls=1.0869)
+
+Training complete.
+Saved final model to runs/E_V2Xnomap_seed0/final_model.pt

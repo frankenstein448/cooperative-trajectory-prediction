@@ -1,0 +1,28 @@
+Per run, ALL (minADE6, ADE1):
+  Ffog_seed0     2.537  5.183
+  Ffog_seed1     2.337  5.085
+  Ffog_seed2     2.621  4.937
+  Ffog_nomap_seed0 2.344  5.115
+  Ffog_nomap_seed1 2.290  4.886
+  Ffog_nomap_seed2 2.327  4.731
+
+ALL minADE6: full 2.498 +/- 0.146   no-map 2.320 +/- 0.028   gap (no-map - full) -0.178
+
+ALL ADE1: full 5.068 +/- 0.124   no-map 4.911 +/- 0.193   gap (no-map - full) -0.158
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.076     2.486  -0.590 |    5.738     5.875  +0.137
+Town04 #96      1.105     1.012  -0.093 |    3.650     3.270  -0.380
+Town05 #16      1.221     1.199  -0.022 |    2.442     2.603  +0.161
+Town05 #41      1.639     1.562  -0.077 |    4.301     3.935  -0.366
+Town05 #42      1.687     1.650  -0.037 |    4.973     4.175  -0.798
+Town05 #51      2.112     2.183  +0.071 |    4.151     3.776  -0.375
+Town05 #65      2.100     1.883  -0.217 |    3.396     3.188  -0.209
+Town05 #73      7.048     6.588  -0.460 |   11.895    12.463  +0.568
+Full better in 1/8 scenes (minADE6), 3/8 scenes (ADE1)
+
+RULE (minADE6): scenes 1/8 >= 7? False   gap -0.178 > 2 x max std 0.292? False
+VERDICT: no detectable map effect under the scene-held-out protocol
+
+Increase vs clean (e12) skipped: no clean log for Ffog_seed0, Ffog_seed1, Ffog_seed2, Ffog_nomap_seed0, Ffog_nomap_seed1, Ffog_nomap_seed2

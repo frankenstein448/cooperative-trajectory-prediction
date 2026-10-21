@@ -1,0 +1,5 @@
+PilotDataset: use_image_cache=False
+15120 unique (agent, scene, frame) keys referenced as ego or coop across all 54 scenes
+expected cache size: 6.36 GiB  (441.0 KiB/key)
+Done: built 0, skipped 15120 (already present), total 15120
+Wrote manifest to /home/karra/hd_cache/images/manifest.json: {'img_size': 224, 'num_views': 3, 'channels': 3, 'file_count': 15120, 'git_commit': 'ea0546b6a26e17383750e9a688f7b8935ac43a5d'}

@@ -1,0 +1,51 @@
+runs: E_V2XRSU / E_V2X seeds [0, 1, 2]; TEST split v2, scenes [5, 6, 76, 78, 89, 91, 95, 100]
+
+Target counts (E_V2XRSU): V 38149, R 2000; moving V 19601, moving R 951; zero-width: V 4743, R 109
+  moving R per scene: #5: 45  #6: 128  #76: 151  #78: 115  #89: 260  #91: 57  #95: 98  #100: 97
+  moving V per scene: #5: 2360  #6: 591  #76: 3057  #78: 3106  #89: 3294  #91: 2981  #95: 2344  #100: 1868
+
+H1 coverage (eval meta; all D samples of the split's scenes):
+  kept 47663: V 38149 (80.04%), V+R 40149 (84.24%), gain +4.20 pp (bar 2.0 pp) -> the RSU adds coverage
+
+H2: E_V2XRSU ADE1 vs constant velocity ADE, moving R targets
+  eligible scenes (>= 20 moving R targets): [5, 6, 76, 78, 89, 91, 95, 100] (8; need >= 6)
+
+  H2 rule over the 8 eligible scenes (wins needed ceil(7/8 x 8) = 7)
+  per scene seed means (with / without): #5: 6.886/9.809  #6: 4.632/6.854  #76: 3.667/5.768  #78: 17.740/27.010  #89: 2.607/3.075  #91: 3.768/4.497  #95: 3.560/3.983  #100: 5.305/7.928
+  form=full (scenes with targets 8/8)  wins=8 (need 7)  pooled 5.523 (sd 0.342) vs 7.898 (sd 0.000)  gap +2.375 > 0.684?
+  -> H2: HELPS (better than constant velocity)
+
+H3: E_V2XRSU vs E_V2X minADE6, moving V targets
+
+  H3 rule over the 8 scenes
+  per scene seed means (with / without): #5: 1.960/2.163  #6: 1.874/1.857  #76: 2.289/1.982  #78: 7.524/7.599  #89: 1.530/1.325  #91: 2.697/2.279  #95: 2.254/1.993  #100: 2.555/2.642
+  form=full (scenes with targets 8/8)  wins=3 (need 7)  pooled 3.022 (sd 0.079) vs 2.889 (sd 0.033)  gap -0.133 > 0.157?
+  -> H3: no detectable effect
+
+DESCRIPTIVE (no verdicts). Seed mean +/- std, pooled over the split:
+  E_V2XRSU  all                 n= 40149 minade6=  1.967+/-0.047 ade1=  4.325+/-0.182 minfde6=  3.869+/-0.041 fde1=  9.671+/-0.296 miss1=  0.452+/-0.018 miss6=  0.364+/-0.005
+  E_V2XRSU  moving              n= 20552 minade6=  2.995+/-0.075 ade1=  6.532+/-0.235 minfde6=  5.535+/-0.109 fde1= 13.225+/-0.265 miss1=  0.661+/-0.008 miss6=  0.545+/-0.008
+  E_V2XRSU  stationary          n= 19597 minade6=  0.890+/-0.053 ade1=  2.011+/-0.129 minfde6=  2.122+/-0.112 fde1=  5.944+/-0.366 miss1=  0.234+/-0.032 miss6=  0.174+/-0.009
+  E_V2XRSU  v                   n= 38149 minade6=  1.984+/-0.050 ade1=  4.361+/-0.181 minfde6=  3.903+/-0.050 fde1=  9.736+/-0.283 miss1=  0.454+/-0.018 miss6=  0.367+/-0.005
+  E_V2XRSU  v_moving            n= 19601 minade6=  3.022+/-0.079 ade1=  6.581+/-0.230 minfde6=  5.578+/-0.113 fde1= 13.314+/-0.242 miss1=  0.662+/-0.007 miss6=  0.550+/-0.008
+  E_V2XRSU  r                   n=  2000 minade6=  1.650+/-0.028 ade1=  3.651+/-0.211 minfde6=  3.219+/-0.142 fde1=  8.435+/-0.555 miss1=  0.425+/-0.033 miss6=  0.312+/-0.005
+  E_V2XRSU  r_moving            n=   951 minade6=  2.443+/-0.091 ade1=  5.523+/-0.342 minfde6=  4.637+/-0.221 fde1= 11.394+/-0.752 miss1=  0.628+/-0.029 miss6=  0.453+/-0.006
+  E_V2X     all                 n= 38149 minade6=  1.892+/-0.013 ade1=  3.768+/-0.155 minfde6=  3.697+/-0.093 fde1=  8.551+/-0.252 miss1=  0.432+/-0.015 miss6=  0.347+/-0.011
+  E_V2X     moving              n= 19601 minade6=  2.889+/-0.033 ade1=  5.730+/-0.177 minfde6=  5.349+/-0.099 fde1= 11.933+/-0.208 miss1=  0.649+/-0.010 miss6=  0.529+/-0.009
+  E_V2X     stationary          n= 18548 minade6=  0.838+/-0.024 ade1=  1.695+/-0.139 minfde6=  1.952+/-0.091 fde1=  4.978+/-0.414 miss1=  0.202+/-0.021 miss6=  0.153+/-0.014
+  baseline  r_moving            cv ade=7.898 fde=17.826 miss=0.774 | stay ade=10.918
+  baseline  v_moving            cv ade=9.324 fde=21.293 miss=0.742 | stay ade=13.291
+
+DESCRIPTIVE: H2 / H3 sets split by zero-width (pooled seed mean +/- std; no verdict):
+  width > 0  H2 set (moving R, n=876): ADE1 5.471+/-0.314 vs CV 7.804 | H3 set (moving V, n=16903): minADE6 3.064+/-0.085 vs E_V2X 2.928+/-0.045
+  zero-width H2 set (moving R, n=75): ADE1 6.126+/-0.724 vs CV 8.995 | H3 set (moving V, n=2698): minADE6 2.760+/-0.199 vs E_V2X 2.645+/-0.044
+
+DESCRIPTIVE: minADE6 on moving R, ADE1 on moving V, per scene (seed means):
+  E_V2XRSU  minade6 r_moving  ALL 2.443  #5: 4.470  #6: 1.727  #76: 1.370  #78: 8.900  #89: 0.878  #91: 1.725  #95: 1.474  #100: 2.055
+  E_V2XRSU  ade1    v_moving  ALL 6.581  #5: 4.620  #6: 3.474  #76: 5.283  #78: 12.977  #89: 4.280  #91: 7.411  #95: 6.192  #100: 4.754
+  E_V2X     ade1    moving    ALL 5.730  #5: 5.036  #6: 3.518  #76: 4.272  #78: 12.588  #89: 2.926  #91: 5.505  #95: 4.514  #100: 5.125
+
+VERDICTS:
+  H1 coverage                         the RSU adds coverage (+4.20 pp)
+  H2 RSU-only vs constant velocity    HELPS (better than constant velocity)
+  H3 E_V2X+RSU vs E_V2X (moving V)    no detectable effect

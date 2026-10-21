@@ -1,0 +1,94 @@
+--run-dir runs/NoCPM_seed1: use_image_cache=True, require_prev_frame=True, use_speed=True, normalize_cam=True, drop_cam_xy=True, use_map=True (from config.json)
+use_cpm=False, use_coop=True (from config.json)
+history_frames=0 (encoder=None), require_history_frames=0 (from config.json)
+Trained with degrade=None; evaluating with degrade=None
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=on, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True
+Evaluating on the TUNING split (2208 samples)
+ckpt=runs/NoCPM_seed1/checkpoint_epoch12.pt  use_map=True
+Using model output[2] as mode scores (shape (8, 6))
+Sanity: mean distance of first GT point from origin = 0.40 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+Sanity: mean CV error at step 1 = 0.071 m (should be well below 0.40 m)
+
+town    scene     n  minADE6  minFDE6     ADE1     FDE1  stayADE  stayFDE
+Town03      4   276   3.347m   8.288m   6.657m  15.501m   9.169m  19.055m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  4.600m cvFDE= 11.400m  | model[cv_ok] minADE6=  3.347m ADE1=  6.657m
+    stationary    : n=  109 minADE6=  1.297m ADE1=  1.594m cvADE=  1.533m stayADE=  1.533m
+    moving        : n=  167 minADE6=  4.686m ADE1=  9.961m cvADE=  6.602m stayADE= 14.153m
+Town04     96   276   1.151m   2.392m   6.007m  14.284m   3.088m   6.352m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  2.480m cvFDE=  6.141m  | model[cv_ok] minADE6=  1.151m ADE1=  6.007m
+    stationary    : n=  115 minADE6=  0.542m ADE1=  5.843m cvADE=  0.404m stayADE=  0.404m
+    moving        : n=  161 minADE6=  1.586m ADE1=  6.124m cvADE=  3.962m stayADE=  5.005m
+Town05     16   276   1.168m   1.742m   3.932m   7.002m   2.288m   4.106m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.097m cvFDE=  7.141m  | model[cv_ok] minADE6=  1.168m ADE1=  3.932m
+    stationary    : n=  156 minADE6=  0.577m ADE1=  1.945m cvADE=  0.627m stayADE=  0.627m
+    moving        : n=  120 minADE6=  1.935m ADE1=  6.516m cvADE=  6.308m stayADE=  4.448m
+Town05     41   276   1.706m   3.710m   5.164m  12.410m   5.362m  10.461m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  4.084m cvFDE=  9.815m  | model[cv_ok] minADE6=  1.706m ADE1=  5.164m
+    stationary    : n=  148 minADE6=  0.714m ADE1=  1.196m cvADE=  1.063m stayADE=  1.063m
+    moving        : n=  128 minADE6=  2.852m ADE1=  9.753m cvADE=  7.576m stayADE= 10.333m
+Town05     42   276   1.741m   3.496m   5.844m  12.774m   3.381m   6.155m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.292m cvFDE=  7.749m  | model[cv_ok] minADE6=  1.741m ADE1=  5.844m
+    stationary    : n=  104 minADE6=  0.587m ADE1=  0.946m cvADE=  0.840m stayADE=  0.840m
+    moving        : n=  172 minADE6=  2.439m ADE1=  8.806m cvADE=  4.775m stayADE=  4.918m
+Town05     51   276   2.600m   3.500m   4.363m   8.111m   8.107m  14.373m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  8.427m cvFDE= 18.575m  | model[cv_ok] minADE6=  2.600m ADE1=  4.363m
+    stationary    : n=  131 minADE6=  0.864m ADE1=  1.004m cvADE=  0.775m stayADE=  0.775m
+    moving        : n=  145 minADE6=  4.168m ADE1=  7.397m cvADE= 15.341m stayADE= 14.730m
+Town05     65   276   2.141m   4.457m   4.659m  10.889m   3.712m   8.998m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE=  3.832m cvFDE=  9.941m  | model[cv_ok] minADE6=  2.141m ADE1=  4.659m
+    stationary    : n=  240 minADE6=  1.336m ADE1=  3.098m cvADE=  1.735m stayADE=  1.735m
+    moving        : n=   36 minADE6=  7.507m ADE1= 15.062m cvADE= 17.817m stayADE= 16.894m
+Town05     73   276   6.425m  12.721m  11.574m  23.893m  13.228m  25.439m
+    CV: n=  276 excluded=  0 (no frame-1)  cvADE= 14.379m cvFDE= 32.686m  | model[cv_ok] minADE6=  6.425m ADE1= 11.574m
+    stationary    : n=  135 minADE6=  2.307m ADE1=  3.778m cvADE=  4.175m stayADE=  4.175m
+    moving        : n=  141 minADE6= 10.368m ADE1= 19.038m cvADE= 24.148m stayADE= 21.895m
+ALL            2208   2.535m   5.038m   6.025m  13.108m   6.042m  11.868m
+CV             2208 cvADE=  5.524m cvFDE= 12.931m  | model[cv_ok] minADE6=  2.535m ADE1=  6.025m  (excluded 0 of 2208 samples, no frame-1)
+    stationary (ALL): n= 1138 minADE6=  1.059m ADE1=  2.469m cvADE=  1.439m stayADE=  1.439m
+    moving (ALL)  : n= 1070 minADE6=  4.104m ADE1=  9.807m cvADE=  9.868m stayADE= 10.937m
+
+Median of per-scene minADE6: 1.941 m   ADE1: 5.504 m
+Scenes where top-1 ADE beats stay-put: 4/8
+
+SAFETY  miss: FDE > 2.0 m (top-1 / best-of-6); off-road: fraction of valid-step points > 2.5 m from the nearest lane-centre waypoint (top-1 / all 6 modes / ground truth)
+SAFE control: ground-truth off-road rate per town (off-road numbers flagged UNRELIABLE above 5%):
+SAFE   Town03: GT off-road 0.4343  -> UNRELIABLE
+SAFE   Town04: GT off-road 0.4426  -> UNRELIABLE
+SAFE   Town05: GT off-road 0.2741  -> UNRELIABLE
+SAFE group                        n   miss1   miss6   offr1   offr6  offrGT
+SAFE Town03 4                   276  0.7319  0.5797  0.4149  0.3694  0.4343  off-road UNRELIABLE (Town03)
+SAFE   stationary               109  0.3945  0.3211  0.7890  0.5586  0.7875  off-road UNRELIABLE (Town03)
+SAFE   moving                   167  0.9521  0.7485  0.1707  0.2459  0.2038  off-road UNRELIABLE (Town03)
+SAFE Town04 96                  276  0.7609  0.3261  0.4814  0.5292  0.4426  off-road UNRELIABLE (Town04)
+SAFE   stationary               115  0.7739  0.0696  0.2348  0.3528  0.2710  off-road UNRELIABLE (Town04)
+SAFE   moving                   161  0.7516  0.5093  0.6576  0.6552  0.5652  off-road UNRELIABLE (Town04)
+SAFE Town05 16                  276  0.4348  0.2391  0.4104  0.3495  0.3786  off-road UNRELIABLE (Town05)
+SAFE   stationary               156  0.1731  0.0769  0.5498  0.4158  0.5517  off-road UNRELIABLE (Town05)
+SAFE   moving                   120  0.7750  0.4500  0.2292  0.2633  0.1536  off-road UNRELIABLE (Town05)
+SAFE Town05 41                  276  0.5326  0.4493  0.1217  0.1407  0.0996  off-road UNRELIABLE (Town05)
+SAFE   stationary               148  0.2095  0.2095  0.0480  0.0420  0.0266  off-road UNRELIABLE (Town05)
+SAFE   moving                   128  0.9062  0.7266  0.2070  0.2548  0.1841  off-road UNRELIABLE (Town05)
+SAFE Town05 42                  276  0.6739  0.5761  0.0550  0.1056  0.0000  off-road UNRELIABLE (Town05)
+SAFE   stationary               104  0.2500  0.2404  0.0000  0.0765  0.0000  off-road UNRELIABLE (Town05)
+SAFE   moving                   172  0.9302  0.7791  0.0882  0.1231  0.0000  off-road UNRELIABLE (Town05)
+SAFE Town05 51                  276  0.5072  0.4565  0.3558  0.4111  0.3337  off-road UNRELIABLE (Town05)
+SAFE   stationary               131  0.1527  0.1298  0.4122  0.4415  0.4094  off-road UNRELIABLE (Town05)
+SAFE   moving                   145  0.8276  0.7517  0.3048  0.3836  0.2653  off-road UNRELIABLE (Town05)
+SAFE Town05 65                  276  0.3913  0.2500  0.0580  0.0690  0.0598  off-road UNRELIABLE (Town05)
+SAFE   stationary               240  0.3333  0.1875  0.0297  0.0616  0.0321  off-road UNRELIABLE (Town05)
+SAFE   moving                    36  0.7778  0.6667  0.2463  0.1185  0.2444  off-road UNRELIABLE (Town05)
+SAFE Town05 73                  276  0.7681  0.7138  0.8703  0.7418  0.7727  off-road UNRELIABLE (Town05)
+SAFE   stationary               135  0.5556  0.5481  0.9568  0.7300  0.8225  off-road UNRELIABLE (Town05)
+SAFE   moving                   141  0.9716  0.8723  0.7875  0.7531  0.7251  off-road UNRELIABLE (Town05)
+SAFE Town03 (town)              276  0.7319  0.5797  0.4149  0.3694  0.4343  off-road UNRELIABLE (Town03)
+SAFE   stationary               109  0.3945  0.3211  0.7890  0.5586  0.7875  off-road UNRELIABLE (Town03)
+SAFE   moving                   167  0.9521  0.7485  0.1707  0.2459  0.2038  off-road UNRELIABLE (Town03)
+SAFE Town04 (town)              276  0.7609  0.3261  0.4814  0.5292  0.4426  off-road UNRELIABLE (Town04)
+SAFE   stationary               115  0.7739  0.0696  0.2348  0.3528  0.2710  off-road UNRELIABLE (Town04)
+SAFE   moving                   161  0.7516  0.5093  0.6576  0.6552  0.5652  off-road UNRELIABLE (Town04)
+SAFE Town05 (town)             1656  0.5513  0.4475  0.3119  0.3029  0.2741  off-road UNRELIABLE (Town05)
+SAFE   stationary               914  0.2834  0.2232  0.3098  0.2737  0.2871  off-road UNRELIABLE (Town05)
+SAFE   moving                   742  0.8814  0.7237  0.3144  0.3389  0.2581  off-road UNRELIABLE (Town05)
+SAFE ALL                       2208  0.6001  0.4488  0.3459  0.3395  0.3152  off-road UNRELIABLE (Town03, Town04, Town05)
+SAFE   stationary              1138  0.3436  0.2170  0.3481  0.3090  0.3334  off-road UNRELIABLE (Town03, Town04, Town05)
+SAFE   moving                  1070  0.8729  0.6953  0.3436  0.3720  0.2958  off-road UNRELIABLE (Town03, Town04, Town05)

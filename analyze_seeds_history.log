@@ -1,0 +1,29 @@
+Per run, ALL (minADE6, ADE1):
+  H8_seed0       2.425  5.149
+  H8_seed1       2.551  6.141
+  H8_seed2       2.496  6.930
+  Dh_seed0       2.539  5.978
+  Dh_seed1       2.589  5.539
+  Dh_seed2       2.663  6.203
+
+ALL minADE6: full 2.491 +/- 0.063   no-map 2.597 +/- 0.062   gap (no-map - full) +0.106
+
+ALL ADE1: full 6.073 +/- 0.892   no-map 5.907 +/- 0.338   gap (no-map - full) -0.167
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.068     3.183  +0.115 |    6.903     6.678  -0.225
+Town04 #96      1.294     1.364  +0.070 |    4.433     5.192  +0.759
+Town05 #16      1.288     1.347  +0.059 |    3.545     2.827  -0.718
+Town05 #41      1.472     1.636  +0.164 |    4.492     4.770  +0.278
+Town05 #42      1.758     1.724  -0.034 |    6.711     4.952  -1.759
+Town05 #51      2.048     2.134  +0.086 |    5.539     5.992  +0.453
+Town05 #65      2.102     2.178  +0.076 |    3.330     3.775  +0.445
+Town05 #73      6.895     7.207  +0.312 |   13.633    13.065  -0.568
+Full better in 7/8 scenes (minADE6), 4/8 scenes (ADE1)
+
+HISTORY RULE (full = history, no-map = control):
+  ALL ADE1    history 6.073 < control 5.907? False
+  ALL minADE6 history 2.491 < control 2.597? True
+  ADE1 lower in 4/8 scenes >= 6? False
+VERDICT: do NOT adopt history

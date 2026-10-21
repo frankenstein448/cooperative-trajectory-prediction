@@ -1,0 +1,3 @@
+PilotDataset: use_image_cache=False
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images)
+OK: 50 random samples (ego images, all coop images, and every other field) are torch.equal with use_image_cache=False vs True.

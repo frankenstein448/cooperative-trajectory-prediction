@@ -1,0 +1,24 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'epochs': 12, 'out_dir': 'runs/C_seed0', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': '9fb16d678e05730bf8f348c0ceda90cfa464238e'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Trainable parameters: 740,942
+Epoch 1/12 (246.9s) | train_loss=2.8227 (reg=2.1936, cls=0.6292) | val_loss=2.6381 (reg=1.5425, cls=1.0956)
+  -> New best val_loss (2.6381), saved best_model.pt
+Epoch 2/12 (245.7s) | train_loss=2.0264 (reg=1.2660, cls=0.7603) | val_loss=2.4189 (reg=1.3380, cls=1.0809)
+  -> New best val_loss (2.4189), saved best_model.pt
+Epoch 3/12 (246.5s) | train_loss=1.8924 (reg=1.1012, cls=0.7912) | val_loss=2.6768 (reg=1.2163, cls=1.4606)
+Epoch 4/12 (246.5s) | train_loss=1.7092 (reg=0.9876, cls=0.7215) | val_loss=2.7367 (reg=1.2083, cls=1.5285)
+Epoch 5/12 (245.4s) | train_loss=1.5780 (reg=0.9443, cls=0.6337) | val_loss=2.7076 (reg=1.1519, cls=1.5558)
+Epoch 6/12 (246.3s) | train_loss=1.4962 (reg=0.9096, cls=0.5866) | val_loss=2.7014 (reg=1.1649, cls=1.5366)
+Epoch 7/12 (246.3s) | train_loss=1.4234 (reg=0.8836, cls=0.5398) | val_loss=2.9716 (reg=1.1900, cls=1.7816)
+Epoch 8/12 (246.8s) | train_loss=1.3709 (reg=0.8542, cls=0.5166) | val_loss=2.9500 (reg=1.1559, cls=1.7941)
+Epoch 9/12 (245.9s) | train_loss=1.3003 (reg=0.8209, cls=0.4794) | val_loss=3.0178 (reg=1.1462, cls=1.8715)
+Epoch 10/12 (246.8s) | train_loss=1.2540 (reg=0.7893, cls=0.4647) | val_loss=3.0198 (reg=1.1785, cls=1.8413)
+Epoch 11/12 (245.2s) | train_loss=1.2117 (reg=0.7496, cls=0.4621) | val_loss=3.1219 (reg=1.2038, cls=1.9181)
+Epoch 12/12 (245.1s) | train_loss=1.1500 (reg=0.7106, cls=0.4393) | val_loss=3.2504 (reg=1.1839, cls=2.0665)
+
+Training complete.
+Saved final model to runs/C_seed0/final_model.pt

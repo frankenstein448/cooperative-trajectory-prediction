@@ -1,0 +1,10 @@
+Using device: cuda
+Dataset size: 10640 samples
+Train: 9044 samples | Val: 1596 samples
+Trainable parameters: 740,942
+Epoch 1/30 (643.5s) | train_loss=3.3790 (reg=2.4769, cls=0.9021) | val_loss=2.7490 (reg=1.8879, cls=0.8611)
+  -> New best val_loss (2.7490), saved best_model.pt
+Epoch 2/30 (655.9s) | train_loss=2.4938 (reg=1.6662, cls=0.8276) | val_loss=2.3903 (reg=1.5810, cls=0.8094)
+  -> New best val_loss (2.3903), saved best_model.pt
+Epoch 3/30 (650.2s) | train_loss=2.2668 (reg=1.5016, cls=0.7652) | val_loss=2.2060 (reg=1.5156, cls=0.6905)
+  -> New best val_loss (2.2060), saved best_model.pt

@@ -1,0 +1,29 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror, use_rsu=True (dir=/home/karra/hd_cache/images_rsu)
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, use_rsu=True, 13384 samples, cache commit af265e9
+ckpt=runs/E_V2XRSU_seed2/checkpoint_epoch12.pt; tuning split (v2): 1984 samples
+Paired 1984 tuning samples with non-test partners (same town, other scene), seed 0
+  Town03: partners from train 248, from tuning 0
+  Town04: partners from train 248, from tuning 0
+  Town05: partners from train 1289, from tuning 199
+real pass vs eval_env_tuning_checkpoint_epoch12.npz: max |ade1 diff| = 0.00e+00
+real pass vs eval_env_tuning_checkpoint_epoch12.npz: max |minade6 diff| = 0.00e+00
+
+Over 1984 tuning samples, 60173 known targets (real RSU input vs zeroed / swapped from another scene of the same town):
+
+  [moving V] n=19879
+    zero: ADE1 7.396 -> 10.676 (delta +3.280)  minADE6 2.967 -> 6.453 (delta +3.486)  top-1 shift 11.260 m (median 7.456)  mode-flip 0.6387
+    swap: ADE1 7.396 -> 7.194 (delta -0.202)  minADE6 2.967 -> 3.080 (delta +0.113)  top-1 shift 3.910 m (median 0.957)  mode-flip 0.2319
+
+  [moving R] n=1141
+    zero: ADE1 6.129 -> 9.359 (delta +3.230)  minADE6 2.372 -> 4.839 (delta +2.468)  top-1 shift 9.146 m (median 7.757)  mode-flip 0.6512
+    swap: ADE1 6.129 -> 6.527 (delta +0.398)  minADE6 2.372 -> 2.455 (delta +0.083)  top-1 shift 2.767 m (median 0.663)  mode-flip 0.1954
+
+  [ALL] n=60173
+    zero: ADE1 4.431 -> 5.215 (delta +0.783)  minADE6 1.604 -> 3.042 (delta +1.438)  top-1 shift 5.817 m (median 0.879)  mode-flip 0.4246
+    swap: ADE1 4.431 -> 4.283 (delta -0.149)  minADE6 1.604 -> 1.632 (delta +0.029)  top-1 shift 2.444 m (median 0.210)  mode-flip 0.1806
+
+Swapped, by partner origin:
+  [moving V] train  n= 17959  ADE1 delta -0.228  minADE6 delta +0.113  top-1 shift 3.796 m  mode-flip 0.2302
+  [moving V] tuning n=  1920  ADE1 delta +0.036  minADE6 delta +0.107  top-1 shift 4.971 m  mode-flip 0.2474
+  [moving R] train  n=  1064  ADE1 delta +0.321  minADE6 delta +0.100  top-1 shift 2.686 m  mode-flip 0.1927
+  [moving R] tuning n=    77  ADE1 delta +1.474  minADE6 delta -0.148  top-1 shift 3.889 m  mode-flip 0.2338

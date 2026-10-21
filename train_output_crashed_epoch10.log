@@ -1,0 +1,57 @@
+Using device: cuda
+Dataset size: 15120 samples
+Train: 12852 samples | Val: 2268 samples
+Trainable parameters: 740,942
+Epoch 1/30 (934.6s) | train_loss=2.9058 (reg=1.9299, cls=0.9758) | val_loss=2.3176 (reg=1.3421, cls=0.9755)
+  -> New best val_loss (2.3176), saved best_model.pt
+Epoch 2/30 (919.5s) | train_loss=2.1879 (reg=1.2431, cls=0.9449) | val_loss=2.0508 (reg=1.1689, cls=0.8820)
+  -> New best val_loss (2.0508), saved best_model.pt
+Epoch 3/30 (933.5s) | train_loss=2.0620 (reg=1.1907, cls=0.8712) | val_loss=1.9790 (reg=1.1370, cls=0.8420)
+  -> New best val_loss (1.9790), saved best_model.pt
+Epoch 4/30 (936.0s) | train_loss=1.9776 (reg=1.1633, cls=0.8142) | val_loss=1.9581 (reg=1.0889, cls=0.8692)
+  -> New best val_loss (1.9581), saved best_model.pt
+Epoch 5/30 (937.3s) | train_loss=1.8789 (reg=1.1203, cls=0.7587) | val_loss=1.7926 (reg=1.0833, cls=0.7093)
+  -> New best val_loss (1.7926), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 5)
+Epoch 6/30 (933.4s) | train_loss=1.8051 (reg=1.0866, cls=0.7185) | val_loss=1.7234 (reg=1.0316, cls=0.6917)
+  -> New best val_loss (1.7234), saved best_model.pt
+Epoch 7/30 (946.6s) | train_loss=1.7180 (reg=1.0447, cls=0.6732) | val_loss=1.6676 (reg=1.0123, cls=0.6553)
+  -> New best val_loss (1.6676), saved best_model.pt
+Epoch 8/30 (944.8s) | train_loss=1.6677 (reg=1.0109, cls=0.6568) | val_loss=1.6976 (reg=0.9999, cls=0.6977)
+Epoch 9/30 (934.9s) | train_loss=1.5894 (reg=0.9691, cls=0.6203) | val_loss=1.5165 (reg=0.9225, cls=0.5941)
+  -> New best val_loss (1.5165), saved best_model.pt
+Traceback (most recent call last):
+  File "/home/karra/hd-maps/train.py", line 125, in <module>
+    main()
+  File "/home/karra/hd-maps/train.py", line 100, in main
+    train_loss, train_reg, train_cls = run_epoch(model, train_loader, loss_fn, optimizer)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/karra/hd-maps/train.py", line 38, in run_epoch
+    for batch in loader:
+  File "/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 725, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1505, in _next_data
+    idx, data = self._get_data()
+                ^^^^^^^^^^^^^^^^
+  File "/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1464, in _get_data
+    success, data = self._try_get_data()
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1291, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/multiprocessing/queues.py", line 122, in get
+    return _ForkingPickler.loads(res)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/multiprocessing/reductions.py", line 538, in rebuild_storage_fd
+    fd = df.detach()
+         ^^^^^^^^^^^
+  File "/usr/lib/python3.12/multiprocessing/resource_sharer.py", line 58, in detach
+    return reduction.recv_handle(conn)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/multiprocessing/reduction.py", line 189, in recv_handle
+    return recvfds(s, 1)[0]
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/multiprocessing/reduction.py", line 164, in recvfds
+    raise RuntimeError('received %d items of ancdata' %
+RuntimeError: received 0 items of ancdata

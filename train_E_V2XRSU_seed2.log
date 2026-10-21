@@ -1,0 +1,27 @@
+Using device: cuda
+Wrote config: {'seed': 2, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'laplace_scale_floor': None, 'wta_soft_tau': None, 'no_map': False, 'map_transform': 'mirror', 'split_version': 'v2', 'degrade': None, 'history_frames': 0, 'history_encoder': None, 'require_history_frames': 0, 'no_cpm': True, 'no_coop': False, 'epochs': 12, 'out_dir': 'runs/E_V2XRSU_seed2', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': '3da2f84464ad0667582a3fbcef28c940b369d05b', 'task': 'env', 'v2x': 'on', 'env_cam': 'speed only (x, y and world heading zeroed after normalization; env_dataset.env_cam)', 'use_rsu': True}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=False, use_coop=True, map_transform=mirror, use_rsu=True (dir=/home/karra/hd_cache/images_rsu)
+EnvDataset: v2x=on, use_map=True, map_transform=mirror, use_rsu=True, 13384 samples, cache commit af265e9
+split_version=v2; Train: 9424 | Tuning: 1984 | Test: 1976 samples (never used here)
+Computed cam_norm from 9424 train samples: {'mean': [25.44208526611328, 38.18598937988281, 0.6245869994163513, 0.4126203656196594], 'std': [129.53204345703125, 129.03956604003906, 1.7902787923812866, 0.865959644317627]}
+Computed env_norm (target history, own frame) over the train split's known targets: {'mean': [-1.6783913151373488, 0.006917656088595788], 'std': [4.097305017299985, 1.2124155454694368]}
+EnvFusion v2x=on, use_map=True, use_rsu=True; trainable parameters: 1,242,414
+Epoch 1/12 (297.0s) | train_loss=3.3235 (reg=2.6891, cls=0.6344) | val_loss=2.4783 (reg=1.6553, cls=0.8230)
+  -> New best val_loss (2.4783), saved best_model.pt
+Epoch 2/12 (296.1s) | train_loss=2.4813 (reg=1.7647, cls=0.7166) | val_loss=2.2213 (reg=1.2072, cls=1.0141)
+  -> New best val_loss (2.2213), saved best_model.pt
+Epoch 3/12 (294.9s) | train_loss=1.9547 (reg=1.2734, cls=0.6813) | val_loss=1.8188 (reg=0.9414, cls=0.8774)
+  -> New best val_loss (1.8188), saved best_model.pt
+Epoch 4/12 (297.4s) | train_loss=1.7126 (reg=1.0794, cls=0.6333) | val_loss=1.7843 (reg=0.8801, cls=0.9042)
+  -> New best val_loss (1.7843), saved best_model.pt
+Epoch 5/12 (296.7s) | train_loss=1.6041 (reg=0.9864, cls=0.6177) | val_loss=1.8493 (reg=0.8709, cls=0.9785)
+Epoch 6/12 (296.5s) | train_loss=1.5174 (reg=0.9063, cls=0.6111) | val_loss=1.8607 (reg=0.8318, cls=1.0289)
+Epoch 7/12 (297.3s) | train_loss=1.4353 (reg=0.8354, cls=0.6000) | val_loss=1.8689 (reg=0.8246, cls=1.0443)
+Epoch 8/12 (298.3s) | train_loss=1.3740 (reg=0.7867, cls=0.5874) | val_loss=1.9621 (reg=0.8259, cls=1.1362)
+Epoch 9/12 (296.8s) | train_loss=1.3203 (reg=0.7488, cls=0.5715) | val_loss=1.9376 (reg=0.8214, cls=1.1162)
+Epoch 10/12 (296.5s) | train_loss=1.2844 (reg=0.7169, cls=0.5674) | val_loss=1.9895 (reg=0.8279, cls=1.1615)
+Epoch 11/12 (295.8s) | train_loss=1.2480 (reg=0.6900, cls=0.5580) | val_loss=2.0318 (reg=0.8407, cls=1.1910)
+Epoch 12/12 (296.2s) | train_loss=1.2105 (reg=0.6656, cls=0.5449) | val_loss=2.0807 (reg=0.8222, cls=1.2585)
+
+Training complete.
+Saved final model to runs/E_V2XRSU_seed2/final_model.pt

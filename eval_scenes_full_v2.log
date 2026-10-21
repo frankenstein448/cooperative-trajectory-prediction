@@ -1,0 +1,17 @@
+ckpt=checkpoints_scene_full/checkpoint_epoch30.pt  use_map=True
+Using model output[2] as mode scores (shape (8, 6))
+Sanity: mean distance of first GT point from origin = 0.40 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+
+town    scene     n  minADE6  minFDE6     ADE1     FDE1  stayADE  stayFDE
+Town03      4   280   3.602m   8.500m   9.454m  20.957m   9.094m  18.864m
+Town04     96   280   1.425m   2.025m   7.245m  13.754m   3.068m   6.288m
+Town05     16   280   1.138m   2.018m   3.492m   5.678m   2.313m   4.118m
+Town05     41   280   2.148m   3.286m   5.169m   8.697m   5.348m  10.429m
+Town05     42   280   2.207m   3.203m   5.062m  10.534m   3.420m   6.239m
+Town05     51   280   2.565m   3.286m   9.440m  16.306m   8.220m  14.582m
+Town05     65   280   1.896m   3.594m   7.475m  14.716m   3.724m   8.948m
+Town05     73   280   6.189m  12.178m  12.531m  23.002m  13.146m  25.243m
+ALL            2240   2.646m   4.761m   7.484m  14.206m   6.042m  11.839m
+
+Median of per-scene minADE6: 2.177 m   ADE1: 7.360 m
+Scenes where top-1 ADE beats stay-put: 2/8

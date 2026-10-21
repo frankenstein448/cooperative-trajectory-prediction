@@ -1,0 +1,23 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': False, 'use_image_cache': True, 'epochs': 12, 'out_dir': 'runs/A_seed0', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'b06fc0deb871a14492d74aa57ecb20231a7fe748'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=False
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Trainable parameters: 740,942
+Epoch 1/12 (248.8s) | train_loss=3.0885 (reg=2.1147, cls=0.9738) | val_loss=2.6165 (reg=1.4776, cls=1.1390)
+  -> New best val_loss (2.6165), saved best_model.pt
+Epoch 2/12 (247.6s) | train_loss=2.2607 (reg=1.3494, cls=0.9113) | val_loss=2.5888 (reg=1.3828, cls=1.2060)
+  -> New best val_loss (2.5888), saved best_model.pt
+Epoch 3/12 (249.6s) | train_loss=2.0471 (reg=1.2062, cls=0.8408) | val_loss=2.6054 (reg=1.3783, cls=1.2271)
+Epoch 4/12 (248.6s) | train_loss=1.9442 (reg=1.1757, cls=0.7685) | val_loss=2.8418 (reg=1.3919, cls=1.4500)
+Epoch 5/12 (249.4s) | train_loss=1.8685 (reg=1.1465, cls=0.7220) | val_loss=2.6852 (reg=1.3603, cls=1.3249)
+Epoch 6/12 (248.0s) | train_loss=1.7775 (reg=1.1163, cls=0.6612) | val_loss=2.9628 (reg=1.3624, cls=1.6004)
+Epoch 7/12 (248.2s) | train_loss=1.6872 (reg=1.0778, cls=0.6094) | val_loss=2.9711 (reg=1.3647, cls=1.6065)
+Epoch 8/12 (248.1s) | train_loss=1.6043 (reg=1.0376, cls=0.5667) | val_loss=3.2558 (reg=1.3827, cls=1.8731)
+Epoch 9/12 (248.7s) | train_loss=1.5268 (reg=0.9950, cls=0.5319) | val_loss=3.5391 (reg=1.4438, cls=2.0953)
+Epoch 10/12 (247.9s) | train_loss=1.4462 (reg=0.9476, cls=0.4986) | val_loss=3.0862 (reg=1.3934, cls=1.6928)
+Epoch 11/12 (248.8s) | train_loss=1.4142 (reg=0.9183, cls=0.4959) | val_loss=3.2650 (reg=1.4298, cls=1.8352)
+Epoch 12/12 (248.7s) | train_loss=1.3405 (reg=0.8779, cls=0.4625) | val_loss=3.4437 (reg=1.4705, cls=1.9731)
+
+Training complete.
+Saved final model to runs/A_seed0/final_model.pt

@@ -1,0 +1,24 @@
+Using device: cuda
+Wrote config: {'seed': 1, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'no_map': True, 'epochs': 12, 'out_dir': 'runs/Dnomap_seed1', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'c06863c13bcb5dd56841c60ed5cac9f765774b8f'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Model use_map=False, loss=WinnerTakesAllLoss
+Trainable parameters: 558,862
+Epoch 1/12 (229.5s) | train_loss=2.9075 (reg=2.1649, cls=0.7425) | val_loss=2.3422 (reg=1.3752, cls=0.9670)
+  -> New best val_loss (2.3422), saved best_model.pt
+Epoch 2/12 (229.8s) | train_loss=2.1261 (reg=1.3151, cls=0.8110) | val_loss=2.3858 (reg=1.2343, cls=1.1515)
+Epoch 3/12 (231.9s) | train_loss=1.9643 (reg=1.2320, cls=0.7323) | val_loss=2.4523 (reg=1.2371, cls=1.2152)
+Epoch 4/12 (230.6s) | train_loss=1.9025 (reg=1.1872, cls=0.7153) | val_loss=2.7762 (reg=1.2635, cls=1.5126)
+Epoch 5/12 (231.0s) | train_loss=1.8302 (reg=1.1402, cls=0.6900) | val_loss=2.7095 (reg=1.2233, cls=1.4863)
+Epoch 6/12 (231.5s) | train_loss=1.7361 (reg=1.1022, cls=0.6339) | val_loss=2.9083 (reg=1.2901, cls=1.6182)
+Epoch 7/12 (230.7s) | train_loss=1.6561 (reg=1.0684, cls=0.5878) | val_loss=2.7886 (reg=1.2342, cls=1.5544)
+Epoch 8/12 (232.2s) | train_loss=1.5187 (reg=0.9726, cls=0.5461) | val_loss=2.9065 (reg=1.2900, cls=1.6166)
+Epoch 9/12 (231.2s) | train_loss=1.3940 (reg=0.8791, cls=0.5150) | val_loss=2.8955 (reg=1.2960, cls=1.5995)
+Epoch 10/12 (232.1s) | train_loss=1.5115 (reg=0.8236, cls=0.6879) | val_loss=3.2220 (reg=1.2944, cls=1.9277)
+Epoch 11/12 (231.0s) | train_loss=1.5412 (reg=0.7714, cls=0.7697) | val_loss=2.9628 (reg=1.2838, cls=1.6790)
+Epoch 12/12 (231.1s) | train_loss=1.2979 (reg=0.7302, cls=0.5677) | val_loss=3.1030 (reg=1.3030, cls=1.7999)
+
+Training complete.
+Saved final model to runs/Dnomap_seed1/final_model.pt

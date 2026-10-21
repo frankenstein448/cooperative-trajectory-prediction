@@ -1,0 +1,27 @@
+ckpt=checkpoints_scene_full/checkpoint_epoch30.pt  use_map=True
+Using model output[2] as mode scores (shape (8, 6))
+Sanity: mean distance of first GT point from origin = 0.40 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+Sanity: mean CV error at step 1 = 0.071 m (should be well below 0.40 m)
+
+town    scene     n  minADE6  minFDE6     ADE1     FDE1  stayADE  stayFDE
+Town03      4   280   3.602m   8.500m   9.454m  20.957m   9.094m  18.864m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  4.600m cvFDE= 11.400m  | model[cv_ok] minADE6=  3.625m ADE1=  9.521m
+Town04     96   280   1.425m   2.025m   7.245m  13.754m   3.068m   6.288m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  2.480m cvFDE=  6.141m  | model[cv_ok] minADE6=  1.425m ADE1=  7.270m
+Town05     16   280   1.138m   2.018m   3.492m   5.678m   2.313m   4.118m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  3.097m cvFDE=  7.141m  | model[cv_ok] minADE6=  1.140m ADE1=  3.500m
+Town05     41   280   2.148m   3.286m   5.169m   8.697m   5.348m  10.429m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  4.084m cvFDE=  9.815m  | model[cv_ok] minADE6=  2.156m ADE1=  5.204m
+Town05     42   280   2.207m   3.203m   5.062m  10.534m   3.420m   6.239m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  3.292m cvFDE=  7.749m  | model[cv_ok] minADE6=  2.214m ADE1=  5.054m
+Town05     51   280   2.565m   3.286m   9.440m  16.306m   8.220m  14.582m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  8.427m cvFDE= 18.575m  | model[cv_ok] minADE6=  2.544m ADE1=  9.396m
+Town05     65   280   1.896m   3.594m   7.475m  14.716m   3.724m   8.948m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE=  3.832m cvFDE=  9.941m  | model[cv_ok] minADE6=  1.882m ADE1=  7.534m
+Town05     73   280   6.189m  12.178m  12.531m  23.002m  13.146m  25.243m
+    CV: n=  276 excluded=  4 (no frame-1)  cvADE= 14.379m cvFDE= 32.686m  | model[cv_ok] minADE6=  6.244m ADE1= 12.551m
+ALL            2240   2.646m   4.761m   7.484m  14.206m   6.042m  11.839m
+CV             2208 cvADE=  5.524m cvFDE= 12.931m  | model[cv_ok] minADE6=  2.654m ADE1=  7.504m  (excluded 32 of 2240 samples, no frame-1)
+
+Median of per-scene minADE6: 2.177 m   ADE1: 7.360 m
+Scenes where top-1 ADE beats stay-put: 2/8

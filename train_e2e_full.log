@@ -1,0 +1,67 @@
+Using device: cuda
+Dataset size: 10640 samples
+Train: 9044 samples | Val: 1596 samples
+Trainable parameters: 740,942
+Epoch 1/30 (644.9s) | train_loss=3.3676 (reg=2.4864, cls=0.8812) | val_loss=2.7514 (reg=1.8887, cls=0.8627)
+  -> New best val_loss (2.7514), saved best_model.pt
+Epoch 2/30 (649.1s) | train_loss=2.4503 (reg=1.6047, cls=0.8456) | val_loss=2.4104 (reg=1.5652, cls=0.8452)
+  -> New best val_loss (2.4104), saved best_model.pt
+Epoch 3/30 (650.3s) | train_loss=2.2443 (reg=1.4962, cls=0.7482) | val_loss=2.2763 (reg=1.5101, cls=0.7662)
+  -> New best val_loss (2.2763), saved best_model.pt
+Epoch 4/30 (644.8s) | train_loss=2.1132 (reg=1.4218, cls=0.6915) | val_loss=2.2089 (reg=1.4526, cls=0.7563)
+  -> New best val_loss (2.2089), saved best_model.pt
+/home/karra/gpu-test-venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:437: UserWarning: This DataLoader will create 4 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
+Epoch 5/30 (799.4s) | train_loss=2.0310 (reg=1.3781, cls=0.6529) | val_loss=2.0738 (reg=1.4065, cls=0.6673)
+  -> New best val_loss (2.0738), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 5)
+Epoch 6/30 (1464.0s) | train_loss=1.9340 (reg=1.3181, cls=0.6159) | val_loss=2.1214 (reg=1.4241, cls=0.6973)
+Epoch 7/30 (1488.1s) | train_loss=1.9933 (reg=1.2561, cls=0.7372) | val_loss=2.0129 (reg=1.2565, cls=0.7564)
+  -> New best val_loss (2.0129), saved best_model.pt
+Epoch 8/30 (1494.9s) | train_loss=1.8398 (reg=1.1632, cls=0.6766) | val_loss=1.8578 (reg=1.1989, cls=0.6589)
+  -> New best val_loss (1.8578), saved best_model.pt
+Epoch 9/30 (1464.6s) | train_loss=1.7396 (reg=1.1239, cls=0.6157) | val_loss=1.8071 (reg=1.1518, cls=0.6553)
+  -> New best val_loss (1.8071), saved best_model.pt
+Epoch 10/30 (1487.3s) | train_loss=1.6528 (reg=1.0705, cls=0.5823) | val_loss=1.7998 (reg=1.1495, cls=0.6503)
+  -> New best val_loss (1.7998), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 10)
+Epoch 11/30 (1481.0s) | train_loss=1.5751 (reg=1.0299, cls=0.5453) | val_loss=1.6800 (reg=1.1103, cls=0.5697)
+  -> New best val_loss (1.6800), saved best_model.pt
+Epoch 12/30 (1462.9s) | train_loss=1.5196 (reg=1.0057, cls=0.5139) | val_loss=1.6421 (reg=1.0719, cls=0.5702)
+  -> New best val_loss (1.6421), saved best_model.pt
+Epoch 13/30 (1487.8s) | train_loss=1.4583 (reg=0.9652, cls=0.4930) | val_loss=1.5495 (reg=1.0336, cls=0.5159)
+  -> New best val_loss (1.5495), saved best_model.pt
+Epoch 14/30 (1464.2s) | train_loss=1.4114 (reg=0.9358, cls=0.4756) | val_loss=1.5376 (reg=1.0225, cls=0.5151)
+  -> New best val_loss (1.5376), saved best_model.pt
+Epoch 15/30 (1467.7s) | train_loss=1.3791 (reg=0.9133, cls=0.4657) | val_loss=1.5029 (reg=1.0153, cls=0.4876)
+  -> New best val_loss (1.5029), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 15)
+Epoch 16/30 (1489.9s) | train_loss=1.3335 (reg=0.8800, cls=0.4535) | val_loss=1.5347 (reg=1.0022, cls=0.5325)
+Epoch 17/30 (1490.2s) | train_loss=1.3040 (reg=0.8478, cls=0.4562) | val_loss=1.4395 (reg=0.9495, cls=0.4900)
+  -> New best val_loss (1.4395), saved best_model.pt
+Epoch 18/30 (1490.8s) | train_loss=1.2855 (reg=0.8319, cls=0.4535) | val_loss=1.4896 (reg=0.9781, cls=0.5115)
+Epoch 19/30 (1487.7s) | train_loss=1.2294 (reg=0.8032, cls=0.4262) | val_loss=1.4008 (reg=0.9025, cls=0.4983)
+  -> New best val_loss (1.4008), saved best_model.pt
+Epoch 20/30 (1485.8s) | train_loss=1.2032 (reg=0.7832, cls=0.4200) | val_loss=1.4040 (reg=0.9041, cls=0.4999)
+  -> Periodic checkpoint saved (epoch 20)
+Epoch 21/30 (1486.8s) | train_loss=1.1802 (reg=0.7673, cls=0.4129) | val_loss=1.3855 (reg=0.8854, cls=0.5001)
+  -> New best val_loss (1.3855), saved best_model.pt
+Epoch 22/30 (1489.1s) | train_loss=1.1471 (reg=0.7482, cls=0.3989) | val_loss=1.3621 (reg=0.8650, cls=0.4970)
+  -> New best val_loss (1.3621), saved best_model.pt
+Epoch 23/30 (1490.1s) | train_loss=1.1028 (reg=0.7196, cls=0.3832) | val_loss=1.3430 (reg=0.8575, cls=0.4855)
+  -> New best val_loss (1.3430), saved best_model.pt
+Epoch 24/30 (1466.3s) | train_loss=1.0900 (reg=0.7077, cls=0.3822) | val_loss=1.2676 (reg=0.8413, cls=0.4263)
+  -> New best val_loss (1.2676), saved best_model.pt
+Epoch 25/30 (1493.0s) | train_loss=1.0649 (reg=0.6920, cls=0.3730) | val_loss=1.2716 (reg=0.8262, cls=0.4454)
+  -> Periodic checkpoint saved (epoch 25)
+Epoch 26/30 (1464.3s) | train_loss=1.0397 (reg=0.6755, cls=0.3642) | val_loss=1.3858 (reg=0.8325, cls=0.5533)
+Epoch 27/30 (1469.3s) | train_loss=1.0308 (reg=0.6663, cls=0.3645) | val_loss=1.1989 (reg=0.7919, cls=0.4070)
+  -> New best val_loss (1.1989), saved best_model.pt
+Epoch 28/30 (1488.7s) | train_loss=0.9856 (reg=0.6401, cls=0.3455) | val_loss=1.2540 (reg=0.7921, cls=0.4619)
+Epoch 29/30 (1483.7s) | train_loss=0.9793 (reg=0.6339, cls=0.3455) | val_loss=1.2070 (reg=0.7714, cls=0.4355)
+Epoch 30/30 (1469.2s) | train_loss=0.9585 (reg=0.6168, cls=0.3418) | val_loss=1.1735 (reg=0.7577, cls=0.4158)
+  -> New best val_loss (1.1735), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 30)
+
+Training complete.
+Saved final model to e2e_model.pt

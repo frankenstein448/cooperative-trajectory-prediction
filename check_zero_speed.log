@@ -1,0 +1,23 @@
+Overall: 12328/21384 consecutive pairs are exact-zero displacement (57.7%)
+Longest zero-run overall: 99 frames (town=Town03 scene=79 agent=2)
+
+Per agent (summed across all scenes):
+  agent 1: 2925/5346 zero (54.7%), longest run=99, mean transition_rate=0.029
+  agent 2: 3050/5346 zero (57.1%), longest run=99, mean transition_rate=0.019
+  agent 3: 3192/5346 zero (59.7%), longest run=99, mean transition_rate=0.018
+  agent 4: 3161/5346 zero (59.1%), longest run=99, mean transition_rate=0.028
+
+Suspicious (agent, scene) combos -- high transition_rate (>0.7) with enough pairs to matter (n_pairs>=20):
+  none found
+
+Top 10 by longest zero-run:
+  town=Town03 scene=79 agent=2: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town03 scene=79 agent=3: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=6 agent=2: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=9 agent=3: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=20 agent=2: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=20 agent=4: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=97 agent=1: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=97 agent=2: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=97 agent=3: longest_run=99  n_pairs=99  frac_zero=1.00
+  town=Town04 scene=98 agent=3: longest_run=99  n_pairs=99  frac_zero=1.00

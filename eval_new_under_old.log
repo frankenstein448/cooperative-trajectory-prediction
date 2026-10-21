@@ -1,0 +1,8 @@
+Checkpoint: checkpoints_e2e/best_model.pt | epoch 29, val_loss=0.9538
+map stream: on | transform: OLD (Town05/Town04 overridden)
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2268    1.505m        2.487m         3.088m
+Town03     297    1.350m        2.098m         2.685m
+Town04     378    0.688m        1.208m         1.461m
+Town05    1593    1.727m        2.862m         3.549m

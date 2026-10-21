@@ -1,0 +1,36 @@
+Per run, ALL (minADE6, ADE1):
+  D_seed0        2.619  5.110
+  D_seed1        2.474  5.473
+  D_seed2        2.508  5.555
+  NoCPM_seed0    2.437  5.560
+  NoCPM_seed1    2.535  6.025
+  NoCPM_seed2    2.385  4.919
+
+ALL minADE6: full 2.534 +/- 0.076   no-map 2.452 +/- 0.076   gap (no-map - full) -0.081
+
+ALL ADE1: full 5.379 +/- 0.237   no-map 5.501 +/- 0.555   gap (no-map - full) +0.122
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.567     3.053  -0.514 |    7.265     6.309  -0.956
+Town04 #96      1.345     1.203  -0.142 |    4.093     6.189  +2.096
+Town05 #16      1.184     1.131  -0.053 |    3.655     2.921  -0.734
+Town05 #41      1.529     1.515  -0.014 |    4.195     4.587  +0.392
+Town05 #42      1.743     1.727  -0.016 |    4.243     4.628  +0.385
+Town05 #51      2.230     2.508  +0.278 |    4.693     4.440  -0.253
+Town05 #65      2.106     2.106  +0.000 |    3.328     3.680  +0.352
+Town05 #73      6.569     6.374  -0.194 |   11.561    11.258  -0.303
+Full better in 2/8 scenes (minADE6), 4/8 scenes (ADE1)
+
+RULE (minADE6): scenes 2/8 >= 7? False   gap -0.081 > 2 x max std 0.152? False
+(component rule: full = D_seed0,D_seed1,D_seed2, ablation = NoCPM_seed0,NoCPM_seed1,NoCPM_seed2)
+VERDICT: no detectable effect of the removed component under the scene-held-out protocol
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.5548  0.4410  0.3421  0.3342  0.3152
+  full      stationary   0.3128  0.2144  0.3431  0.3086  0.3334
+  full      moving       0.8121  0.6819  0.3411  0.3614  0.2958
+  no-map    ALL          0.5738  0.4452  0.3414  0.3313  0.3152
+  no-map    stationary   0.3310  0.2299  0.3423  0.3042  0.3334
+  no-map    moving       0.8321  0.6741  0.3404  0.3601  0.2958

@@ -1,0 +1,10 @@
+Using device: cuda
+Val set: 2268 samples (same split as training)
+Loaded checkpoint: epoch 29, val_loss=0.9538
+
+==================================================
+minADE6:              1.317m  (V2XPnP: 1.35m)
+minFDE6 (same mode):  2.662m  (V2XPnP: 2.36m)
+minFDE6 (independent):2.110m
+==================================================
+Evaluated on 2268 valid samples

@@ -1,0 +1,32 @@
+Per run, ALL (minADE6, ADE1):
+  D_seed0        2.641  5.258
+  D_seed1        2.365  5.544
+  D_seed2        2.527  5.241
+  Dnomap_seed0   2.510  6.419
+  Dnomap_seed1   2.615  4.790
+  Dnomap_seed2   2.525  4.767
+
+ALL minADE6: full 2.511 +/- 0.139   no-map 2.550 +/- 0.057   gap (no-map - full) +0.039
+
+ALL ADE1: full 5.348 +/- 0.170   no-map 5.325 +/- 0.947   gap (no-map - full) -0.022
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.164     3.064  -0.100 |    6.259     5.696  -0.563
+Town04 #96      1.307     1.255  -0.052 |    4.012     3.487  -0.525
+Town05 #16      1.264     1.255  -0.008 |    3.139     3.990  +0.851
+Town05 #41      1.590     1.628  +0.039 |    4.172     4.341  +0.169
+Town05 #42      1.764     1.697  -0.066 |    4.417     5.121  +0.704
+Town05 #51      2.427     2.467  +0.039 |    5.157     5.055  -0.102
+Town05 #65      1.991     2.229  +0.238 |    3.420     3.624  +0.204
+Town05 #73      6.582     6.804  +0.222 |   12.205    11.289  -0.917
+Full better in 4/8 scenes (minADE6), 4/8 scenes (ADE1)
+
+RULE (minADE6): scenes 4/8 >= 7? False   gap +0.039 > 2 x max std 0.277? False
+VERDICT: no detectable map effect under the scene-held-out protocol
+
+Increase in ALL vs clean (e12), tuning_cam_fog - clean, seed mean +/- std (per seed in brackets):
+  full    minADE6  clean 2.534 -> 2.511   increase -0.023 +/- 0.075  [+0.022, -0.109, +0.019]
+  full    ADE1     clean 5.379 -> 5.348   increase -0.032 +/- 0.248  [+0.148, +0.071, -0.314]
+  no-map  minADE6  clean 2.529 -> 2.550   increase +0.021 +/- 0.076  [+0.105, +0.001, -0.043]
+  no-map  ADE1     clean 5.054 -> 5.325   increase +0.271 +/- 0.607  [+0.972, -0.059, -0.099]

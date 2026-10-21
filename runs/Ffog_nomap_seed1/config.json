@@ -1,0 +1,26 @@
+{
+  "seed": 1,
+  "use_speed": true,
+  "use_image_cache": true,
+  "normalize_cam": true,
+  "drop_cam_xy": true,
+  "loss": "wta",
+  "relaxed_wta_eps": null,
+  "no_map": true,
+  "degrade": {
+    "mode": "fog",
+    "lidar_range_m": 20.0,
+    "fog_contrast": 0.4,
+    "fog_offset": 0.3,
+    "fog_noise_std": 0.05,
+    "seed": "zlib.crc32(f'{agent_id}_{scene}_{frame}') of the sensor's agent"
+  },
+  "epochs": 12,
+  "out_dir": "runs/Ffog_nomap_seed1",
+  "require_prev_frame": true,
+  "batch_size": 8,
+  "lr": 0.0001,
+  "num_workers": 2,
+  "scene_split_seed": 42,
+  "git_commit": "1fcf6461f0a058382a67516748c77901b2ff81fa"
+}

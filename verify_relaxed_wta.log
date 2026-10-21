@@ -1,0 +1,2 @@
+OK 1: eps=0 RelaxedWTALoss == WinnerTakesAllLoss exactly (loss, reg, cls, winner, grads) on 20 random batches [B=8, K=6, H=30]
+OK 2: eps=0.05 RelaxedWTALoss matches the loop reference on 20 random batches

@@ -1,0 +1,33 @@
+Using device: cuda
+Wrote config: {'seed': 3, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'laplace_mixture', 'relaxed_wta_eps': None, 'laplace_scale_floor': 0.01, 'wta_soft_tau': None, 'no_map': False, 'degrade': None, 'history_frames': 0, 'history_encoder': None, 'require_history_frames': 0, 'no_cpm': False, 'no_coop': False, 'epochs': 12, 'out_dir': 'runs/L_seed3', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'c09a06d963156c880d1225d42d0856d5b4c58c0c'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Model use_map=True, use_cpm=True, use_coop=True, loss=LaplaceMixtureLoss (scale floor=0.01 m)
+Trainable parameters: 787,382
+Epoch 1/12 (263.0s) | train_loss=19.0292 (reg=19.0292, cls=1.1078) | val_loss=0.9891 (reg=0.9891, cls=1.3473)
+  -> New best val_loss (0.9891), saved best_model.pt
+Epoch 2/12 (256.8s) | train_loss=-24.7428 (reg=-24.7428, cls=1.3584) | val_loss=-7.0704 (reg=-7.0704, cls=1.5219)
+  -> New best val_loss (-7.0704), saved best_model.pt
+Epoch 3/12 (254.3s) | train_loss=-33.0384 (reg=-33.0384, cls=1.4046) | val_loss=-13.6355 (reg=-13.6355, cls=1.5234)
+  -> New best val_loss (-13.6355), saved best_model.pt
+Epoch 4/12 (253.4s) | train_loss=-37.3161 (reg=-37.3161, cls=1.4220) | val_loss=-14.5912 (reg=-14.5912, cls=1.5436)
+  -> New best val_loss (-14.5912), saved best_model.pt
+Epoch 5/12 (253.2s) | train_loss=-40.9110 (reg=-40.9110, cls=1.4235) | val_loss=-21.4737 (reg=-21.4737, cls=1.5817)
+  -> New best val_loss (-21.4737), saved best_model.pt
+Epoch 6/12 (252.5s) | train_loss=-43.9065 (reg=-43.9065, cls=1.4277) | val_loss=-20.7967 (reg=-20.7967, cls=1.5156)
+Epoch 7/12 (254.3s) | train_loss=-45.7719 (reg=-45.7719, cls=1.4199) | val_loss=-25.1354 (reg=-25.1354, cls=1.5833)
+  -> New best val_loss (-25.1354), saved best_model.pt
+Epoch 8/12 (254.8s) | train_loss=-48.1790 (reg=-48.1790, cls=1.4077) | val_loss=-25.5893 (reg=-25.5893, cls=1.5280)
+  -> New best val_loss (-25.5893), saved best_model.pt
+Epoch 9/12 (254.5s) | train_loss=-50.4348 (reg=-50.4348, cls=1.3309) | val_loss=-19.7428 (reg=-19.7428, cls=1.4436)
+Epoch 10/12 (255.9s) | train_loss=-53.2845 (reg=-53.2845, cls=1.2554) | val_loss=-30.3342 (reg=-30.3342, cls=1.3842)
+  -> New best val_loss (-30.3342), saved best_model.pt
+Epoch 11/12 (254.4s) | train_loss=-55.7661 (reg=-55.7661, cls=1.2491) | val_loss=-31.6963 (reg=-31.6963, cls=1.4156)
+  -> New best val_loss (-31.6963), saved best_model.pt
+Epoch 12/12 (256.4s) | train_loss=-57.6976 (reg=-57.6976, cls=1.2497) | val_loss=-32.8741 (reg=-32.8741, cls=1.4239)
+  -> New best val_loss (-32.8741), saved best_model.pt
+
+Training complete.
+Saved final model to runs/L_seed3/final_model.pt

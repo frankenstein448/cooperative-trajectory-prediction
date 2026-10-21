@@ -1,0 +1,8 @@
+Checkpoint: checkpoints_e2e/best_model.pt | epoch 29, val_loss=0.9538
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2268    1.317m        2.110m         2.662m
+Town03     297    1.350m        2.098m         2.685m
+Town04     378    0.483m        0.858m         1.031m
+Town05    1593    1.509m        2.409m         3.045m

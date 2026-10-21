@@ -1,0 +1,18 @@
+15120 unique (agent, scene, frame) keys referenced as ego or coop across all 54 scenes
+expected cache size: 6.36 GiB  (441.0 KiB/key)
+  built 1000, skipped 0 so far (of 15120 total)
+  built 2000, skipped 0 so far (of 15120 total)
+  built 3000, skipped 0 so far (of 15120 total)
+  built 4000, skipped 0 so far (of 15120 total)
+  built 5000, skipped 0 so far (of 15120 total)
+  built 6000, skipped 0 so far (of 15120 total)
+  built 7000, skipped 0 so far (of 15120 total)
+  built 8000, skipped 0 so far (of 15120 total)
+  built 9000, skipped 0 so far (of 15120 total)
+  built 10000, skipped 0 so far (of 15120 total)
+  built 11000, skipped 0 so far (of 15120 total)
+  built 12000, skipped 0 so far (of 15120 total)
+  built 13000, skipped 0 so far (of 15120 total)
+  built 14000, skipped 0 so far (of 15120 total)
+  built 15000, skipped 0 so far (of 15120 total)
+Done: built 15120, skipped 0 (already present), total 15120

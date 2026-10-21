@@ -1,0 +1,48 @@
+Checkpoint: checkpoints_scene_full/checkpoint_epoch5.pt | epoch 5, val_loss=3.0431
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.687m        4.747m         5.899m
+Town03     280    3.303m        6.784m         7.819m
+Town04     280    1.236m        2.148m         2.630m
+Town05    1680    2.826m        4.840m         6.124m
+Checkpoint: checkpoints_scene_full/checkpoint_epoch10.pt | epoch 10, val_loss=3.2251
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.702m        4.746m         5.954m
+Town03     280    3.653m        7.388m         8.299m
+Town04     280    1.358m        2.336m         2.952m
+Town05    1680    2.767m        4.708m         6.064m
+Checkpoint: checkpoints_scene_full/checkpoint_epoch15.pt | epoch 15, val_loss=3.3194
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.702m        4.624m         5.842m
+Town03     280    3.818m        8.182m         9.061m
+Town04     280    1.345m        1.942m         2.845m
+Town05    1680    2.742m        4.478m         5.805m
+Checkpoint: checkpoints_scene_full/checkpoint_epoch20.pt | epoch 20, val_loss=3.8526
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.609m        4.670m         5.887m
+Town03     280    3.336m        7.706m         8.368m
+Town04     280    1.422m        1.810m         2.869m
+Town05    1680    2.686m        4.641m         5.976m
+Checkpoint: checkpoints_scene_full/checkpoint_epoch25.pt | epoch 25, val_loss=4.0044
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.682m        4.746m         5.973m
+Town03     280    3.883m        8.704m         9.436m
+Town04     280    1.338m        1.884m         2.865m
+Town05    1680    2.706m        4.564m         5.913m
+Checkpoint: checkpoints_scene_full/checkpoint_epoch30.pt | epoch 30, val_loss=3.9320
+map stream: on | transform: current file
+
+group        n   minADE6  minFDE6(ind)  minFDE6(same)
+ALL       2240    2.646m        4.761m         5.985m
+Town03     280    3.602m        8.500m         9.012m
+Town04     280    1.425m        2.025m         3.120m
+Town05    1680    2.690m        4.594m         5.958m

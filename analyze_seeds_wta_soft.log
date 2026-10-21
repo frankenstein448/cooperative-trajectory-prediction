@@ -1,0 +1,58 @@
+Per run, ALL (minADE6, ADE1):
+  W_seed0        2.617  5.610
+  W_seed1        2.401  5.305
+  W_seed2        2.438  5.102
+  W_seed3        2.609  5.580
+  W_seed4        2.527  5.903
+  D_seed0        2.619  5.110
+  D_seed1        2.474  5.473
+  D_seed2        2.508  5.555
+  D_seed3        2.495  5.882
+  D_seed4        2.440  5.363
+
+ALL minADE6: full 2.518 +/- 0.098   no-map 2.507 +/- 0.068   gap (no-map - full) -0.011
+
+ALL ADE1: full 5.500 +/- 0.307   no-map 5.477 +/- 0.282   gap (no-map - full) -0.023
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.340     3.389  +0.049 |    7.255     7.372  +0.117
+Town04 #96      1.182     1.291  +0.109 |    3.924     3.983  +0.059
+Town05 #16      1.252     1.193  -0.059 |    3.252     3.358  +0.105
+Town05 #41      1.526     1.510  -0.017 |    4.185     4.119  -0.066
+Town05 #42      1.725     1.757  +0.032 |    4.983     4.730  -0.253
+Town05 #51      2.257     2.262  +0.005 |    4.807     5.165  +0.358
+Town05 #65      2.144     2.105  -0.039 |    3.547     3.450  -0.096
+Town05 #73      6.721     6.554  -0.167 |   12.047    11.635  -0.412
+Full better in 4/8 scenes (minADE6), 4/8 scenes (ADE1)
+
+Ranking metrics, ALL, per run (minFDE6, brierFDE, div):
+  W_seed0        5.267  5.752  22.311
+  W_seed1        4.578  4.976  25.635
+  W_seed2        4.910  5.324  22.601
+  W_seed3        5.176  5.633  22.191
+  W_seed4        4.964  5.427  26.954
+  D_seed0        5.525  5.953  20.452
+  D_seed1        4.839  5.241  25.379
+  D_seed2        4.836  5.278  24.247
+  D_seed3        5.062  5.531  23.394
+  D_seed4        4.820  5.251  26.666
+  W seed mean +/- std: ADE1 5.500 +/- 0.307   minADE6 2.518 +/- 0.098   minFDE6 4.979 +/- 0.268   brierFDE 5.422 +/- 0.301   div 23.938 +/- 2.206
+  D seed mean +/- std: ADE1 5.477 +/- 0.282   minADE6 2.507 +/- 0.068   minFDE6 5.016 +/- 0.301   brierFDE 5.451 +/- 0.305   div 24.028 +/- 2.346
+
+LOSS RULE (full = wta_soft W, no-map = D):
+  ALL ADE1    W 5.500 < D 5.477? False
+  ADE1 lower in 4/8 scenes >= 6? False
+  ALL minADE6 W 2.518 - D 2.507 = +0.011 <= +0.100? True
+  ALL div     W 23.938 >= 0.5 x D 24.028 = 12.014? True
+  (reported, not a criterion) ADE1 seed std: W 0.307  D 0.282
+VERDICT: do NOT adopt wta_soft
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.5656  0.4371  0.3382  0.3344  0.3152
+  full      stationary   0.3218  0.2097  0.3417  0.3090  0.3334
+  full      moving       0.8249  0.6789  0.3345  0.3615  0.2958
+  no-map    ALL          0.5677  0.4437  0.3406  0.3317  0.3152
+  no-map    stationary   0.3287  0.2135  0.3402  0.3057  0.3334
+  no-map    moving       0.8220  0.6884  0.3410  0.3593  0.2958

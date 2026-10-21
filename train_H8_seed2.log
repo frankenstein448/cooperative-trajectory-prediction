@@ -1,0 +1,27 @@
+Using device: cuda
+Wrote config: {'seed': 2, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'no_map': False, 'degrade': None, 'history_frames': 8, 'history_encoder': 'gru', 'require_history_frames': 0, 'epochs': 12, 'out_dir': 'runs/H8_seed2', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'fd4fb153c59c7e2256a9852683ea29ee65c45845'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=8, require_history_frames=0, history_norm=off
+PilotDataset: dropped 1512 samples without frames frame-8 .. frame (13392 kept)
+Dataset size: 13392 samples
+Train: 9424 samples | Tuning: 1984 samples | Test: 1984 samples (never used here)
+Computed cam_norm from 9424 train samples: {'mean': [26.4482421875, 42.29000473022461, 0.5023107528686523, 0.4529152512550354], 'std': [132.04173278808594, 129.40194702148438, 1.8418140411376953, 0.8961902856826782]}
+Computed history_norm from 9424 train samples: {'mean': [-1.9952421188354492, 0.005896736867725849], 'std': [4.456562042236328, 0.967014729976654]}
+Model use_map=True, loss=WinnerTakesAllLoss
+Trainable parameters: 778,702
+Epoch 1/12 (221.6s) | train_loss=2.8337 (reg=2.2438, cls=0.5899) | val_loss=2.7817 (reg=1.5784, cls=1.2033)
+  -> New best val_loss (2.7817), saved best_model.pt
+Epoch 2/12 (222.7s) | train_loss=2.0437 (reg=1.3116, cls=0.7320) | val_loss=2.3550 (reg=1.3182, cls=1.0368)
+  -> New best val_loss (2.3550), saved best_model.pt
+Epoch 3/12 (222.5s) | train_loss=1.9049 (reg=1.0786, cls=0.8262) | val_loss=2.6554 (reg=1.2065, cls=1.4489)
+Epoch 4/12 (223.5s) | train_loss=1.6619 (reg=0.9778, cls=0.6841) | val_loss=2.7269 (reg=1.2263, cls=1.5006)
+Epoch 5/12 (223.1s) | train_loss=1.5643 (reg=0.9325, cls=0.6318) | val_loss=2.9699 (reg=1.2621, cls=1.7079)
+Epoch 6/12 (222.9s) | train_loss=1.4653 (reg=0.8983, cls=0.5671) | val_loss=2.6952 (reg=1.2203, cls=1.4749)
+Epoch 7/12 (223.0s) | train_loss=1.3973 (reg=0.8748, cls=0.5225) | val_loss=2.8633 (reg=1.2430, cls=1.6203)
+Epoch 8/12 (223.8s) | train_loss=1.3205 (reg=0.8384, cls=0.4821) | val_loss=2.9173 (reg=1.2530, cls=1.6642)
+Epoch 9/12 (223.1s) | train_loss=1.2711 (reg=0.8109, cls=0.4602) | val_loss=2.9240 (reg=1.2818, cls=1.6422)
+Epoch 10/12 (222.3s) | train_loss=1.2253 (reg=0.7898, cls=0.4355) | val_loss=2.8420 (reg=1.2189, cls=1.6231)
+Epoch 11/12 (223.0s) | train_loss=1.1835 (reg=0.7584, cls=0.4251) | val_loss=3.0990 (reg=1.2365, cls=1.8625)
+Epoch 12/12 (222.9s) | train_loss=1.1255 (reg=0.7225, cls=0.4030) | val_loss=3.0850 (reg=1.2327, cls=1.8523)
+
+Training complete.
+Saved final model to runs/H8_seed2/final_model.pt

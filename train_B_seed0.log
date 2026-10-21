@@ -1,0 +1,24 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': True, 'use_image_cache': True, 'epochs': 12, 'out_dir': 'runs/B_seed0', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'b06fc0deb871a14492d74aa57ecb20231a7fe748'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Trainable parameters: 740,942
+Epoch 1/12 (244.4s) | train_loss=3.1305 (reg=2.1759, cls=0.9545) | val_loss=2.6312 (reg=1.4878, cls=1.1434)
+  -> New best val_loss (2.6312), saved best_model.pt
+Epoch 2/12 (245.0s) | train_loss=2.3022 (reg=1.4251, cls=0.8771) | val_loss=2.6146 (reg=1.4047, cls=1.2099)
+  -> New best val_loss (2.6146), saved best_model.pt
+Epoch 3/12 (245.7s) | train_loss=2.1710 (reg=1.3661, cls=0.8049) | val_loss=2.6031 (reg=1.4159, cls=1.1871)
+  -> New best val_loss (2.6031), saved best_model.pt
+Epoch 4/12 (245.6s) | train_loss=2.0683 (reg=1.3295, cls=0.7388) | val_loss=2.7117 (reg=1.4130, cls=1.2987)
+Epoch 5/12 (244.8s) | train_loss=1.9466 (reg=1.2922, cls=0.6544) | val_loss=2.7143 (reg=1.3908, cls=1.3236)
+Epoch 6/12 (246.3s) | train_loss=1.8600 (reg=1.2491, cls=0.6108) | val_loss=2.8694 (reg=1.3667, cls=1.5027)
+Epoch 7/12 (244.9s) | train_loss=1.7742 (reg=1.2086, cls=0.5657) | val_loss=2.9530 (reg=1.4147, cls=1.5383)
+Epoch 8/12 (245.7s) | train_loss=1.6450 (reg=1.1120, cls=0.5330) | val_loss=3.0411 (reg=1.3380, cls=1.7031)
+Epoch 9/12 (245.6s) | train_loss=1.5196 (reg=1.0178, cls=0.5018) | val_loss=3.1405 (reg=1.3491, cls=1.7914)
+Epoch 10/12 (245.9s) | train_loss=1.4337 (reg=0.9649, cls=0.4688) | val_loss=2.9880 (reg=1.3414, cls=1.6466)
+Epoch 11/12 (245.8s) | train_loss=1.3603 (reg=0.9143, cls=0.4460) | val_loss=3.0219 (reg=1.3904, cls=1.6315)
+Epoch 12/12 (245.1s) | train_loss=1.3114 (reg=0.8774, cls=0.4341) | val_loss=3.1556 (reg=1.4269, cls=1.7287)
+
+Training complete.
+Saved final model to runs/B_seed0/final_model.pt

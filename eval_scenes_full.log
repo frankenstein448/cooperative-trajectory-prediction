@@ -1,0 +1,12 @@
+Sanity: mean distance of first GT point from origin = 0.40 m (should be small, near the per-step motion, if gt_traj is relative to the agent)
+
+town    scene     n  model minADE6  stay-put ADE
+Town03      4   280         3.602m        9.094m
+Town04     96   280         1.425m        3.068m
+Town05     16   280         1.138m        2.313m
+Town05     41   280         2.148m        5.348m
+Town05     42   280         2.207m        3.420m
+Town05     51   280         2.565m        8.220m
+Town05     65   280         1.896m        3.724m
+Town05     73   280         6.189m       13.146m
+ALL            2240         2.646m        6.042m

@@ -1,0 +1,36 @@
+Per run, ALL (minADE6, ADE1):
+  C_D_seed0      2.492  7.397
+  C_D_seed1      2.566  6.740
+  C_D_seed2      2.535  6.178
+  C_EgoOnly_seed0 2.443  6.082
+  C_EgoOnly_seed1 2.314  7.127
+  C_EgoOnly_seed2 2.407  5.823
+
+ALL minADE6: full 2.531 +/- 0.037   no-map 2.388 +/- 0.067   gap (no-map - full) -0.143
+
+ALL ADE1: full 6.772 +/- 0.610   no-map 6.344 +/- 0.690   gap (no-map - full) -0.428
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #85      5.479     5.353  -0.127 |   10.050    10.548  +0.498
+Town04 #30      4.640     3.895  -0.745 |    7.976     7.735  -0.241
+Town05 #3       1.631     1.845  +0.214 |    4.781     4.394  -0.387
+Town05 #14      1.629     1.725  +0.096 |   12.002     8.460  -3.542
+Town05 #15      1.799     1.715  -0.084 |    4.577     4.345  -0.233
+Town05 #16      1.252     1.132  -0.120 |    3.098     2.608  -0.489
+Town05 #21      0.938     0.899  -0.039 |    5.460     4.083  -1.378
+Town05 #22      2.878     2.540  -0.338 |    6.229     8.580  +2.351
+Full better in 2/8 scenes (minADE6), 2/8 scenes (ADE1)
+
+RULE (minADE6): scenes 2/8 >= 7? False   gap -0.143 > 2 x max std 0.133? False
+(component rule: full = C_D_seed0,C_D_seed1,C_D_seed2, ablation = C_EgoOnly_seed0,C_EgoOnly_seed1,C_EgoOnly_seed2)
+VERDICT: no detectable effect of the removed component under the scene-held-out protocol
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.6087  0.4260  0.0243  0.0930  0.0263
+  full      stationary   0.4391  0.2323  0.0033  0.0670  0.0022
+  full      moving       0.8304  0.6792  0.0517  0.1269  0.0580
+  no-map    ALL          0.5921  0.3995  0.0354  0.1071  0.0263
+  no-map    stationary   0.4343  0.1988  0.0057  0.0698  0.0022
+  no-map    moving       0.7983  0.6618  0.0741  0.1558  0.0580

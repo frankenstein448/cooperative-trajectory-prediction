@@ -1,0 +1,14 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'wta', 'relaxed_wta_eps': None, 'no_map': True, 'epochs': 12, 'out_dir': '/tmp/claude-1002/-home-karra-hd-maps/341b6510-9e16-463a-bad7-65824174ebb7/scratchpad/nomap_dryrun', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': '7505a93e6b4cd6c3f11e2f3961b5b54fbafd9d69'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Model use_map=False, loss=WinnerTakesAllLoss
+Trainable parameters: 558,862
+DRY RUN: 2 train batches + 2 val batches, no checkpoints will be saved
+  train batch 0: loss=8.1376 reg=6.1146 cls=2.0230
+  train batch 1: loss=7.3256 reg=5.5723 cls=1.7533
+  val batch 0: loss=1.5220 reg=0.1664 cls=1.3555
+  val batch 1: loss=2.8239 reg=0.9602 cls=1.8637
+DRY RUN complete -- no checkpoints saved, exiting.

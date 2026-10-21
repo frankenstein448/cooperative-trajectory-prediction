@@ -1,0 +1,58 @@
+Per run, ALL (minADE6, ADE1):
+  L_seed0        3.101  5.070
+  L_seed1        3.103  4.915
+  L_seed2        3.068  4.821
+  L_seed3        3.074  4.850
+  L_seed4        3.056  4.946
+  D_seed0        2.619  5.110
+  D_seed1        2.474  5.473
+  D_seed2        2.508  5.555
+  D_seed3        2.495  5.882
+  D_seed4        2.440  5.363
+
+ALL minADE6: full 3.080 +/- 0.021   no-map 2.507 +/- 0.068   gap (no-map - full) -0.573
+
+ALL ADE1: full 4.920 +/- 0.097   no-map 5.477 +/- 0.282   gap (no-map - full) +0.556
+
+Per scene, seed-averaged (positive diff = map helps):
+scene         full m6  nomap m6    diff |  full a1  nomap a1    diff
+Town03 #4       3.881     3.389  -0.492 |    5.936     7.372  +1.436
+Town04 #96      1.172     1.291  +0.118 |    3.090     3.983  +0.893
+Town05 #16      1.251     1.193  -0.058 |    2.257     3.358  +1.101
+Town05 #41      1.963     1.510  -0.454 |    3.961     4.119  +0.158
+Town05 #42      1.666     1.757  +0.091 |    2.830     4.730  +1.900
+Town05 #51      3.167     2.262  -0.905 |    6.060     5.165  -0.895
+Town05 #65      2.699     2.105  -0.594 |    3.510     3.450  -0.059
+Town05 #73      8.842     6.554  -2.288 |   11.719    11.635  -0.084
+Full better in 2/8 scenes (minADE6), 5/8 scenes (ADE1)
+
+Ranking metrics, ALL, per run (minFDE6, brierFDE, div, calibration pt50 xy50 pt90 xy90 of the top mode):
+  L_seed0        6.274  6.781  9.645  0.5248  0.5783  0.6116  0.6826
+  L_seed1        6.344  6.861  9.367  0.5290  0.6020  0.6040  0.6845
+  L_seed2        6.280  6.772  9.485  0.5175  0.5456  0.6033  0.6961
+  L_seed3        6.291  6.806  9.416  0.5149  0.5962  0.5965  0.6880
+  L_seed4        6.336  6.852  9.391  0.5281  0.5889  0.6226  0.7029
+  D_seed0        5.525  5.953  20.452
+  D_seed1        4.839  5.241  25.379
+  D_seed2        4.836  5.278  24.247
+  D_seed3        5.062  5.531  23.394
+  D_seed4        4.820  5.251  26.666
+  L seed mean +/- std: ADE1 4.920 +/- 0.097   minADE6 3.080 +/- 0.021   minFDE6 6.305 +/- 0.033   brierFDE 6.814 +/- 0.041   div 9.461 +/- 0.112   cal pt50 0.523 +/- 0.006   cal xy50 0.582 +/- 0.022   cal pt90 0.608 +/- 0.010   cal xy90 0.691 +/- 0.009
+  D seed mean +/- std: ADE1 5.477 +/- 0.282   minADE6 2.507 +/- 0.068   minFDE6 5.016 +/- 0.301   brierFDE 5.451 +/- 0.305   div 24.028 +/- 2.346
+
+LOSS RULE (full = laplace_mixture L, no-map = D):
+  ALL ADE1    L 4.920 < D 5.477? True
+  ADE1 lower in 5/8 scenes >= 6? False
+  ALL minADE6 L 3.080 - D 2.507 = +0.573 <= +0.100? False
+  ALL div     L 9.461 >= 0.5 x D 24.028 = 12.014? False
+  (reported, not a criterion) ADE1 seed std: L 0.097  D 0.282
+VERDICT: do NOT adopt laplace_mixture
+
+Safety, ALL rows, seed mean (descriptive only, not part of any rule; see each log's SAFE block for per-scene/per-town rows and GT-control UNRELIABLE flags):
+            group         miss1   miss6   offr1   offr6  offrGT
+  full      ALL          0.5382  0.4182  0.3507  0.2923  0.3152
+  full      stationary   0.2693  0.1842  0.3489  0.2702  0.3334
+  full      moving       0.8243  0.6671  0.3527  0.3158  0.2958
+  no-map    ALL          0.5677  0.4437  0.3406  0.3317  0.3152
+  no-map    stationary   0.3287  0.2135  0.3402  0.3057  0.3334
+  no-map    moving       0.8220  0.6884  0.3410  0.3593  0.2958
