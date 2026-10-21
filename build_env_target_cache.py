@@ -42,12 +42,13 @@ import collections
 
 import numpy as np
 
+import paths
 from v2x_message_stream import V2XMetadataLoader, V2X_ROOT, quaternion_to_yaw
 from pilot_dataset import _available_frames, ALL_SCENES, SCENE_TO_TOWN, CAMERA_COMPATIBLE_AGENTS
 from scene_split import KNOWN_TUNING_SCENES
 from ground_truth_extractor import HORIZON
 
-ENV_CACHE_DIR = os.path.expanduser("~/hd_cache/env_targets")
+ENV_CACHE_DIR = paths.ENV_CACHE_DIR
 RADIUS_M = 50.0
 EGO_MATCH_M = 1.0
 HIST = 8

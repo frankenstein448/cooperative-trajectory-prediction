@@ -20,9 +20,10 @@ import collections
 
 import numpy as np
 
+import paths
 from build_env_target_cache import ENV_CACHE_DIR, CAT4_OF, load_test_scenes
 
-ROOT = "/home/karra/V2X-Sim-2.0/v2.0"
+ROOT = paths.V2X_META_DIR
 N_CHECK = 50
 # scoping numbers (env_scoping.log, env_followup.log)
 SCOPING_BEFORE = {"train": 298747, "tuning": 63372, "test": 68270}

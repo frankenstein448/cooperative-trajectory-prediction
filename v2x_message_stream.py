@@ -10,8 +10,10 @@ import math
 import torch
 import torch.nn as nn
 
+import paths
+
 EMBED_DIM = 128
-V2X_ROOT = "/home/karra/V2X-Sim-2.0/v2.0"
+V2X_ROOT = paths.V2X_META_DIR
 CPM_RADIUS_M = 50.0  # only include objects within this range of ego
 
 

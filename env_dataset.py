@@ -38,9 +38,10 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+import paths
 from env_map import LanePolylines, K_PIECES, MAX_PIECE_POINTS, N_POINT_FEATS
 
-ENV_CACHE_DIR = os.path.expanduser("~/hd_cache/env_targets")
+ENV_CACHE_DIR = paths.ENV_CACHE_DIR
 TOWNS = ("Town03", "Town04", "Town05")
 POS_SCALE_M = 50.0     # target radius around the ego
 SPEED_SCALE = 5.0      # m per frame (5 Hz)

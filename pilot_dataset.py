@@ -25,11 +25,12 @@ from ego_sensor_encoder import load_semantic_lidar
 from ego_camera_encoder import load_image, IMG_SIZE
 from find_coop_neighbors import find_coop_neighbors
 from rgcn_map_encoder import load_graph, get_nearby_lane_nodes
+import paths
 from coord_transform import v2xsim_to_carla, MAP_TRANSFORMS
 from motion_utils import get_cv_velocity
 from sensor_degradation import DEGRADE_MODES, degrade_points, degrade_images
 
-SWEEPS_ROOT = "/home/karra/V2X-Sim-2.0/sweeps"
+SWEEPS_ROOT = paths.V2X_SWEEPS_DIR
 CAMERA_COMPATIBLE_AGENTS = [1, 2, 3, 4]
 VIEWS = ["CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT"]
 K_NEAREST_LANES = 5
@@ -37,13 +38,13 @@ K_NEAREST_LANES = 5
 # Camera image cache (built by build_image_cache.py): one .npy per
 # (agent_id, scene, frame), holding all 3 views as uint8 [3, 3, 224, 224]
 # (decoded + resized, before ToTensor's float/255 conversion).
-IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images")
+IMAGE_CACHE_DIR = paths.IMAGE_CACHE_DIR
 
 # RSU (agent 0; env task use_rsu, runs/DECISION_RULES_RSU.md): SEMLIDAR_TOP_id_0 + 4 cameras CAM_id_0_<k>.
 # Its image cache (build_rsu_image_cache.py) is separate: one .npy per (scene, frame), uint8 [4, 3, 224, 224].
 RSU_AGENT_ID = 0
 RSU_VIEWS = ["CAM_id_0_0", "CAM_id_0_1", "CAM_id_0_2", "CAM_id_0_3"]
-RSU_IMAGE_CACHE_DIR = os.path.expanduser("~/hd_cache/images_rsu")
+RSU_IMAGE_CACHE_DIR = paths.RSU_IMAGE_CACHE_DIR
 
 # Ego-task map input: v1 = RGCN lane graph (topology/*.pkl, nearby_idx); v2 = the env task's lane-piece tokens
 # (env_map.py; runs/DECISION_RULES_MAPV2_EGO.md).

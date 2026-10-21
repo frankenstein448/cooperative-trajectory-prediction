@@ -39,7 +39,9 @@ import subprocess
 import numpy as np
 import carla
 
-CARLA_DIR = os.path.expanduser("~/carla_sim")
+import paths
+
+CARLA_DIR = paths.CARLA_ROOT
 ENGINE_INI = os.path.join(CARLA_DIR, "CarlaUE4/Config/DefaultEngine.ini")
 ENGINE_BAK = ENGINE_INI + ".orig_replay"   # the original, made on the first start and kept
 MAP_LINES = re.compile(r"^((?:EditorStartupMap|GameDefaultMap|ServerDefaultMap)=/Game/Carla/Maps/)\w+\.\w+$", re.M)

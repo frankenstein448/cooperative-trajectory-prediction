@@ -20,10 +20,11 @@ import numpy as np
 from PIL import Image
 import torchvision.transforms as T
 
+import paths
 from pilot_dataset import PilotDataset, SWEEPS_ROOT, VIEWS, CAMERA_COMPATIBLE_AGENTS
 from find_coop_neighbors import find_coop_neighbors
 
-CACHE_DIR = os.path.expanduser("~/hd_cache/images")
+CACHE_DIR = paths.IMAGE_CACHE_DIR
 IMG_SIZE = 224
 _resize = T.Resize((IMG_SIZE, IMG_SIZE))
 

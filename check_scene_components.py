@@ -22,14 +22,15 @@ import collections
 
 import numpy as np
 
+import paths
 from pilot_dataset import ALL_SCENES, SCENE_TO_TOWN
 from scene_split import KNOWN_TUNING_SCENES
 
-ROOT = "/home/karra/V2X-Sim-2.0/v2.0"
+ROOT = paths.V2X_META_DIR
 LINK_SHARE = 0.01
 TARGET = {"train": 0.70, "tuning": 0.15, "test": 0.15}
 OLD_TUNING_IN_TEST_PENALTY = 0.002
-SAMPLES_PER_SCENE_CACHE = "/home/karra/hd_cache/env_targets/env_targets.npz"
+SAMPLES_PER_SCENE_CACHE = paths.ENV_TARGETS_NPZ
 
 
 def jl(name):

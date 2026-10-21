@@ -2,17 +2,19 @@
 Run in gpu-test-venv. Found 2026-10-13: 35 cross-split pairs, scenes 49 (test) and 72 (train) identical.
 --split-version v2 (scene_split.py) checks the leak-free split; --threshold sets the listed share (default 0.05);
 the script ends with the number of cross-split pairs above the threshold."""
-import re, json, sys, argparse, collections
-sys.path.insert(0, "/home/karra/hd-maps-dev")
+import os, re, json, sys, argparse, collections
+HERE = os.path.dirname(os.path.abspath(__file__))   # this checkout: code and test_scenes.json
+sys.path.insert(0, HERE)
+import paths
 from pilot_dataset import ALL_SCENES, SCENE_TO_TOWN
 from scene_split import KNOWN_TUNING_SCENES, v2_scene_sets
 ap = argparse.ArgumentParser()
 ap.add_argument("--split-version", choices=["v1", "v2"], default="v1")
 ap.add_argument("--threshold", type=float, default=0.05)
 args = ap.parse_args()
-R = "/home/karra/V2X-Sim-2.0/v2.0"
+R = paths.V2X_META_DIR
 jl = lambda n: json.load(open(f"{R}/{n}"))
-test = {t: set(v) for t, v in json.load(open("/home/karra/hd-maps-dev/test_scenes.json")).items()}
+test = {t: set(v) for t, v in json.load(open(os.path.join(HERE, "test_scenes.json"))).items()}
 sp = lambda s: "tuning" if s in KNOWN_TUNING_SCENES.get(SCENE_TO_TOWN[s], ()) else "test" if s in test.get(SCENE_TO_TOWN[s], ()) else "train"
 if args.split_version == "v2":
     V2 = v2_scene_sets()

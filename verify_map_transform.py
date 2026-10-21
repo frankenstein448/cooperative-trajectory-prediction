@@ -25,6 +25,7 @@ import torch
 from scipy.spatial import cKDTree
 
 import coord_transform as ct
+import paths
 import safety_metrics
 from rgcn_map_encoder import get_nearby_lane_nodes
 
@@ -127,7 +128,7 @@ for t in TOWNS:
           f"{t}: mirror position/yaw round trip exact; legacy max error {np.abs(l - pts).max():.1e}")
 
 print("\n4. Lane heading vs mirrored target heading (env cache, moving targets)")
-z = np.load("/home/karra/hd_cache/env_targets/env_targets.npz")
+z = np.load(paths.ENV_TARGETS_NPZ)
 town_t = z["sample_town"][z["sample"]]
 mov = z["speed"] > 0
 wrapd = lambda a: np.abs((np.degrees(a) + 180) % 360 - 180)

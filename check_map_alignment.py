@@ -43,11 +43,12 @@ import numpy as np
 from scipy.spatial import cKDTree
 from scipy.ndimage import distance_transform_edt
 
+import paths
 from coord_transform import TOWN_TRANSFORMS
 from pilot_dataset import ALL_SCENES, SCENE_TO_TOWN
 from scene_split import KNOWN_TUNING_SCENES
 
-ROOT = "/home/karra/V2X-Sim-2.0/v2.0"
+ROOT = paths.V2X_META_DIR
 PASS_MEDIAN_M, PASS_P95_M = 1.0, 2.5
 MAX_STEP_M, SENTINEL = 10.0, 1e6
 TRUNC_M = 3.0

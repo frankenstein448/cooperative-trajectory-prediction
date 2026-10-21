@@ -20,7 +20,9 @@ import numpy as np
 import carla
 from scipy.spatial import cKDTree
 
-XODR_DIR = os.path.expanduser("~/carla_sim/CarlaUE4/Content/Carla/Maps/OpenDrive")
+import paths
+
+XODR_DIR = paths.CARLA_XODR_DIR
 TOWNS = ["Town03", "Town04", "Town05"]
 JUNCTION_SPACING_M = 1.0
 
