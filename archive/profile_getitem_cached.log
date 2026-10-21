@@ -1,0 +1,11 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images)
+Over 100 random train samples (mean 4.00 agents/sample, 1200 jpeg files, 400 lidar files total):
+
+  jpeg            :   19.28 ms/sample  ( 68.5% of accounted time)
+  lidar           :    8.08 ms/sample  ( 28.7% of accounted time)
+  neighbor_search :    0.04 ms/sample  (  0.2% of accounted time)
+  meta_gt         :    0.73 ms/sample  (  2.6% of accounted time)
+  sum             :   28.13 ms/sample
+
+  jpeg per-file:   1.607 ms/file  (1200 files)
+  lidar per-file:  2.020 ms/file  (400 files)

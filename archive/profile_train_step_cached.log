@@ -1,0 +1,35 @@
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images)
+USDT:2026-10-09 20:46:26 309872:309872 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-10-09 20:46:44 309872:309872 SyncActivityProfilerHandler.cpp:59] profiler_stop
+DataLoader wait: mean 72.3 ms over 45 batches
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                          step/backward        33.91%        7.737s        34.94%        7.974s     159.481ms       0.000us         0.00%       2.109ms      42.183us            50  
+                                           step/forward         3.59%     818.475ms        21.80%        4.975s      99.506ms       0.000us         0.00%     540.676ms      10.814ms            50  
+enumerate(DataLoader)#_MultiProcessingDataLoaderIter...        12.25%        2.796s        12.48%        2.848s      56.970ms       0.000us         0.00%       0.000us       0.000us            50  
+autograd::engine::evaluate_function: ConvolutionBack...         1.19%     270.412ms         9.81%        2.238s     116.561us       0.000us         0.00%     446.150ms      23.237us         19200  
+                                       cudaLaunchKernel         7.57%        1.727s         7.69%        1.756s       4.729us       0.000us         0.00%     227.303us       0.001us        371209  
+                                   ConvolutionBackward0         0.21%      46.864ms         7.26%        1.657s      86.291us       0.000us         0.00%     409.994ms      21.354us         19200  
+                             aten::convolution_backward         3.31%     756.423ms         7.06%        1.610s      83.850us     352.567ms        27.03%     409.994ms      21.354us         19200  
+    autograd::engine::evaluate_function: AddmmBackward0         1.01%     229.449ms         6.85%        1.563s      99.865us       0.000us         0.00%     208.702ms      13.336us         15650  
+                                              aten::bmm         0.07%      16.875ms         6.50%        1.483s       4.944ms     285.915us         0.02%     383.004us       1.277us           300  
+      autograd::engine::evaluate_function: BmmBackward0         0.01%       1.374ms         6.49%        1.480s      14.799ms       0.000us         0.00%     236.290us       2.363us           100  
+                                           BmmBackward0         0.00%     933.432us         6.48%        1.478s      14.785ms       0.000us         0.00%     236.290us       2.363us           100  
+                                  _native::bmm_triton_0         6.41%        1.463s         6.42%        1.464s      14.644ms      94.209us         0.01%      94.209us       0.942us           100  
+                                           aten::conv2d         0.12%      28.216ms         5.46%        1.245s      64.866us       0.000us         0.00%     189.620ms       9.876us         19200  
+                                      aten::convolution         0.38%      86.552ms         5.33%        1.217s      63.393us       0.000us         0.00%     189.620ms       9.876us         19200  
+                                     aten::_convolution         0.46%     106.042ms         4.95%        1.131s      58.885us       0.000us         0.00%     189.620ms       9.876us         19200  
+                                         AddmmBackward0         0.48%     108.853ms         4.03%     919.371ms      58.746us       0.000us         0.00%     122.360ms       7.819us         15650  
+                                               aten::to         0.10%      22.330ms         3.85%     877.489ms      29.617us       0.000us         0.00%     127.980ms       4.320us         29628  
+                                         aten::_to_copy         0.12%      27.980ms         3.75%     855.159ms     105.784us       0.000us         0.00%     127.980ms      15.831us          8084  
+                                            aten::copy_         0.24%      53.792ms         3.57%     814.459ms      88.915us     128.979ms         9.89%     128.982ms      14.081us          9160  
+                                aten::cudnn_convolution         2.26%     514.705ms         3.38%     770.802ms      40.146us     166.393ms        12.76%     166.534ms       8.674us         19200  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 22.819s
+Self CUDA time total: 1.304s
+
+
+host->device copy (summed aten::to/copy_/memcpy, nested inside forward): 47.0 ms/batch
+forward (record_function total, includes the H2D above):  99.5 ms/batch
+backward (record_function total):                         159.5 ms/batch

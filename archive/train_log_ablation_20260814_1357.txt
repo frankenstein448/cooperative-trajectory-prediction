@@ -1,0 +1,66 @@
+Using device: cuda
+Training ABLATION model: use_map=False
+Dataset size: 15120 samples
+Train: 12852 samples | Val: 2268 samples (same split as full model)
+Trainable parameters: 558,862 (full model had 740,942)
+Epoch 1/30 (1785.3s) | train_loss=3.1836 (reg=2.1193, cls=1.0643) | val_loss=2.6372 (reg=1.4686, cls=1.1686)
+  -> New best val_loss (2.6372), saved best_model.pt
+Epoch 2/30 (1779.0s) | train_loss=2.5698 (reg=1.4648, cls=1.1050) | val_loss=2.4996 (reg=1.4025, cls=1.0972)
+  -> New best val_loss (2.4996), saved best_model.pt
+Epoch 3/30 (1805.7s) | train_loss=2.4158 (reg=1.3942, cls=1.0217) | val_loss=2.3023 (reg=1.3138, cls=0.9885)
+  -> New best val_loss (2.3023), saved best_model.pt
+Epoch 4/30 (1773.5s) | train_loss=2.2874 (reg=1.3406, cls=0.9468) | val_loss=2.2298 (reg=1.2895, cls=0.9403)
+  -> New best val_loss (2.2298), saved best_model.pt
+Epoch 5/30 (1810.4s) | train_loss=2.1843 (reg=1.2975, cls=0.8868) | val_loss=2.1766 (reg=1.2831, cls=0.8934)
+  -> New best val_loss (2.1766), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 5)
+Epoch 6/30 (1783.5s) | train_loss=2.0514 (reg=1.2466, cls=0.8048) | val_loss=2.0152 (reg=1.1982, cls=0.8170)
+  -> New best val_loss (2.0152), saved best_model.pt
+Epoch 7/30 (1811.3s) | train_loss=1.9675 (reg=1.2075, cls=0.7600) | val_loss=1.9080 (reg=1.1812, cls=0.7268)
+  -> New best val_loss (1.9080), saved best_model.pt
+Epoch 8/30 (1806.2s) | train_loss=1.8844 (reg=1.1720, cls=0.7124) | val_loss=1.8824 (reg=1.1507, cls=0.7317)
+  -> New best val_loss (1.8824), saved best_model.pt
+Epoch 9/30 (1777.1s) | train_loss=1.8131 (reg=1.1415, cls=0.6716) | val_loss=1.8776 (reg=1.1322, cls=0.7454)
+  -> New best val_loss (1.8776), saved best_model.pt
+Epoch 10/30 (1813.5s) | train_loss=1.7375 (reg=1.1046, cls=0.6329) | val_loss=1.7529 (reg=1.0817, cls=0.6712)
+  -> New best val_loss (1.7529), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 10)
+Epoch 11/30 (1807.6s) | train_loss=1.6680 (reg=1.0667, cls=0.6014) | val_loss=1.6988 (reg=1.0500, cls=0.6488)
+  -> New best val_loss (1.6988), saved best_model.pt
+Epoch 12/30 (1799.0s) | train_loss=1.6007 (reg=1.0282, cls=0.5726) | val_loss=1.6078 (reg=1.0079, cls=0.5999)
+  -> New best val_loss (1.6078), saved best_model.pt
+Epoch 13/30 (1810.3s) | train_loss=1.5036 (reg=0.9764, cls=0.5272) | val_loss=1.5188 (reg=0.9588, cls=0.5600)
+  -> New best val_loss (1.5188), saved best_model.pt
+Epoch 14/30 (1806.3s) | train_loss=1.4370 (reg=0.9313, cls=0.5057) | val_loss=1.4267 (reg=0.9106, cls=0.5161)
+  -> New best val_loss (1.4267), saved best_model.pt
+Epoch 15/30 (1781.3s) | train_loss=1.3651 (reg=0.8876, cls=0.4775) | val_loss=1.4447 (reg=0.8982, cls=0.5465)
+  -> Periodic checkpoint saved (epoch 15)
+Epoch 16/30 (1810.6s) | train_loss=1.3075 (reg=0.8471, cls=0.4605) | val_loss=1.4688 (reg=0.8726, cls=0.5962)
+Epoch 17/30 (1779.0s) | train_loss=1.2726 (reg=0.8157, cls=0.4569) | val_loss=1.3556 (reg=0.8304, cls=0.5252)
+  -> New best val_loss (1.3556), saved best_model.pt
+Epoch 18/30 (1778.2s) | train_loss=1.2208 (reg=0.7894, cls=0.4314) | val_loss=1.3155 (reg=0.8108, cls=0.5047)
+  -> New best val_loss (1.3155), saved best_model.pt
+Epoch 19/30 (1811.6s) | train_loss=1.1901 (reg=0.7662, cls=0.4239) | val_loss=1.2344 (reg=0.7750, cls=0.4595)
+  -> New best val_loss (1.2344), saved best_model.pt
+Epoch 20/30 (1786.6s) | train_loss=1.1429 (reg=0.7401, cls=0.4029) | val_loss=1.2062 (reg=0.7572, cls=0.4490)
+  -> New best val_loss (1.2062), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 20)
+Epoch 21/30 (1807.3s) | train_loss=1.1300 (reg=0.7212, cls=0.4088) | val_loss=1.2096 (reg=0.7644, cls=0.4452)
+Epoch 22/30 (1801.7s) | train_loss=1.0985 (reg=0.7019, cls=0.3966) | val_loss=1.2156 (reg=0.7506, cls=0.4650)
+Epoch 23/30 (1812.4s) | train_loss=1.0716 (reg=0.6867, cls=0.3849) | val_loss=1.2154 (reg=0.7293, cls=0.4861)
+Epoch 24/30 (1814.3s) | train_loss=1.0370 (reg=0.6656, cls=0.3715) | val_loss=1.2311 (reg=0.7204, cls=0.5106)
+Epoch 25/30 (1783.4s) | train_loss=1.0106 (reg=0.6502, cls=0.3604) | val_loss=1.1757 (reg=0.7199, cls=0.4558)
+  -> New best val_loss (1.1757), saved best_model.pt
+  -> Periodic checkpoint saved (epoch 25)
+Epoch 26/30 (1808.7s) | train_loss=0.9918 (reg=0.6328, cls=0.3590) | val_loss=1.1342 (reg=0.6772, cls=0.4570)
+  -> New best val_loss (1.1342), saved best_model.pt
+Epoch 27/30 (1816.3s) | train_loss=0.9821 (reg=0.6233, cls=0.3587) | val_loss=1.1349 (reg=0.6672, cls=0.4677)
+Epoch 28/30 (1776.7s) | train_loss=0.9460 (reg=0.6042, cls=0.3419) | val_loss=1.0944 (reg=0.6593, cls=0.4351)
+  -> New best val_loss (1.0944), saved best_model.pt
+Epoch 29/30 (1775.4s) | train_loss=0.9409 (reg=0.5909, cls=0.3499) | val_loss=1.0926 (reg=0.6540, cls=0.4386)
+  -> New best val_loss (1.0926), saved best_model.pt
+Epoch 30/30 (1807.5s) | train_loss=0.9302 (reg=0.5817, cls=0.3484) | val_loss=1.1230 (reg=0.6555, cls=0.4675)
+  -> Periodic checkpoint saved (epoch 30)
+
+Ablation training complete.
+Saved final model to e2e_model_no_map.pt

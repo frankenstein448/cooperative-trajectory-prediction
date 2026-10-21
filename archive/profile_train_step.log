@@ -1,0 +1,34 @@
+USDT:2026-10-09 19:15:37 284751:284751 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-10-09 19:16:28 284751:284751 SyncActivityProfilerHandler.cpp:59] profiler_stop
+DataLoader wait: mean 746.4 ms over 45 batches
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+enumerate(DataLoader)#_MultiProcessingDataLoaderIter...        62.58%       34.950s        62.68%       35.001s     700.024ms       0.000us         0.00%       0.000us       0.000us            50  
+                                          step/backward        14.35%        8.014s        14.81%        8.273s     165.463ms       0.000us         0.00%       2.115ms      42.300us            50  
+                                           step/forward         1.51%     843.147ms         9.47%        5.289s     105.773ms       0.000us         0.00%     541.123ms      10.822ms            50  
+autograd::engine::evaluate_function: ConvolutionBack...         0.49%     272.219ms         4.08%        2.276s     118.540us       0.000us         0.00%     446.723ms      23.267us         19200  
+                                       cudaLaunchKernel         3.14%        1.754s         3.17%        1.770s       4.763us       0.000us         0.00%     191.229us       0.001us        371623  
+                                   ConvolutionBackward0         0.09%      49.268ms         3.04%        1.700s      88.521us       0.000us         0.00%     410.490ms      21.380us         19200  
+                             aten::convolution_backward         1.40%     781.242ms         2.96%        1.650s      85.955us     353.177ms        27.06%     410.490ms      21.380us         19200  
+                                              aten::bmm         0.03%      17.606ms         2.92%        1.629s       5.431ms     287.011us         0.02%     384.194us       1.281us           300  
+      autograd::engine::evaluate_function: BmmBackward0         0.00%       1.415ms         2.91%        1.626s      16.264ms       0.000us         0.00%     236.836us       2.368us           100  
+                                           BmmBackward0         0.00%       1.277ms         2.91%        1.625s      16.249ms       0.000us         0.00%     236.836us       2.368us           100  
+                                  _native::bmm_triton_0         2.88%        1.608s         2.88%        1.610s      16.098ms      94.303us         0.01%      94.303us       0.943us           100  
+    autograd::engine::evaluate_function: AddmmBackward0         0.42%     236.126ms         2.85%        1.590s     101.590us       0.000us         0.00%     208.499ms      13.323us         15650  
+                                           aten::conv2d         0.05%      29.320ms         2.56%        1.431s      74.550us       0.000us         0.00%     189.721ms       9.881us         19200  
+                                      aten::convolution         0.15%      85.704ms         2.51%        1.402s      73.023us       0.000us         0.00%     189.721ms       9.881us         19200  
+                                     aten::_convolution         0.20%     114.267ms         2.36%        1.316s      68.560us       0.000us         0.00%     189.721ms       9.881us         19200  
+                                aten::cudnn_convolution         1.19%     662.691ms         1.66%     927.551ms      48.310us     166.468ms        12.75%     166.610ms       8.678us         19200  
+                                         AddmmBackward0         0.20%     110.353ms         1.65%     919.393ms      58.747us       0.000us         0.00%     122.591ms       7.833us         15650  
+                                               aten::to         0.04%      21.306ms         1.59%     887.870ms      29.913us       0.000us         0.00%     126.983ms       4.278us         29682  
+                                         aten::_to_copy         0.05%      28.288ms         1.55%     866.564ms     107.036us       0.000us         0.00%     126.983ms      15.685us          8096  
+                                            aten::copy_         0.10%      56.340ms         1.48%     828.254ms      90.126us     127.997ms         9.81%     128.000ms      13.928us          9190  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 55.844s
+Self CUDA time total: 1.305s
+
+
+host->device copy (summed aten::to/copy_/memcpy, nested inside forward): 47.7 ms/batch
+forward (record_function total, includes the H2D above):  105.8 ms/batch
+backward (record_function total):                         165.5 ms/batch

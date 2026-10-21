@@ -6,10 +6,10 @@ need the repository root on `PYTHONPATH`, a live CARLA server, or paths that no 
 Appendix G needs (pilot pipeline, transform grid search / refit / residual / heading scripts, `test_transforms*.py`,
 the legacy branch of `coord_transform.py`, split v1 in `scene_split.py`) is **not** here; it stays in the root.
 
-33 files: 22 moved from the repository (`git mv`, history kept), 11 copied from the untracked files of the main
+38 files: 23 moved from the repository (`git mv`, history kept), 15 copied from the untracked files of the main
 checkout.
 
-## Moved from the repository root (15)
+## Moved from the repository root (16)
 
 | file | what it was | why archived |
 |---|---|---|
@@ -23,6 +23,7 @@ checkout.
 | `check_waypoint.py` | loads Town05 in CARLA and queries a waypoint | earliest transform probe, no caller |
 | `find_good_test_point.py` | picks a scene-77 agent point for the transform probes (live Town05) | earliest transform probe, no caller |
 | `get_lidar_position.py` | world position of one LIDAR_TOP sample (scene 77) | earliest transform probe, no caller |
+| `check_std.py` | prints the mean / std of the Town05 topology graph's node positions | August exploration, no caller |
 | `profile_getitem.py` | timing breakdown of `PilotDataset.__getitem__` | one-off performance tool, no caller |
 | `profile_train_step.py` | timing of ~50 train batches (loader wait, transfer, step) | one-off performance tool, no caller |
 | `diag_lidar_scene30_frame19_ego3.png` | first output of `diag_lidar_behind.py` (two panels) | image; the thesis figure is `viz_env/thesis_figures/lidar_blindspot.pdf` (`--print`) |
@@ -41,7 +42,7 @@ checkout.
 | `topology/extract_agent_pos.py` | agent positions from a coperception `V2X-Sim-det` sample | reads `~/V2X-Sim-det`, which no thesis script uses |
 | `topology/RGCN map encoder` | early copy of `rgcn_map_encoder.py` (20 lines differ; no `.py`, spaces in the name) | superseded by `rgcn_map_encoder.py` |
 
-## Copied from untracked files of the main checkout (11)
+## Copied from untracked files of the main checkout (15)
 
 | file | what it was | why archived |
 |---|---|---|
@@ -56,3 +57,7 @@ checkout.
 | `auto_loss_after_nocoop.sh` | one-off chain: wait for the NoCoop verdict, merge c09a06d, verify, dry run, `run_loss_seeds.sh` | one-off orchestration of the loss study; the study itself is `run_loss_seeds.sh` |
 | `train_log_20260813_1910.txt` | pilot training log (random split, 30 epochs) | pilot log of 2026-08 |
 | `training_history.txt` | terminal capture of an early pilot training session | pilot log of 2026-08 |
+| `train_log_ablation_20260814_1357.txt` | pilot no-map ablation training log (`train_ablation.py`, random split) | pilot log of 2026-08 |
+| `profile_getitem_cached.log` | output of `profile_getitem.py` (image cache on) | log of an archived one-off tool |
+| `profile_train_step.log` | output of `profile_train_step.py` (no image cache) | log of an archived one-off tool |
+| `profile_train_step_cached.log` | output of `profile_train_step.py` (image cache on) | log of an archived one-off tool |
