@@ -20,8 +20,11 @@ read. Seed 0, checkpoint_epoch12.pt for every model.
 Per frame (ego frame, ego heading up, fixed VIEW, scale bar): map v2 lanes (env_map.LanePolylines, mirror transform),
 the ego, the other CAVs (1-4) and the RSU (agent 0; an edge marker when outside the view), every kept target of the
 env cache as its box coloured by visibility class (ego / coop CAV only / RSU only / nobody), its ground-truth 6 s
-future (drawn above the predictions) and, for the model's known targets, its top-1 mode (thick) plus, for moving
-targets only, the other 5 modes (--all-modes: for every known target; --all-modes-stills: extra all-modes stills).
+future (dashed, drawn above the predictions; not drawn when shorter than STILL_M) and, for the model's known targets,
+its top-1 mode (thick, arrowhead at the predicted end; a top-1 path shorter than STILL_M, moving or not, is a dot with a
+white rim on the target instead) plus, for moving targets only, the other 5 modes (thin, no arrow; --all-modes: for
+every known target; --all-modes-stills: extra all-modes stills). Every line has a thin white outline (the convention of
+overlay_carla_replay.py's CARLA video).
 CAV / RSU labels sit on a white background, placed beside the marker off the target boxes. A title line above each
 panel gives town, scene, ego, time, split and model. Targets some CAV or the RSU sees but this
 panel's model does not take as input (e.g. (b) in an E_EgoOnly panel) are drawn faded, with their ground truth and no
@@ -58,6 +61,9 @@ LANE_RANGE_M = 110.0
 LANE_JOIN_M, LANE_JOIN_DEG = 3.0, 30.0    # drawing only: join a lane's end to a lane start this close / aligned
 FADE = 0.3                                # alpha of targets that are not an input of the panel's model
 GT_LW = 2.2                               # ground-truth line width (drawn above the predictions)
+OUTLINE_PT = 1.6                          # white outline under the lines: this much wider (points, x k)
+ARROW_L_PT, ARROW_W_PT = 7.0, 6.0         # top-1 arrowhead length / base width (points, x k)
+STILL_M = 1.0                             # top-1 path shorter than this: dot on the target; ground truth: not drawn
 LABEL_CHAR_EM, LABEL_H_EM, LABEL_GAP_PT = 0.66, 1.6, 11.5   # CAV / RSU label: approx. text box (em), marker gap
 LABEL_OFFSETS = ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (0, -1), (1, 0), (-1, 0))   # tried in this order
 CLASS_NAMES = ("seen by the ego", "coop CAV only", "RSU only", "nobody")
@@ -306,6 +312,38 @@ PRINT_MARGIN_IN, PRINT_GAP_IN, PRINT_TITLE_IN, PRINT_ROW_IN = 0.06, 0.08, 0.2, 0
 PANEL_LABELS = {"E_V2X": "E_V2X", "E_EgoOnly": "E_EgoOnly", "E_V2XRSU": "E_V2X+RSU", "E_V2Xnomap": "E_V2X without map"}
 
 
+def outline(lw, k, alpha=1.0):
+    import matplotlib.patheffects as pe
+    return [pe.Stroke(linewidth=lw + OUTLINE_PT * k, foreground="white", alpha=alpha), pe.Normal()]
+
+
+def path_len(p):
+    return float(np.hypot(*np.diff(p, axis=0).T).sum())
+
+
+def arrow_line(ax, p, color, lw, k, m_per_pt, zorder):
+    """Top-1 line (screen m) ending in an arrowhead at the predicted end, pointing along the path's last ARROW_L_PT;
+    the line stops at the arrowhead's base so its round cap does not poke through the tip."""
+    from matplotlib.patches import Polygon
+    L, W = ARROW_L_PT * k * m_per_pt, ARROW_W_PT * k * m_per_pt
+    seg = np.hypot(*np.diff(p, axis=0).T)
+    back = np.concatenate([np.cumsum(seg[::-1])[::-1], [0.0]])     # path length from each point to the end
+    tip = p[-1]
+    if back[0] <= L:                       # shorter than the arrowhead: arrow along the whole path
+        base, body = p[0], p[:1]
+    else:
+        i = int(np.nonzero(back > L)[0][-1])                        # back[i] > L >= back[i + 1]
+        base = p[i + 1] + (p[i] - p[i + 1]) * (L - back[i + 1]) / seg[i]
+        body = np.vstack([p[:i + 1], base])
+    if len(body) >= 2:
+        ax.plot(body[:, 0], body[:, 1], color=color, lw=lw, zorder=zorder, solid_capstyle="round",
+                path_effects=outline(lw, k))
+    u = (tip - base) / np.hypot(*(tip - base))
+    n = np.array([-u[1], u[0]]) * W / 2
+    ax.add_patch(Polygon(np.array([tip, tip - u * L + n, tip - u * L - n]), closed=True, facecolor=color,
+                         edgecolor="white", lw=OUTLINE_PT * k / 2, joinstyle="miter", zorder=zorder + 0.1))
+
+
 def draw_panel(ax, fr, run, known, preds, all_modes, st):
     from matplotlib.collections import LineCollection
     from matplotlib.patches import Polygon
@@ -318,6 +356,9 @@ def draw_panel(ax, fr, run, known, preds, all_modes, st):
     ax.set_facecolor("white")
     for sp in ax.spines.values():
         sp.set_linewidth(0.8 * k)
+    pos = ax.get_position()
+    m_per_pt = max(2 * VIEW_LAT / (pos.width * ax.figure.get_figwidth() * 72),
+                   (VIEW_BACK + VIEW_FWD) / (pos.height * ax.figure.get_figheight() * 72))
     seg, park = fr["lanes"], fr["lanes_park"]
     ax.add_collection(LineCollection(seg[~park], colors=LANE_COLOR, linewidths=0.9 * k, zorder=1))
     if park.any():
@@ -328,8 +369,10 @@ def draw_panel(ax, fr, run, known, preds, all_modes, st):
         is_known = known[j]
         faded = not is_known and cls != 3      # seen by a CAV / the RSU, but not an input of this model
         gt = scr(np.vstack([cur, fr["fut_ego"][j]]))
-        ax.plot(gt[:, 0], gt[:, 1], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), alpha=FADE if faded else 0.8,
-                zorder=4.8)
+        if path_len(gt) >= STILL_M:          # shorter ground truth: no line, no outline
+            a = FADE if faded else 0.8
+            ax.plot(gt[:, 0], gt[:, 1], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), alpha=a, zorder=4.8,
+                    path_effects=outline(GT_LW * k, k, a))
         if cls == 3:
             ax.add_patch(Polygon(box(cur, yaw, *fr["wl"][j]), closed=True, zorder=5, facecolor="white", edgecolor=col,
                                  lw=1.4 * k))
@@ -342,16 +385,16 @@ def draw_panel(ax, fr, run, known, preds, all_modes, st):
             for m in range(trajs.shape[0]):
                 p = scr(np.vstack([cur, own_to_ego(trajs[m], cur, yaw)]))
                 if m == top:
-                    ax.plot(p[:, 0], p[:, 1], color=col, lw=2.4 * k, zorder=4.5, solid_capstyle="round")
-                    ax.plot(p[-1, 0], p[-1, 1], "o", ms=4.5 * k, color=col, mec="black", mew=0.5 * k, zorder=4.6)
+                    if path_len(p) < STILL_M:
+                        ax.plot(*p[0], "o", ms=4.0 * k, color=col, mec="white", mew=1.0 * k, zorder=5.1)
+                    else:
+                        arrow_line(ax, p, col, 2.4 * k, k, m_per_pt, 4.5)
                 elif all_modes or fr["moving"][j]:
-                    ax.plot(p[:, 0], p[:, 1], color=col, lw=0.9 * k, alpha=0.55, zorder=4)
+                    ax.plot(p[:, 0], p[:, 1], color=col, lw=0.9 * k, alpha=0.55, zorder=4,
+                            path_effects=outline(0.9 * k, k, 0.55))
     obstacles = [np.r_[b.min(axis=0), b.max(axis=0)] for b in
                  (box(fr["cur"][j], fr["yaw"][j], *fr["wl"][j]) for j in range(len(fr["tid"])))]
     obstacles.append(np.r_[-EGO_SIZE[0] / 2, -EGO_SIZE[1] / 2, EGO_SIZE[0] / 2, EGO_SIZE[1] / 2])
-    pos = ax.get_position()
-    m_per_pt = max(2 * VIEW_LAT / (pos.width * ax.figure.get_figwidth() * 72),
-                   (VIEW_BACK + VIEW_FWD) / (pos.height * ax.figure.get_figheight() * 72))
     for a, (xy, yaw) in fr["cavs"].items():
         p = scr(xy)
         if in_view(p):
@@ -417,19 +460,47 @@ def legend_handles(all_modes, st, no_pred):
         h.append(Patch(facecolor=CLASS_COLORS[1], edgecolor="black", lw=0.4 * k, alpha=FADE,
                        label="faded: not a model input" if short else
                        "faded: not an input of this model (no prediction)"))
-    h.append(Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s"))
-    if not no_pred:
-        h += [Line2D([], [], color="#555555", lw=2.4 * k, marker="o", ms=4.5 * k, markevery=[1],
-                     label="prediction, top-1 mode"),
-              Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55,
-                     label=("other 5 modes" if short else "prediction, other 5 modes")
-                     + ("" if all_modes else " (moving)" if short else " (moving targets)"))]
+    h.append(Line2D([], [], color=GT_COLOR, lw=GT_LW * k, ls=(0, (3, 2)), label="ground truth, 6 s",
+                    path_effects=outline(GT_LW * k, k)))
+    if not no_pred:   # entries as in overlay_carla_replay.py's video
+        h += [ArrowHandle(label="prediction, top-1 (6 s, arrow = predicted end)", k=k),
+              Line2D([], [], ls="", marker="o", ms=4.0 * k, color="#555555", mec="white", mew=1.0 * k,
+                     label="dot: predicted to stay (< 1 m in 6 s)"),
+              Line2D([], [], color="#555555", lw=0.9 * k, alpha=0.55, path_effects=outline(0.9 * k, k, 0.55),
+                     label="other 5 modes" + ("" if all_modes else " (moving)"))]
     h += [Line2D([], [], color=LANE_COLOR, lw=1.2 * k, label="lane centre line" + ("" if short else " (map v2)")),
           Patch(facecolor=EGO_COLOR, label="ego (heading up)" if short else "ego vehicle (heading up)"),
           Line2D([], [], ls="", marker="D", ms=8 * k, mfc="none", mec=CAV_COLOR, mew=2 * k, label="other CAV"),
           Line2D([], [], ls="", marker="^", ms=9 * k, mfc=RSU_COLOR, mec=RSU_COLOR,
                  label="RSU (hollow: off view)" if short else "RSU (hollow: outside view)")]
     return h
+
+
+class ArrowHandle:
+    """Legend entry for the top-1 line: drawn by arrow_handler() as a grey line with an arrowhead at its right end."""
+    def __init__(self, label, k):
+        self.label, self.k = label, k
+
+    def get_label(self):
+        return self.label
+
+
+def arrow_handler():
+    from matplotlib.legend_handler import HandlerBase
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Polygon
+
+    class ArrowHandler(HandlerBase):
+        def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+            k = orig_handle.k
+            y, x0, x1 = height / 2 - ydescent, -xdescent, width - xdescent
+            L, W = ARROW_L_PT * k, ARROW_W_PT * k
+            ln = Line2D([x0, x1 - L], [y, y], color="#555555", lw=2.4 * k, solid_capstyle="round",
+                        path_effects=outline(2.4 * k, k), transform=trans)
+            head = Polygon([[x1, y], [x1 - L, y + W / 2], [x1 - L, y - W / 2]], closed=True, facecolor="#555555",
+                           edgecolor="white", lw=OUTLINE_PT * k / 2, joinstyle="miter", transform=trans)
+            return [ln, head]
+    return ArrowHandler()
 
 
 def render_frame(fr, runs, known, preds, path, dpi, all_modes, st=VIDEO):
@@ -452,21 +523,22 @@ def render_frame(fr, runs, known, preds, path, dpi, all_modes, st=VIDEO):
                 for i in range(n)]
         lg = fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=ncol,
                         fontsize=st["fs_legend"], frameon=False, handlelength=1.5, columnspacing=0.8,
-                        handletextpad=0.5, borderaxespad=0.2, labelspacing=0.3)
+                        handletextpad=0.5, borderaxespad=0.2, labelspacing=0.3,
+                        handler_map={ArrowHandle: arrow_handler()})
     else:
         fig, axes = plt.subplots(1, n, figsize=(7.0 * n, 8.2 if n == 1 else 7.7), squeeze=False)
         axes = axes[0]
-        fig.legend(handles=handles, loc="lower center", ncol=4 if n == 1 else 6, fontsize=st["fs_legend"],
-                   frameon=False)
+        lg = fig.legend(handles=handles, loc="lower center", ncol=4 if n == 1 else 5, fontsize=st["fs_legend"],
+                        frameon=False, handler_map={ArrowHandle: arrow_handler()})
         fig.subplots_adjust(left=0.02, right=0.98, top=0.93 if n == 1 else 0.925, bottom=0.15 if n == 1 else 0.10,
                             wspace=0.03)
     for ax, run in zip(axes, runs):
         draw_panel(ax, fr, run, known[run], preds[run], all_modes, st)
+    fig.canvas.draw()
+    bb = lg.get_window_extent().transformed(fig.transFigure.inverted())
+    assert bb.x0 >= 0 and bb.x1 <= 1 and bb.y0 >= 0 and bb.y1 <= axes[0].get_position().y0 + 1e-3, \
+        f"legend does not fit below the panels: {bb}"
     if st["print"]:
-        fig.canvas.draw()
-        bb = lg.get_window_extent().transformed(fig.transFigure.inverted())
-        assert bb.x0 >= 0 and bb.x1 <= 1 and bb.y0 >= 0 and bb.y1 <= axes[0].get_position().y0 + 1e-3, \
-            f"legend does not fit below the panels: {bb}"
         from matplotlib.text import Text
         small = {t.get_text(): t.get_fontsize() for t in fig.findobj(Text)
                  if t.get_visible() and t.get_text() and t.get_fontsize() < 8}

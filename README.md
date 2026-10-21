@@ -49,6 +49,24 @@ Built on the [V2X-Sim 2.0](https://ai4ce.github.io/V2X-Sim/) dataset and CARLA-e
 - `pilot_dataset.py` — PyTorch Dataset over Town05 scenes
 - `train.py` — training loop with train/val split
 
+## BEV prediction videos and thesis figures (visualisation only)
+
+All outputs of `render_env_bev.py` (tuning split v2, seed 0, epoch 12) with the flags used for the thesis and the
+defense, from the data checkout (writes `viz_env/`, overwriting earlier outputs):
+
+```
+~/hd-maps-dev/make_bev_figures.sh
+```
+
+- videos (mp4 at 2.5 fps, frames, 300 dpi stills): Town05 #22 ego 1 and #16 ego 4, Town04 #30 ego 3, each E_V2X vs
+  E_EgoOnly, and Town04 #30 ego 3 E_V2X+RSU vs E_V2X
+- eight thesis PDFs (`--print`) in `viz_env/thesis_figures/`: #16 frame 35 without predictions (`--no-pred`,
+  introduction), #16 frame 35, #30 frame 40 (both pairs) with and without all modes, #22 frame 39 all modes (appendix)
+
+Prediction drawing as in the CARLA video: top-1 ends in an arrowhead (a dot with a white rim when the top-1 path is
+under 1 m), the other 5 modes of moving targets are thin lines, every line has a thin white outline. The script refuses
+to start while a training / eval run or a GPU compute process is running, prints each command and stops on error.
+
 ## CARLA replay video (visualisation only)
 
 Recorded V2X-Sim data of one tuning-split scene replayed in CARLA 0.9.15 (`~/carla_sim`), with the cached seed-0
