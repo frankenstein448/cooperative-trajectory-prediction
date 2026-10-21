@@ -9,3 +9,10 @@ checkpoints/
 
 # rendered videos / frames / stills (render_env_bev.py); regenerate, do not commit
 viz_env/
+
+# eval results (5-8 MB each): packaged separately in ~/submission/results_npz.zip with SHA256SUMS.txt
+runs/*/eval_env_*.npz
+# visualisation outputs: regenerate, do not commit
+viz_output/
+carla_replay_frames_*/
+*dense_waypoints.png
