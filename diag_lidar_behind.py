@@ -196,7 +196,7 @@ def print_figure(out, ego, z, T, k):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="diag_lidar_scene30_frame19_ego3.png")
+    ap.add_argument("--out", default="viz_env/diag_lidar_scene30_frame19_ego3.png")
     ap.add_argument("--print", action="store_true", help="thesis PDF from this sample's records only (print_main)")
     args = ap.parse_args()
     if args.print:
