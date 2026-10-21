@@ -1,0 +1,125 @@
+"""
+train.py
+End-to-end training: all encoders (ego, coop, v2x, map) are now trainable,
+not frozen. Uses EndToEndFusion (end_to_end_model.py) and PilotDataset's
+custom collate_fn (variable-size LiDAR/camera/coop data per sample).
+
+Run in gpu-test-venv.
+"""
+import os
+import time
+import torch
+from torch.utils.data import DataLoader, random_split
+
+from pilot_dataset import PilotDataset, pilot_collate_fn
+from end_to_end_model import EndToEndFusion
+from trajectory_loss import WinnerTakesAllLoss
+
+BATCH_SIZE = 8
+EPOCHS = 30
+LR = 1e-4          # lower than the frozen-encoder run (1e-3) -- more parameters now training, needs more caution
+VAL_FRACTION = 0.15
+SEED = 42
+NUM_WORKERS = 4
+CHECKPOINT_EVERY = 5
+CHECKPOINT_DIR = "checkpoints_e2e"
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def run_epoch(model, loader, loss_fn, optimizer=None):
+    is_train = optimizer is not None
+    model.train() if is_train else model.eval()
+
+    total_loss, total_reg, total_cls, n_batches = 0.0, 0.0, 0.0, 0
+
+    context = torch.enable_grad() if is_train else torch.no_grad()
+    with context:
+        for batch in loader:
+            gt_traj = batch["gt_traj"].to(DEVICE)
+            gt_mask = batch["gt_mask"].to(DEVICE)
+
+            if is_train:
+                optimizer.zero_grad()
+
+            fused, trajs, conf = model(batch)
+            loss, info = loss_fn(trajs, conf, gt_traj, gt_mask)
+
+            if is_train:
+                loss.backward()
+                optimizer.step()
+
+            total_loss += loss.item()
+            total_reg += info["reg_loss"]
+            total_cls += info["cls_loss"]
+            n_batches += 1
+
+    return total_loss / n_batches, total_reg / n_batches, total_cls / n_batches
+
+
+def save_checkpoint(model, optimizer, epoch, train_loss, val_loss, path):
+    torch.save({
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "train_loss": train_loss,
+        "val_loss": val_loss,
+    }, path)
+
+
+def main():
+    print(f"Using device: {DEVICE}")
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+    dataset = PilotDataset()
+    print(f"Dataset size: {len(dataset)} samples")
+
+    n_val = int(len(dataset) * VAL_FRACTION)
+    n_train = len(dataset) - n_val
+    train_set, val_set = random_split(
+        dataset, [n_train, n_val], generator=torch.Generator().manual_seed(SEED)
+    )
+    print(f"Train: {n_train} samples | Val: {n_val} samples")
+
+    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
+                               num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
+    val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False,
+                             num_workers=NUM_WORKERS, collate_fn=pilot_collate_fn)
+
+    model = EndToEndFusion(device=DEVICE).to(DEVICE)
+    loss_fn = WinnerTakesAllLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+    n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Trainable parameters: {n_params:,}")
+
+    best_val_loss = float("inf")
+
+    for epoch in range(1, EPOCHS + 1):
+        t0 = time.time()
+        train_loss, train_reg, train_cls = run_epoch(model, train_loader, loss_fn, optimizer)
+        val_loss, val_reg, val_cls = run_epoch(model, val_loader, loss_fn, optimizer=None)
+        elapsed = time.time() - t0
+
+        print(f"Epoch {epoch}/{EPOCHS} ({elapsed:.1f}s) | "
+              f"train_loss={train_loss:.4f} (reg={train_reg:.4f}, cls={train_cls:.4f}) | "
+              f"val_loss={val_loss:.4f} (reg={val_reg:.4f}, cls={val_cls:.4f})")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            save_checkpoint(model, optimizer, epoch, train_loss, val_loss,
+                             os.path.join(CHECKPOINT_DIR, "best_model.pt"))
+            print(f"  -> New best val_loss ({val_loss:.4f}), saved best_model.pt")
+
+        if epoch % CHECKPOINT_EVERY == 0:
+            save_checkpoint(model, optimizer, epoch, train_loss, val_loss,
+                             os.path.join(CHECKPOINT_DIR, f"checkpoint_epoch{epoch}.pt"))
+            print(f"  -> Periodic checkpoint saved (epoch {epoch})")
+
+    print("\nTraining complete.")
+    torch.save(model.state_dict(), "e2e_model.pt")
+    print("Saved final model to e2e_model.pt")
+
+
+if __name__ == "__main__":
+    main()

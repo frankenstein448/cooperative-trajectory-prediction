@@ -1,0 +1,47 @@
+import argparse
+import torch
+from torch.utils.data import DataLoader
+
+from pilot_dataset import PilotDataset, pilot_collate_fn
+from visualize_predictions import load_model
+from scene_split import scene_split
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--ckpt", required=True)
+parser.add_argument("--no-map", action="store_true")
+args = parser.parse_args()
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+dataset = PilotDataset()
+_, val_set = scene_split(dataset, 0.15, 42)
+keys = [(dataset.samples[i][3], dataset.samples[i][1]) for i in val_set.indices]
+loader = DataLoader(val_set, batch_size=8, shuffle=False, collate_fn=pilot_collate_fn)
+model = load_model(args.ckpt, use_map=not args.no_map).to(DEVICE).eval()
+
+model_ade, zero_ade, valid_all, first_step = [], [], [], []
+with torch.no_grad():
+    for batch in loader:
+        gt = batch["gt_traj"].to(DEVICE)
+        mask = batch["gt_mask"].to(DEVICE).float()
+        _, trajs, _ = model(batch)
+        cnt = mask.sum(-1).clamp(min=1)                                  # [B]
+        dist = torch.norm(trajs - gt.unsqueeze(1), dim=-1)               # [B, K, T]
+        ade_modes = (dist * mask.unsqueeze(1)).sum(-1) / cnt.unsqueeze(1)
+        model_ade.append(ade_modes.min(dim=1).values.cpu())
+        zero_ade.append(((torch.norm(gt, dim=-1) * mask).sum(-1) / cnt).cpu())
+        valid_all.append((mask.sum(-1) > 0).cpu())
+        first_step.append(torch.norm(gt[:, 0], dim=-1).cpu())
+model_ade, zero_ade, valid_all, first_step = (torch.cat(x) for x in (model_ade, zero_ade, valid_all, first_step))
+assert len(model_ade) == len(keys)
+
+print(f"Sanity: mean distance of first GT point from origin = {first_step.mean():.2f} m "
+      f"(should be small, near the per-step motion, if gt_traj is relative to the agent)")
+print(f"\n{'town':7s} {'scene':>5s} {'n':>5s} {'model minADE6':>14s} {'stay-put ADE':>13s}")
+for key in sorted(set(keys)):
+    sel = torch.tensor([k == key for k in keys]) & valid_all
+    n = int(sel.sum())
+    if n:
+        print(f"{key[0]:7s} {key[1]:5d} {n:5d} {model_ade[sel].mean():13.3f}m {zero_ade[sel].mean():12.3f}m")
+print(f"{'ALL':7s} {'':5s} {int(valid_all.sum()):5d} "
+      f"{model_ade[valid_all].mean():13.3f}m {zero_ade[valid_all].mean():12.3f}m")
