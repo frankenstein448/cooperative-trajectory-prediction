@@ -1,0 +1,14 @@
+Using device: cuda
+Wrote config: {'seed': 0, 'use_speed': True, 'use_image_cache': True, 'normalize_cam': True, 'drop_cam_xy': True, 'loss': 'laplace_mixture', 'relaxed_wta_eps': None, 'laplace_scale_floor': 0.01, 'wta_soft_tau': None, 'no_map': False, 'degrade': None, 'history_frames': 0, 'history_encoder': None, 'require_history_frames': 0, 'no_cpm': False, 'no_coop': False, 'epochs': 12, 'out_dir': '/tmp/dry_L', 'require_prev_frame': True, 'batch_size': 8, 'lr': 0.0001, 'num_workers': 2, 'scene_split_seed': 42, 'git_commit': 'c09a06d963156c880d1225d42d0856d5b4c58c0c'}
+PilotDataset: use_image_cache=True (dir=/home/karra/hd_cache/images), require_prev_frame=True, use_speed=True, cam_norm=off, drop_cam_xy=True, degrade=None, history_frames=0, require_history_frames=0, history_norm=off, use_cpm=True, use_coop=True
+Dataset size: 14904 samples
+Train: 10488 samples | Tuning: 2208 samples | Test: 2208 samples (never used here)
+Computed cam_norm from 10488 train samples: {'mean': [26.14356803894043, 42.2320556640625, 0.500006914138794, 0.4627939760684967], 'std': [132.21255493164062, 129.48611450195312, 1.8510555028915405, 0.9353517889976501]}
+Model use_map=True, use_cpm=True, use_coop=True, loss=LaplaceMixtureLoss (scale floor=0.01 m)
+Trainable parameters: 787,382
+DRY RUN: 2 train batches + 2 val batches, no checkpoints will be saved
+  train batch 0: loss=492.8860 reg=492.8860 cls=2.1263
+  train batch 1: loss=294.6235 reg=294.6235 cls=1.9992
+  val batch 0: loss=56.0712 reg=56.0712 cls=2.0234
+  val batch 1: loss=130.4290 reg=130.4290 cls=1.7988
+DRY RUN complete -- no checkpoints saved, exiting.

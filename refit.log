@@ -1,0 +1,18 @@
+
+Town05: 106 moving paths, 2000 points used
+  current  theta=70.50: median dist 4.79 m, within 2 m: 33%
+  refit    theta=85.60: median dist 1.23 m, within 2 m: 66%
+  suggested: "theta": 85.60, "tx": -52.50, "ty": -30.71
+  saved viz_output/refit_Town05.png
+
+Town04: 13 moving paths, 910 points used
+  current  theta=296.50: median dist 6.52 m, within 2 m: 22%
+  refit    theta=262.50: median dist 1.84 m, within 2 m: 52%
+  suggested: "theta": 262.50, "tx": 114.05, "ty": 211.86
+  saved viz_output/refit_Town04.png
+
+Town03: 16 moving paths, 1120 points used
+  current  theta=194.75: median dist 1.36 m, within 2 m: 59%
+  refit    theta=168.75: median dist 1.21 m, within 2 m: 63%
+  suggested: "theta": 168.75, "tx": 28.63, "ty": -11.03
+  saved viz_output/refit_Town03.png
