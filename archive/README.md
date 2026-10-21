@@ -6,10 +6,10 @@ need the repository root on `PYTHONPATH`, a live CARLA server, or paths that no 
 Appendix G needs (pilot pipeline, transform grid search / refit / residual / heading scripts, `test_transforms*.py`,
 the legacy branch of `coord_transform.py`, split v1 in `scene_split.py`) is **not** here; it stays in the root.
 
-38 files: 23 moved from the repository (`git mv`, history kept), 15 copied from the untracked files of the main
+40 files: 25 moved from the repository (`git mv`, history kept), 15 copied from the untracked files of the main
 checkout.
 
-## Moved from the repository root (16)
+## Moved from the repository root (18)
 
 | file | what it was | why archived |
 |---|---|---|
@@ -24,6 +24,8 @@ checkout.
 | `find_good_test_point.py` | picks a scene-77 agent point for the transform probes (live Town05) | earliest transform probe, no caller |
 | `get_lidar_position.py` | world position of one LIDAR_TOP sample (scene 77) | earliest transform probe, no caller |
 | `check_std.py` | prints the mean / std of the Town05 topology graph's node positions | August exploration, no caller |
+| `smoke_test.py` | a few forward / backward steps of the pilot model with samples from all three towns in one batch | pilot sanity check, no caller, no thesis result |
+| `record_carla_replay.py` | first CARLA video: one Part 1 prediction sample drawn on the CARLA map (wrote `carla_replay_frames_Town04/`, `viz_output/carla_replay*.mp4`) | superseded by the CARLA replay `make_carla_replay.sh` (`export_` / `carla_` / `overlay_carla_replay.py`); no caller |
 | `profile_getitem.py` | timing breakdown of `PilotDataset.__getitem__` | one-off performance tool, no caller |
 | `profile_train_step.py` | timing of ~50 train batches (loader wait, transfer, step) | one-off performance tool, no caller |
 | `diag_lidar_scene30_frame19_ego3.png` | first output of `diag_lidar_behind.py` (two panels) | image; the thesis figure is `viz_env/thesis_figures/lidar_blindspot.pdf` (`--print`) |
